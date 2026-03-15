@@ -89,6 +89,23 @@
         .btn-edit-sm { background:rgba(243,156,18,.12); border:1px solid rgba(243,156,18,.35); color:#f39c12; border-radius:7px; padding:4px 10px; font-size:0.68rem; font-weight:700; cursor:pointer; }
         .btn-del-sm { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35); color:#f87171; border-radius:7px; padding:4px 10px; font-size:0.68rem; font-weight:700; cursor:pointer; }
 
+        /* WHATSAPP BUTTON */
+        .btn-whatsapp-sm { 
+            background: rgba(37, 211, 102, 0.12); 
+            border: 1px solid rgba(37, 211, 102, 0.35); 
+            color: #25d366; 
+            border-radius: 7px; 
+            padding: 4px 10px; 
+            font-size: 0.68rem; 
+            font-weight: 700; 
+            cursor: pointer; 
+            margin-left: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-whatsapp-sm:hover { background: #25d366; color: #fff; }
+
         /* GROUPS TAB COLLAPSIBLE */
         .enrollment-row select, .enrollment-row input { font-size:0.82rem !important; }
         .sched-chip { background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:5px; padding:2px 7px; font-size:0.6rem; font-weight:700; margin-right:3px; }
@@ -135,7 +152,6 @@
         .badge-denied { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); border-radius:5px; padding:2px 8px; font-size:0.62rem; font-weight:700; }
         body.member-mode .nav-bar { display:none !important; }
 
-        }
         /* Column widths for member statement table */
         .pdf-table.member-table col.c-no    { width: 4%; }
         .pdf-table.member-table col.c-month { width: 22%; }
@@ -167,7 +183,6 @@
 <body>
 
 <div class="container py-2">
-    <!-- ADMIN HEADER -->
     <div id="adminHeader" class="app-header">
         <div class="brand">🏆 AK Chit Funds <small style="font-size:0.5em;color:#2ecc71;">☁ CLOUD</small></div>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -179,7 +194,6 @@
         </div>
     </div>
 
-    <!-- MEMBER PROFILE HEADER -->
     <div id="memberHeader" style="display:none;padding:16px 4px 0;">
         <div style="background:linear-gradient(135deg,rgba(243,156,18,.18),rgba(243,156,18,.04));border:1px solid rgba(243,156,18,.3);border-radius:22px;padding:18px 18px 14px;">
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
@@ -208,7 +222,6 @@
         </div>
     </div>
 
-    <!-- HOME TAB -->
     <div id="homeTab" class="tab-content active">
         <div id="adminStatCards" class="row g-2 mt-3 text-center">
             <div class="col-4"><div class="stat-card"><span class="stat-num" id="memberCount">-</span><span class="stat-label">Members</span></div></div>
@@ -242,103 +255,130 @@
         </div>
     </div>
 
-    <!-- GROUPS TAB -->
     <div id="groupsTab" class="tab-content"><div id="groupListArea" class="mt-2"></div></div>
 
-    <!-- LIST TAB -->
     <div id="listTab" class="tab-content">
         <div id="simpleListArea" class="mt-2"></div>
-        <!-- ── New Chit Planner ── -->
         <div style="display:flex;align-items:center;gap:10px;margin:20px 0 10px;">
             <div style="flex:1;height:1px;background:var(--border);"></div>
             <div style="font-size:0.65rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">📋 New Chit Planner</div>
             <div style="flex:1;height:1px;background:var(--border);"></div>
         </div>
+        <div id="ncpSavedList" style="margin-bottom:12px;"></div>
+
         <div id="newChitPlanner" style="background:var(--card-bg);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:16px;">
 
-            <!-- Planner Inputs -->
-            <div style="padding:16px;border-bottom:1px solid var(--border);">
-                <div style="font-size:0.7rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">⚙️ Chit Parameters</div>
-
-                <!-- Row 1 -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">🏷️ Group Name</div>
-                        <input id="ncp_name" type="text" class="form-input" placeholder="e.g. Gold Chit 3L" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">👤 Member Name (for print)</div>
-                        <input id="ncp_member" type="text" class="form-input" placeholder="e.g. Ramesh Kumar" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <div style="font-size:0.65rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;">⚙️ Chit Parameters</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input id="ncp_version_label" type="text" placeholder="Version name (e.g. v1, Draft A)" style="background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 10px;border-radius:9px;font-size:0.75rem;width:160px;">
+                    <button onclick="ncpSaveVersion()" style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:6px 14px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">💾 Save</button>
+                    <button onclick="ncpNewPlanner()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:6px 12px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">＋ New</button>
                 </div>
-
-                <!-- Row 2 -->
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">💰 Chit Amount (₹)</div>
-                        <input id="ncp_amount" type="number" class="form-input" placeholder="e.g. 300000" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">👥 No. of Members</div>
-                        <input id="ncp_members" type="number" class="form-input" placeholder="e.g. 20" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">📆 Duration (months)</div>
-                        <input id="ncp_duration" type="number" class="form-input" placeholder="e.g. 20" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
-                </div>
-
-                <!-- Row 3 -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">🗓️ Start Date</div>
-                        <input id="ncp_start" type="date" class="form-input" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
-                    <div>
-                        <div style="font-size:0.55rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:3px;">📅 Due Day of Month</div>
-                        <input id="ncp_dueday" type="number" min="1" max="31" class="form-input" placeholder="e.g. 8" style="margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-                    </div>
-                </div>
-
-                <button onclick="ncpGenerate()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">⚡ Generate Schedule</button>
             </div>
 
-            <!-- Schedule Table (hidden until generated) -->
+            <div style="padding:16px 16px 14px;border-bottom:1px solid var(--border);">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🏷️ Group Name</div>
+                        <input id="ncp_name" type="text" class="form-input" placeholder="e.g. Gold Chit" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">👤 Member Name</div>
+                        <input id="ncp_member" type="text" class="form-input" placeholder="e.g. Ramesh Kumar" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">💰 Chit Amount (₹)</div>
+                        <input id="ncp_amount" type="number" class="form-input" placeholder="e.g. 500000" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">👥 No. of Members</div>
+                        <input id="ncp_members" type="number" class="form-input" placeholder="e.g. 20" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📆 Duration (months)</div>
+                        <input id="ncp_duration" type="number" class="form-input" placeholder="e.g. 20" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🗓️ Start Date</div>
+                        <input id="ncp_start" type="date" class="form-input" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📅 Due Day of Month</div>
+                        <input id="ncp_dueday" type="number" min="1" max="31" class="form-input" placeholder="e.g. 8" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                    </div>
+                </div>
+
+                <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:12px 14px;margin-bottom:14px;">
+                    <div style="font-size:0.6rem;font-weight:800;color:#34d399;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">💹 Owner Profit Settings</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;">
+                        <div>
+                            <div style="font-size:0.58rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📋 Commission % <span style="color:#34d399;">(per month)</span></div>
+                            <input id="ncp_commission" type="number" min="0" max="10" step="0.5" class="form-input" value="5" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;" title="% of chit amount kept by owner each month as foreman fee">
+                        </div>
+                        <div>
+                            <div style="font-size:0.58rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📈 Pay Escalation % <span style="color:#f59e0b;">(per month)</span></div>
+                            <input id="ncp_escalation" type="number" min="0" max="5" step="0.5" class="form-input" value="0" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;" title="Monthly increase in member contribution (%). 0 = flat. 1% = each month ₹ increases by 1% over previous.">
+                        </div>
+                        <div>
+                            <div style="font-size:0.58rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🔢 Payout Mode</div>
+                            <select id="ncp_payoutmode" class="form-input" onchange="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;">
+                                <option value="diminishing">Diminishing (High→Low)</option>
+                                <option value="flat">Flat (Commission only)</option>
+                                <option value="ascending">Ascending (Low→High)</option>
+                                <option value="custom">Custom (manual)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <div style="font-size:0.58rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🎯 Min Payout % <span style="color:#f87171;">(of chit)</span></div>
+                            <input id="ncp_minpayout" type="number" min="50" max="99" step="1" class="form-input" value="70" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.82rem;" title="Minimum % of chit amount that any winner receives (last months get highest payout)">
+                        </div>
+                    </div>
+                    <div id="ncp_profitPreview" style="display:none;margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+                </div>
+
+                <button onclick="ncpGenerate()" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:11px;border-radius:10px;font-size:0.85rem;font-weight:800;cursor:pointer;">⚡ Generate Profitable Schedule</button>
+            </div>
+
             <div id="ncp_tableWrap" style="display:none;">
-                <!-- Summary chips -->
                 <div id="ncp_chips" style="display:flex;gap:0;border-bottom:1px solid var(--border);"></div>
 
-                <!-- Editable schedule rows -->
                 <div style="padding:12px 14px 6px;">
                     <div style="font-size:0.65rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">✏️ Edit Schedule (Monthly Pay &amp; Chit Payout per month)</div>
-                    <div style="display:flex;gap:4px;margin-bottom:4px;font-size:0.56rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;padding:0 2px;">
-                        <span style="width:30px;text-align:center;">#</span>
-                        <span style="flex:1.2;">Due Date</span>
-                        <span style="flex:1;">Monthly Pay (₹)</span>
-                        <span style="flex:1;">Chit Payout (₹)</span>
-                        <span style="width:60px;text-align:center;">% Return</span>
+                    <div style="display:flex;gap:4px;margin-bottom:4px;font-size:0.62rem;color:var(--text-dim);font-weight:700;text-uppercase;padding:0 2px;">
+                        <span style="width:26px;text-align:center;">#</span>
+                        <span style="flex:1.4;">Due Date</span>
+                        <span style="flex:1.2;">Pay/Member (₹)</span>
+                        <span style="flex:1.2;">Chit Payout (₹)</span>
+                        <span style="width:52px;text-align:center;">Payout%</span>
+                        <span style="width:80px;text-align:right;color:#34d399;">Owner Profit</span>
                     </div>
                     <div id="ncp_rows" style="display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;"></div>
                 </div>
 
-                <!-- Total row -->
-                <div id="ncp_total" style="display:flex;align-items:center;gap:4px;padding:8px 14px;background:rgba(243,156,18,0.07);border-top:1px solid var(--border);font-size:0.72rem;font-weight:800;">
-                    <span style="width:30px;"></span>
-                    <span style="flex:1.2;color:#f39c12;">TOTAL</span>
-                    <span id="ncp_totalPay" style="flex:1;color:#34d399;"></span>
-                    <span id="ncp_totalPayout" style="flex:1;color:#f59e0b;"></span>
-                    <span style="width:60px;"></span>
+                <div id="ncp_total" style="display:flex;align-items:center;gap:4px;padding:8px 14px;background:rgba(16,185,129,0.08);border-top:1px solid var(--border);font-size:0.82rem;font-weight:800;">
+                    <span style="width:26px;"></span>
+                    <div style="flex:1.4;">
+                        <div style="color:#f39c12;font-size:0.82rem;">TOTAL</div>
+                        <div style="color:var(--text-dim);font-size:0.52rem;font-weight:600;margin-top:1px;">1 member pays</div>
+                    </div>
+                    <span id="ncp_totalPay" style="flex:1.2;color:#a5b4fc;"></span>
+                    <span id="ncp_totalPayout" style="flex:1.2;color:#f59e0b;"></span>
+                    <span style="width:52px;"></span>
+                    <span id="ncp_totalProfit" style="width:80px;text-align:right;color:#34d399;font-size:0.88rem;"></span>
                 </div>
 
-                <!-- Print button -->
-                <div style="padding:12px 14px;">
-                    <button onclick="ncpPrint()" style="width:100%;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">🖨️ Preview &amp; Print Schedule</button>
+                <div style="padding:12px 14px;display:flex;gap:8px;">
+                    <button onclick="ncpSaveVersion()" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">💾 Save Planner</button>
+                    <button onclick="ncpPrint()" style="flex:2;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">🖨️ Preview &amp; Print Schedule</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- BACKUP TAB -->
     <div id="backupTab" class="tab-content">
         <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
         <div class="stat-card p-4">
@@ -353,9 +393,6 @@
     </div>
 </div>
 
-<!-- ══════ MODALS ══════ -->
-
-<!-- MEMBER MODAL -->
 <div id="memberModal" class="modal-overlay">
     <div class="modal-content-custom">
         <div class="modal-title" id="memberModalTitle">👤 Create Member</div>
@@ -375,7 +412,6 @@
     </div>
 </div>
 
-<!-- GROUP MODAL -->
 <div id="groupModal" class="modal-overlay">
     <div class="modal-content-custom">
         <div class="modal-title" id="groupModalTitle">🏦 New Group</div>
@@ -397,7 +433,6 @@
     </div>
 </div>
 
-<!-- PAYMENT MODAL -->
 <div id="paymentModal" class="modal-overlay">
     <div class="modal-content-custom">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -415,6 +450,7 @@
         <label class="form-label-small">Group / Enrollment</label>
         <select id="pGroup" class="form-input"><option value="">-- Select Member First --</option></select>
         <input type="hidden" id="pEnrollmentId">
+        <input type="hidden" id="pSlotNum" value="1">
 
         <label class="form-label-small">Payment Type</label>
         <select id="pNumMonths" class="form-input" onchange="onNumMonthsChange()">
@@ -427,12 +463,21 @@
             <div style="font-size:0.62rem;color:var(--text-dim);margin-bottom:8px;">✅ Green = already paid &nbsp;|&nbsp; Tick the months being paid now</div>
             <div id="monthSelectorGrid" class="month-selector-grid"></div>
             <div id="selectedSummary" class="selected-summary" style="display:none;"></div>
+            <div id="perMonthAmtWrap" style="display:none;margin-top:10px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <label style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;flex:1;">💰 Amount per Month (if different)</label>
+                    <label style="font-size:0.65rem;color:#a5b4fc;display:flex;align-items:center;gap:5px;cursor:pointer;">
+                        <input type="checkbox" id="perMonthCustomToggle" onchange="togglePerMonthCustom()"> Different amounts
+                    </label>
+                </div>
+                <div id="perMonthAmtGrid" style="display:none;display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;"></div>
+            </div>
         </div>
 
         <div class="row g-2">
             <div class="col-6">
                 <label class="form-label-small">Chit Amount <span id="perMonthLabel" style="color:#a5b4fc;font-size:0.65rem;"></span></label>
-                <input type="number" id="pChit" class="form-input" placeholder="₹ per month" oninput="calcBalance()">
+                <input type="number" id="pChit" class="form-input" placeholder="₹ per month" oninput="onChitAmtChange()">
             </div>
             <div class="col-6">
                 <label class="form-label-small">Total Amount Paid</label>
@@ -465,7 +510,6 @@
     </div>
 </div>
 
-<!-- EDIT PAYMENT MODAL -->
 <div id="editPaymentModal" class="modal-overlay">
     <div class="modal-content-custom">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -507,7 +551,6 @@
     </div>
 </div>
 
-<!-- CONFIRM MODAL -->
 <div id="confirmModal" class="modal-overlay">
     <div class="modal-content-custom" style="max-width:360px;">
         <div style="font-size:2rem;text-align:center;margin-bottom:10px;" id="confirmIcon">⚠️</div>
@@ -518,7 +561,6 @@
     </div>
 </div>
 
-<!-- ══════ LOGIN SCREEN ══════ -->
 <div id="loginScreen">
     <div class="login-card">
         <div class="login-brand">
@@ -556,7 +598,6 @@
     </div>
 </div>
 
-<!-- ACCESS REQUESTS MODAL -->
 <div id="accessModal" class="modal-overlay">
     <div class="modal-content-custom" style="max-width:500px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
@@ -573,7 +614,6 @@
     </div>
 </div>
 
-<!-- BOTTOM NAV -->
 <div class="nav-bar">
     <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
     <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
@@ -585,7 +625,7 @@
 // ══════════════════════════════════════════
 // FIREBASE
 // ══════════════════════════════════════════
-const firebaseConfig={apiKey:"AIzaSyB9_sBL83skvIaOVAE8msHwIWq8QQwhxFU",authDomain:"ak-chit-funds.firebaseapp.com",projectId:"ak-chit-funds",storageBucket:"ak-chit-funds.firebasestorage.app",messagingSenderId:"297195194526",appId:"1:297195194526:web:b71c7c09dcf8610211938f"};
+const firebaseConfig={apiKey:"AIzaSyCqb7gAbpa3UabPU3g_YhNITuPWtWPY4KU",authDomain:"ak-events-2016.firebaseapp.com",projectId:"ak-events-2016",storageBucket:"ak-events-2016.firebasestorage.app",messagingSenderId:"78066764444",appId:"1:78066764444:web:5bb9e0d48c128a8632fb59"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 let ALL_MEMBERS=[];
@@ -593,10 +633,9 @@ let ALL_MEMBERS=[];
 // ══════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════
-// ── In-memory cache so Firestore is hit once per session, not on every action
 const _dbCache = {};
 let _cacheTs = {};
-const CACHE_TTL = 60000; // 60 seconds
+const CACHE_TTL = 60000; 
 
 async function getCollection(col, forceRefresh=false){
     const now = Date.now();
@@ -609,13 +648,11 @@ async function getCollection(col, forceRefresh=false){
     return _dbCache[col];
 }
 
-// Call this after any write (add/edit/delete) to bust the relevant cache
 function bustCache(col){ delete _dbCache[col]; delete _cacheTs[col]; }
 function fmtDate(d){if(!d)return"—";const[y,m,day]=d.split("-");return`${day}/${m}/${y}`;}
 function fmtAmt(v){return'₹'+(parseFloat(v)||0).toLocaleString('en-IN');}
 function ini(n){return(n||'?').split(' ').map(x=>x[0]||'').join('').toUpperCase().slice(0,2)||'??';}
 function isAdmin(){ return CURRENT_USER && CURRENT_USER.role === 'admin'; }
-function guardAdmin(fn){ return function(...args){ if(!isAdmin()){ showToast('🚫 Access denied',false); return; } return fn(...args); }; }
 
 function openModal(id){document.getElementById(id).style.display='block';}
 function closeModal(id){document.getElementById(id).style.display='none';}
@@ -642,6 +679,40 @@ function showConfirm(icon,title,msg,onOk){
     document.getElementById('confirmMsg').textContent=msg;
     document.getElementById('confirmOkBtn').onclick=()=>{closeModal('confirmModal');onOk();};
     openModal('confirmModal');
+}
+
+// ══════════════════════════════════════════
+// WHATSAPP REMINDER
+// ══════════════════════════════════════════
+function sendWhatsAppReminder(memberId, groupId) {
+    const members = _dbCache['members'] || [];
+    const groups = _dbCache['groups'] || [];
+    const m = members.find(x => x.id === memberId);
+    const g = groups.find(x => x.id === groupId);
+
+    if (!m || !g) return showToast('❌ Data missing', false);
+
+    let phone = (m.phone || '').replace(/\D/g, '');
+    if (phone.length === 10) phone = '91' + phone;
+    
+    if (!phone) return showToast('❌ Phone number missing', false);
+
+    const message = 
+`*PAYMENT REMINDER* 🏆
+
+Dear *${m.name}*,
+
+This is a friendly reminder regarding your contribution for:
+📂 *Group:* ${g.name}
+📅 *Due Date:* ${g.dueDay || '—'}${['st','nd','rd'][((g.dueDay%100-11)%10)-1]||'th'} of this month.
+
+Please ignore if already paid. You can pay via UPI/Cash and share the screenshot.
+
+Thank you for your trust!
+*AK Chit Funds*`;
+
+    const encodedMsg = encodeURIComponent(message);
+    window.open(`https://wa.me/${phone}?text=${encodedMsg}`, '_blank');
 }
 
 // ══════════════════════════════════════════
@@ -719,12 +790,15 @@ async function buildMonthSelectorGrid(){
     const summary=document.getElementById('selectedSummary');
     grid.innerHTML='<div style="color:var(--text-dim);font-size:0.72rem;padding:8px;">Select member & group first…</div>';
     summary.style.display='none';
+    document.getElementById('perMonthAmtWrap').style.display='none';
+    document.getElementById('perMonthCustomToggle').checked=false;
     if(!mid||!gid) return;
     const gs=await getCollection('groups');
+    window._gs_cache=gs; 
     const grp=gs.find(g=>g.id===gid);
     if(!grp){grid.innerHTML='<div style="color:#f87171;font-size:0.72rem;">Group not found</div>';return;}
     const {paidSlots,allDueDates}=await getPaidSlots(mid,gid,grp);
-    if(!allDueDates.length){grid.innerHTML='<div style="color:#f87171;font-size:0.72rem;">No due dates configured for this group</div>';return;}
+    if(!allDueDates.length){grid.innerHTML='<div style="color:#f87171;font-size:0.72rem;">No due dates configured</div>';return;}
     const today=new Date().toISOString().split('T')[0];
     grid.innerHTML=allDueDates.map((dd,i)=>{
         const paid=paidSlots.has(i);
@@ -745,11 +819,65 @@ function updateSelectedSummary(){
     const summary=document.getElementById('selectedSummary');
     if(newlySelected.length===0){
         summary.style.display='none';
+        document.getElementById('perMonthAmtWrap').style.display='none';
     } else {
         summary.style.display='block';
-        summary.textContent=`📅 ${newlySelected.length} month${newlySelected.length>1?'s':''} selected for payment`;
+        summary.textContent=`📅 ${newlySelected.length} month${newlySelected.length>1?'s':''} selected`;
+        document.getElementById('perMonthAmtWrap').style.display='block';
+        buildPerMonthAmtGrid(newlySelected);
     }
     calcBalance();
+}
+
+function buildPerMonthAmtGrid(selectedSlots){
+    const isCustom=document.getElementById('perMonthCustomToggle').checked;
+    const grid=document.getElementById('perMonthAmtGrid');
+    if(!isCustom){ grid.style.display='none'; return; }
+    grid.style.display='flex';
+    const gs_cache=window._gs_cache||[];
+    const gid=document.getElementById('pGroup').value;
+    const grp=gs_cache.find(g=>g.id===gid);
+    const allDueDates=grp?getGroupDueDates(grp):[];
+    const chit=parseFloat(document.getElementById('pChit').value)||0;
+    const existing={};
+    grid.querySelectorAll('.pma-row').forEach(r=>{ existing[r.dataset.slot]=r.querySelector('input').value; });
+    grid.innerHTML=selectedSlots.map(slot=>{
+        const label=allDueDates[slot]?fmtDate(allDueDates[slot]):`Month ${slot+1}`;
+        const val=existing[slot]!==undefined?existing[slot]:(chit||'');
+        return `<div class="pma-row" data-slot="${slot}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
+            <span style="flex:1;font-size:0.72rem;color:#a5b4fc;font-weight:700;">${label}</span>
+            <input type="number" placeholder="₹ amount" value="${val}" style="width:110px;background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 9px;border-radius:7px;font-size:0.8rem;" oninput="calcBalance()">
+        </div>`;
+    }).join('');
+}
+
+function togglePerMonthCustom(){
+    const isCustom=document.getElementById('perMonthCustomToggle').checked;
+    const slots=Array.from(document.querySelectorAll('#monthSelectorGrid input[type=checkbox]:checked:not(:disabled)')).map(cb=>parseInt(cb.value));
+    if(isCustom && slots.length>0) buildPerMonthAmtGrid(slots);
+    else document.getElementById('perMonthAmtGrid').style.display='none';
+    calcBalance();
+}
+
+function onChitAmtChange(){
+    if(document.getElementById('perMonthCustomToggle')?.checked){
+        const chit=parseFloat(document.getElementById('pChit').value)||0;
+        document.querySelectorAll('#perMonthAmtGrid .pma-row input').forEach(inp=>{
+            if(!inp.value) inp.value=chit||'';
+        });
+    }
+    calcBalance();
+}
+
+function getPerMonthAmounts(){
+    if(!document.getElementById('perMonthCustomToggle')?.checked) return null;
+    const map={};
+    document.querySelectorAll('#perMonthAmtGrid .pma-row').forEach(r=>{
+        const slot=parseInt(r.dataset.slot);
+        const val=parseFloat(r.querySelector('input').value)||0;
+        if(!isNaN(slot)) map[slot]=val;
+    });
+    return map;
 }
 
 function calcBalance(){
@@ -757,12 +885,22 @@ function calcBalance(){
     const paid=parseFloat(document.getElementById('pPaid').value)||0;
     const isMulti=document.getElementById('pNumMonths').value==='multi';
     if(isMulti){
-        const n=Math.max(1,Array.from(document.querySelectorAll('#monthSelectorGrid input[type=checkbox]:checked:not(:disabled)')).length);
-        const totalChit=chit*n;
+        const selectedCBs=Array.from(document.querySelectorAll('#monthSelectorGrid input[type=checkbox]:checked:not(:disabled)'));
+        const n=Math.max(1,selectedCBs.length);
+        const isCustom=document.getElementById('perMonthCustomToggle')?.checked;
+        let totalChit=0;
+        if(isCustom){
+            const amtMap=getPerMonthAmounts()||{};
+            selectedCBs.forEach(cb=>{ totalChit+=(amtMap[parseInt(cb.value)]||chit); });
+        } else {
+            totalChit=chit*n;
+        }
         const bal=Math.max(0,totalChit-paid);
         if(n>1){
             document.getElementById('totalChitRef').style.display='block';
-            document.getElementById('totalChitVal').textContent=`₹${totalChit.toLocaleString('en-IN')} (${n}×₹${chit.toLocaleString('en-IN')})`;
+            document.getElementById('totalChitVal').textContent=isCustom
+                ? `₹${totalChit.toLocaleString('en-IN')} (${n} mo, custom)`
+                : `₹${totalChit.toLocaleString('en-IN')} (${n}×₹${chit.toLocaleString('en-IN')})`;
             document.getElementById('totalBalVal').textContent=`₹${bal.toLocaleString('en-IN')}`;
         } else {
             document.getElementById('totalChitRef').style.display='none';
@@ -832,7 +970,6 @@ async function loadMemberLedger(){
     const mPays=ps.filter(p=>p.memberId===mid);
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
     const totalBal=mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-    // Support both legacy groupIds and new enrollments
     let enrollments = m.enrollments;
     if(!enrollments||!enrollments.length){
         enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:''}));
@@ -840,16 +977,13 @@ async function loadMemberLedger(){
     const memberGroups=gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id));
 
     const payTablesHtml=enrollments.map((enr,gi)=>{
-        const grp=gs.find(g=>g.id===enr.groupId);if(!grp)return'';
-        // Match payments: if enrollmentId exists use it, else match by groupId (legacy)
-        const pays=mPays.filter(p=>{
+        const grp=gs.find(g=>g.id===enr.groupId); if(!grp) return '';
+        const qty=parseInt(enr.qty||1);
+        const allPays=mPays.filter(p=>{
             if(enr.enrollmentId && p.enrollmentId) return p.enrollmentId===enr.enrollmentId;
             return p.groupId===enr.groupId;
         }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
         const allDueDates=getGroupDueDates(grp);
-        const tPaid=pays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal=pays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const tableId=`ledgerTable_${gi}`;
         const totalMonths=parseInt(grp.duration||grp.gDuration)||21;
         let elapsed=0;
         if(grp.startDate||grp.gStart){
@@ -860,115 +994,92 @@ async function loadMemberLedger(){
         const left=Math.max(0,totalMonths-elapsed);
         const gStartDisplay=fmtDate(grp.startDate||grp.gStart||'');
         const gDueDayOrd=grp.dueDay?`${grp.dueDay}${['st','nd','rd'][((grp.dueDay%100-11)%10)-1]||'th'}`:'—';
-        const multiMonthCount=pays.filter(p=>p.numMonths&&p.numMonths>1).length;
+        const tPaid=allPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+        const tBal=allPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+        const tableId=`ledgerTable_${gi}`;
+        const showSlotCol = qty > 1; 
 
-        const rows=pays.map((p,idx)=>{
+        const expandedPays = [];
+        allPays.forEach(p => {
+            const isMultiP = p.numMonths && p.numMonths > 1;
+            const hasPMB = isMultiP && p.perMonthBreakdown && p.perMonthBreakdown.length > 0;
+            if(hasPMB){
+                p.perMonthBreakdown.forEach((pmb, bi) => {
+                    expandedPays.push({ _isExpanded:true, _parentId:p.id, _groupSize:p.perMonthBreakdown.length, _groupIdx:bi, id:p.id+'_pmb_'+bi, memberId:p.memberId, groupId:p.groupId, enrollmentId:p.enrollmentId, slotNum:p.slotNum, date:p.date, chit:pmb.amt, paid:pmb.amt, balance:0, paidBy:p.paidBy, chitPicked:bi===0?p.chitPicked:'No', chitPickedBy:bi===0?(p.chitPickedBy||''):'', monthSlot:pmb.slot, monthSlots:[pmb.slot], numMonths:1 });
+                });
+            } else { expandedPays.push(p); }
+        });
+
+        const rows = expandedPays.map((p,idx)=>{
             const cp=p.chitPicked==='Yes';
-            const isMulti=p.numMonths&&p.numMonths>1;
+            const isMulti=!p._isExpanded && p.numMonths&&p.numMonths>1;
             const months=p.monthSlots||[];
             let monthLabel='—';
             if(isMulti && months.length>0){
-                const firstLabel=months[0]>=0&&allDueDates[months[0]]?fmtDate(allDueDates[months[0]]):'—';
-                const lastLabel=months[months.length-1]>=0&&allDueDates[months[months.length-1]]?fmtDate(allDueDates[months[months.length-1]]):'—';
-                monthLabel=`${firstLabel} → ${lastLabel}`;
+                const fl=months[0]>=0&&allDueDates[months[0]]?fmtDate(allDueDates[months[0]]):'—';
+                const ll=months[months.length-1]>=0&&allDueDates[months[months.length-1]]?fmtDate(allDueDates[months[months.length-1]]):'—';
+                monthLabel=`${fl} → ${ll}`;
             } else {
-                const slotIdx=p.monthSlot!==undefined?p.monthSlot:getMonthSlot(allDueDates,p.date);
-                monthLabel=slotIdx>=0&&allDueDates[slotIdx]?fmtDate(allDueDates[slotIdx]):'—';
+                const si=p.monthSlot!==undefined?p.monthSlot:getMonthSlot(allDueDates,p.date);
+                monthLabel=si>=0&&allDueDates[si]?fmtDate(allDueDates[si]):'—';
             }
-
-            const rowClass=cp?'chit-picked':(isMulti?'multi-month-row':'');
-            return`<tr class="${rowClass}">
+            const slotNum = p.slotNum||1;
+            const slotCell = showSlotCol
+                ? `<td style="text-align:center;"><span style="background:rgba(245,158,11,0.18);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:2px 7px;font-size:0.65rem;font-weight:800;">Chit ${slotNum}</span></td>`
+                : '';
+            let rowClass=cp?'chit-picked':(isMulti?'multi-month-row':'');
+            let extraStyle='';
+            if(p._isExpanded){ extraStyle=p._groupIdx===0?'background:rgba(99,102,241,0.13);border-top:2px solid rgba(99,102,241,0.55);':'background:rgba(99,102,241,0.06);'; rowClass=''; }
+            const editBtn=p._isExpanded?`<button class="btn-edit-sm" onclick="openEditPayment('${p._parentId}')" style="font-size:0.6rem;padding:3px 7px;opacity:0.65;">✏️</button>`:`<button class="btn-edit-sm" onclick="openEditPayment('${p.id}')" style="font-size:0.6rem;padding:3px 7px;">✏️</button>`;
+            return `<tr class="${rowClass}" style="${extraStyle}">
                 <td style="color:var(--text-dim);font-weight:700;">${idx+1}</td>
-                <td style="color:#a5b4fc;font-weight:700;white-space:normal;min-width:90px;font-size:0.62rem;">${monthLabel}${isMulti?`<br><span class="multi-month-badge">📅 ${p.numMonths} months</span>`:''}</td>
+                ${slotCell}
+                <td style="color:#a5b4fc;font-weight:700;white-space:normal;min-width:90px;font-size:0.62rem;">${monthLabel}${isMulti?`<br><span class="multi-month-badge">📅 ${p.numMonths} mo</span>`:''}</td>
                 <td>${fmtDate(p.date)}</td>
                 <td style="color:#c4b5fd;">${fmtAmt(p.chit)}${isMulti?`<span style="font-size:0.55rem;color:var(--text-dim);display:block;">/mo × ${p.numMonths}</span>`:''}</td>
                 <td style="color:#34d399;font-weight:700;">${fmtAmt(p.paid)}</td>
                 <td style="color:#f59e0b;">${fmtAmt(p.balance)}</td>
                 <td style="color:var(--text-dim);font-size:0.6rem;">${p.paidBy||'—'}</td>
-                <td>${cp
-                    ?`<div><span class="chit-yes-badge">✅ Picked</span>${p.chitPickedBy?`<div style="font-size:0.58rem;color:var(--text-dim);margin-top:3px;">by ${p.chitPickedBy}</div>`:''}</div>`
-                    :'<span class="chit-no">—</span>'}</td>
-                <td><button class="btn-edit-sm" onclick="openEditPayment('${p.id}')" style="font-size:0.6rem;padding:3px 7px;">✏️</button></td>
+                <td>${cp?`<span class="chit-yes-badge">✅ Picked</span>`:'—'}</td>
+                <td>${editBtn}</td>
             </tr>`;
         }).join('');
 
-        return`<div style="margin-bottom:12px;">
-            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:10px 14px;border:1px solid var(--border);border-bottom:none;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-                <div>
-                    <div style="font-size:0.8rem;font-weight:800;color:#f39c12;margin-bottom:4px;">📂 ${grp.name}${enr.label?` <span style="font-size:0.65rem;background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 6px;color:#f39c12;">${enr.label}</span>`:''}</div>
-                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                        <span style="font-size:0.58rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:5px;padding:1px 6px;color:#a5b4fc;">🗓 Started: ${gStartDisplay}</span>
-                        ${grp.dueDay?`<span style="font-size:0.58rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:5px;padding:1px 6px;color:#f39c12;">📅 Due: ${gDueDayOrd}</span>`:''}
-                        ${multiMonthCount>0?`<span style="font-size:0.58rem;background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.35);border-radius:5px;padding:1px 6px;color:#a5b4fc;">📦 ${multiMonthCount} bulk payment${multiMonthCount>1?'s':''}</span>`:''}
-                    </div>
-                </div>
-                <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-size:1rem;font-weight:800;color:#a5b4fc;">${left}<span style="font-size:0.62rem;color:var(--text-dim);">/${totalMonths}</span></div>
-                    <div style="font-size:0.55rem;color:var(--text-dim);text-transform:uppercase;">months pending</div>
-                </div>
+        return `<div style="margin-bottom:12px;">
+            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:10px 14px;border:1px solid var(--border);border-bottom:none;display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:0.8rem;font-weight:800;color:#f39c12;">📂 ${grp.name}</div>
+                <div style="text-align:right;"><div style="font-size:1rem;font-weight:800;color:#a5b4fc;">${left}<span style="font-size:0.62rem;color:var(--text-dim);">/${totalMonths}</span></div></div>
             </div>
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;">
-                <div onclick="toggleLedgerTable('${tableId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
-                    <span style="font-size:0.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;">Payment History (${pays.length} entries)</span>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:0.65rem;color:#34d399;">${fmtAmt(tPaid)} paid</span>
-                        ${tBal>0?`<span style="font-size:0.65rem;color:#f59e0b;">${fmtAmt(tBal)} bal</span>`:''}
-                        <span style="font-size:0.8rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">▶</span>
-                    </div>
+                <div onclick="toggleLedgerTable('${tableId}',this)" style="display:flex;justify-content:space-between;padding:9px 14px;cursor:pointer;">
+                    <span style="font-size:0.65rem;color:var(--text-dim);">History</span>
+                    <span class="ledger-chevron">▶</span>
                 </div>
                 <div id="${tableId}" style="display:none;">
-                    <div style="overflow-x:auto;"><table class="table-custom">
-                        <thead><tr><th>#</th><th>Month(s) Covered</th><th>Pay Date</th><th>Chit/Mo</th><th>Total Paid</th><th>Balance</th><th>Mode</th><th>Chit Picked Amt</th><th></th></tr></thead>
-                        <tbody>${rows||`<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:16px;">No payments yet</td></tr>`}
-                        ${pays.length?`<tr style="font-weight:800;background:rgba(255,255,255,.04);">
-                            <td colspan="4" style="color:var(--text-dim);">Total</td>
-                            <td style="color:#34d399;">${fmtAmt(tPaid)}</td>
-                            <td style="color:#f59e0b;">${fmtAmt(tBal)}</td>
-                            <td colspan="3"></td>
-                        </tr>`:''}
-                        </tbody>
-                    </table></div>
-                    ${multiMonthCount>0?`<div style="padding:8px 14px 10px;font-size:0.62rem;color:#a5b4fc;border-top:1px solid var(--border);">
-                        <span style="margin-right:6px;">📅</span> Purple rows = multi-month bulk payments
-                    </div>`:''}
+                    <table class="table-custom">
+                        <thead><tr><th>#</th>${showSlotCol?'<th>Chit</th>':''}<th>Month</th><th>Pay Date</th><th>Chit/Mo</th><th>Paid</th><th>Bal</th><th>Mode</th><th>Pick</th><th></th></tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
                 </div>
             </div>
         </div>`;
     }).join('');
 
-    const isMember = CURRENT_USER && CURRENT_USER.role === 'member';
-    const ledgerHtml = `
-        <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;padding-top:4px;">
-            <div style="width:44px;height:44px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;">${ini(m.name)}</div>
-            <div style="flex:1;">
-                <div style="font-size:1rem;font-weight:800;">${m.name}</div>
-                <div style="font-size:0.68rem;color:var(--text-dim);">${mPays.length} payments · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
-            </div>
-            ${!isMember?`<div style="display:flex;gap:6px;">
-                <button class="btn-edit-sm" onclick="openEditMember('${mid}')">✏️</button>
-                <button class="btn-pdf" onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:7px 14px;font-size:0.75rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;">🖨️ Print</button>
-            </div>`:`<button onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:8px 16px;font-size:0.8rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;">🖨️ Print Statement</button>`}
-        </div>
-        ${payTablesHtml||'<div style="text-align:center;color:var(--text-dim);padding:20px;">No payments yet</div>'}
-    `;
-
     if(isMember){
-        document.getElementById('memberLedgerData').innerHTML = ledgerHtml;
+        document.getElementById('memberLedgerData').innerHTML = payTablesHtml;
         document.getElementById('mhGroups').textContent = memberGroups.length;
         document.getElementById('mhTotalPaid').textContent = fmtAmt(totalPaid);
         document.getElementById('mhBalance').textContent = fmtAmt(totalBal);
     } else {
-        document.getElementById('ledgerData').innerHTML = ledgerHtml;
+        document.getElementById('ledgerData').innerHTML = payTablesHtml;
     }
 }
 
 // ══════════════════════════════════════════
 // MEMBER CRUD
 // ══════════════════════════════════════════
-// ── Enrollment helper: generate unique ID
 function genEnrollId(){ return 'enr_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
 
-// ── Render enrollment rows inside the member modal
 let _enrollGroupOptions = [];
 
 async function openAddMember(){
@@ -976,11 +1087,9 @@ async function openAddMember(){
     document.getElementById('mName').value='';
     document.getElementById('mPhone').value='';
     document.getElementById('editMemberId').value='';
-    document.getElementById('memberModalTitle').textContent='👤 Create Member';
-    document.getElementById('deleteMemberArea').style.display='none';
-    _enrollGroupOptions = await getCollection('groups');
     document.getElementById('enrollmentList').innerHTML='';
-    addEnrollmentRow(); // start with one empty row
+    _enrollGroupOptions = await getCollection('groups');
+    addEnrollmentRow();
     openModal('memberModal');
 }
 
@@ -991,23 +1100,15 @@ async function openEditMember(mid){
     document.getElementById('editMemberId').value=m.id;
     document.getElementById('mName').value=m.name||'';
     document.getElementById('mPhone').value=m.phone||'';
-    document.getElementById('memberModalTitle').textContent='✏️ Edit Member';
-    document.getElementById('deleteMemberArea').style.display='block';
     _enrollGroupOptions = await getCollection('groups');
     const list = document.getElementById('enrollmentList');
     list.innerHTML='';
-
-    // Support both old (groupIds array) and new (enrollments array) format
-    let enrollments = m.enrollments;
-    if(!enrollments || !enrollments.length){
-        // Migrate legacy groupIds
-        enrollments = (m.groupIds||[]).map(gid=>({enrollmentId: genEnrollId(), groupId: gid, label:''}));
-    }
-    enrollments.forEach(e=> addEnrollmentRow(e.groupId, e.label, e.enrollmentId));
+    let enrollments = m.enrollments || (m.groupIds||[]).map(gid=>({enrollmentId: genEnrollId(), groupId: gid, label:''}));
+    enrollments.forEach(e=> addEnrollmentRow(e.groupId, e.label, e.enrollmentId, e.qty||1));
     openModal('memberModal');
 }
 
-function addEnrollmentRow(groupId='', label='', enrollmentId=''){
+function addEnrollmentRow(groupId='', label='', enrollmentId='', qty=1){
     const id = enrollmentId || genEnrollId();
     const opts = _enrollGroupOptions.map(g=>`<option value="${g.id}" ${g.id===groupId?'selected':''}>${g.name}</option>`).join('');
     const row = document.createElement('div');
@@ -1015,64 +1116,38 @@ function addEnrollmentRow(groupId='', label='', enrollmentId=''){
     row.dataset.enrollmentId = id;
     row.style.cssText='display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:8px 10px;';
     row.innerHTML=`
-        <select class="enr-group form-input" style="flex:2;margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
-            <option value="">-- Select Group --</option>${opts}
-        </select>
-        <input type="text" class="enr-label form-input" placeholder="Label (optional, e.g. Round 2)" value="${label}"
-            style="flex:2;margin-bottom:0;padding:8px 10px;font-size:0.82rem;" title="Add a label to distinguish if same group enrolled twice">
-        <button type="button" onclick="this.closest('.enrollment-row').remove()"
-            style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 10px;font-size:0.85rem;cursor:pointer;flex-shrink:0;">✕</button>`;
+        <select class="enr-group form-input" style="flex:3;margin-bottom:0;">${opts}</select>
+        <input type="number" class="enr-qty form-input" value="${qty}" style="width:50px;margin-bottom:0;text-align:center;">
+        <input type="text" class="enr-label form-input" placeholder="Label" value="${label}" style="flex:2;margin-bottom:0;">
+        <button type="button" onclick="this.closest('.enrollment-row').remove()" style="color:#f87171;">✕</button>`;
     document.getElementById('enrollmentList').appendChild(row);
 }
 
 async function saveMember(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
     const n=document.getElementById('mName').value.trim();
     const p=document.getElementById('mPhone').value.trim();
     const eid=document.getElementById('editMemberId').value;
-    if(!n) return showToast('❌ Enter member name',false);
-
-    // Collect enrollments from rows
     const rows = document.querySelectorAll('.enrollment-row');
     const enrollments = [];
-    const groupIds = []; // keep legacy field for backward compat
-    let valid = true;
+    const groupIds = [];
     rows.forEach(row=>{
         const gid = row.querySelector('.enr-group').value;
         const lbl = row.querySelector('.enr-label').value.trim();
-        const eid2 = row.dataset.enrollmentId;
-        if(!gid){ valid=false; return; }
-        enrollments.push({enrollmentId:eid2, groupId:gid, label:lbl});
+        const qty = parseInt(row.querySelector('.enr-qty').value)||1;
+        enrollments.push({enrollmentId:row.dataset.enrollmentId, groupId:gid, label:lbl, qty});
         if(!groupIds.includes(gid)) groupIds.push(gid);
     });
-    if(!valid || enrollments.length===0) return showToast('❌ Select a group for each enrollment row',false);
-
     const data = {name:n, phone:p, enrollments, groupIds};
     if(eid) await db.collection('members').doc(eid).update(data);
     else await db.collection('members').add(data);
-    bustCache('members');
-    closeModal('memberModal');
-    showToast(`✅ Member "${n}" saved with ${enrollments.length} enrollment${enrollments.length!==1?'s':''}!`);
-    updateUI();
+    bustCache('members'); closeModal('memberModal'); updateUI();
 }
 
 function deleteMemberFromModal(){
-    const eid=document.getElementById('editMemberId').value;if(!eid)return;
-    const name=document.getElementById('mName').value;
-    showConfirm('🗑','Delete Member?',`This will permanently delete "${name}" and ALL their payment records.`,async()=>{
-        const pays=await db.collection('payments').where('memberId','==',eid).get();
-        const batch=db.batch();
-        pays.docs.forEach(d=>batch.delete(d.ref));
-        await batch.commit();
+    const eid=document.getElementById('editMemberId').value;
+    showConfirm('🗑','Delete Member?','Sure?',async()=>{
         await db.collection('members').doc(eid).delete();
-        bustCache('members');bustCache('payments');
-        closeModal('memberModal');
-        if(document.getElementById('summaryView').value===eid){
-            document.getElementById('summaryView').value='';
-            document.getElementById('summarySearch').value='';
-            document.getElementById('ledgerData').innerHTML='';
-        }
-        showToast('🗑 Member & all payments deleted');updateUI();
+        bustCache('members'); closeModal('memberModal'); updateUI();
     });
 }
 
@@ -1080,55 +1155,31 @@ function deleteMemberFromModal(){
 // GROUP CRUD
 // ══════════════════════════════════════════
 function openAddGroup(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    document.getElementById('gName').value='';
-    document.getElementById('gDuration').value='';
-    document.getElementById('gDueDay').value='';
-    document.getElementById('gStart').value='';
-    document.getElementById('editGroupId').value='';
-    document.getElementById('groupModalTitle').textContent='🏦 New Group';
-    document.getElementById('deleteGroupArea').style.display='none';
-    openModal('groupModal');
+    document.getElementById('gName').value=''; document.getElementById('gDuration').value='';
+    document.getElementById('gDueDay').value=''; document.getElementById('gStart').value='';
+    document.getElementById('editGroupId').value=''; openModal('groupModal');
 }
 
 async function openEditGroup(gid){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const gs=await getCollection('groups');const g=gs.find(x=>x.id===gid);if(!g)return;
+    const gs=await getCollection('groups');const g=gs.find(x=>x.id===gid);
     document.getElementById('editGroupId').value=g.id;
-    document.getElementById('gName').value=g.name||'';
-    document.getElementById('gDuration').value=g.duration||g.gDuration||'';
-    document.getElementById('gDueDay').value=g.dueDay||'';
-    document.getElementById('gStart').value=g.startDate||g.gStart||'';
-    document.getElementById('groupModalTitle').textContent='✏️ Edit Group';
-    document.getElementById('deleteGroupArea').style.display='block';
+    document.getElementById('gName').value=g.name;
+    document.getElementById('gDuration').value=g.duration||g.gDuration;
+    document.getElementById('gDueDay').value=g.dueDay;
+    document.getElementById('gStart').value=g.startDate||g.gStart;
     openModal('groupModal');
 }
 
 async function saveGroup(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
     const name=document.getElementById('gName').value.trim();
     const duration=document.getElementById('gDuration').value;
-    const dueDay=parseInt(document.getElementById('gDueDay').value)||null;
+    const dueDay=parseInt(document.getElementById('gDueDay').value);
     const startDate=document.getElementById('gStart').value;
     const eid=document.getElementById('editGroupId').value;
-    if(!name)return showToast('❌ Enter group name',false);
-    if(dueDay&&(dueDay<1||dueDay>31))return showToast('❌ Due Day must be 1–31',false);
-    const data={name,duration,startDate};
-    if(dueDay) data.dueDay=dueDay;
+    const data={name,duration,startDate,dueDay};
     if(eid)await db.collection('groups').doc(eid).update(data);
     else await db.collection('groups').add(data);
-    bustCache('groups');
-    closeModal('groupModal');showToast(`✅ Group "${name}" saved!`);updateUI();
-}
-
-function deleteGroupFromModal(){
-    const eid=document.getElementById('editGroupId').value;if(!eid)return;
-    const name=document.getElementById('gName').value;
-    showConfirm('🗑','Delete Group?',`This will permanently delete "${name}". Member assignments and payments will remain.`,async()=>{
-        await db.collection('groups').doc(eid).delete();
-        bustCache('groups');
-        closeModal('groupModal');showToast('🗑 Group deleted');updateUI();
-    });
+    bustCache('groups'); closeModal('groupModal'); updateUI();
 }
 
 // ══════════════════════════════════════════
@@ -1136,223 +1187,46 @@ function deleteGroupFromModal(){
 // ══════════════════════════════════════════
 function resetPaymentForm(){
     document.getElementById('pDate').value=new Date().toISOString().split('T')[0];
-    document.getElementById('pMemberSearch').value='';
-    document.getElementById('pMember').value='';
-    document.getElementById('pMemberList').style.display='none';
-    document.getElementById('pGroup').innerHTML='<option value="">-- Select Member First --</option>';
-    document.getElementById('pNumMonths').value='1';
-    document.getElementById('pChit').value='';
-    document.getElementById('pPaid').value='';
-    document.getElementById('pPaidBy').value='';
-    document.getElementById('pChitPicked').value='No';
-    document.getElementById('pChitPickedBy').value='';
-    document.getElementById('chitPickedNameDiv').style.display='none';
-    document.getElementById('multiMonthPreview').style.display='none';
-    document.getElementById('totalChitRef').style.display='none';
-    document.getElementById('perMonthLabel').textContent='';
-    document.getElementById('monthSelectorGrid').innerHTML='';
-    document.getElementById('selectedSummary').style.display='none';
-    const sel=document.getElementById('pChitPicked');
-    [...sel.options].forEach(o=>o.disabled=false);
-    sel.title='';
+    document.getElementById('pMemberSearch').value=''; document.getElementById('pMember').value='';
+    document.getElementById('pGroup').innerHTML='<option value="">Select Member First</option>';
+    document.getElementById('pNumMonths').value='1'; document.getElementById('pChit').value='';
+    document.getElementById('pPaid').value=''; document.getElementById('pPaidBy').value='';
 }
 
-function openPaymentModal(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    resetPaymentForm();
-    openModal('paymentModal');
-}
+function openPaymentModal(){ openModal('paymentModal'); resetPaymentForm(); }
 
 async function linkGroupForPayment(){
     const mid=document.getElementById('pMember').value;
-    const ms=await getCollection('members');const m=ms.find(x=>x.id===mid);if(!m)return;
+    const ms=await getCollection('members');const m=ms.find(x=>x.id===mid);
     const gs=await getCollection('groups');
-
-    // Build options from enrollments (supports same group multiple times)
     let opts='';
-    if(m.enrollments && m.enrollments.length){
-        opts = m.enrollments.map(e=>{
-            const g=gs.find(x=>x.id===e.groupId);
-            if(!g)return'';
-            const dispLabel = e.label ? ` (${e.label})` : '';
-            return `<option value="${e.groupId}" data-enrollment-id="${e.enrollmentId}">${g.name}${dispLabel}</option>`;
-        }).join('');
-    } else {
-        // Legacy fallback
-        opts = gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id)).map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
-    }
-    document.getElementById('pGroup').innerHTML = opts || '<option value="">No groups assigned</option>';
-
-    // Store enrollmentId on change
-    const sel = document.getElementById('pGroup');
-    sel.onchange = function(){
-        const chosen = sel.options[sel.selectedIndex];
-        document.getElementById('pEnrollmentId').value = chosen ? (chosen.dataset.enrollmentId||'') : '';
-        onGroupChange();
-    };
-    // Set initial enrollmentId
-    const first = sel.options[sel.selectedIndex];
-    document.getElementById('pEnrollmentId').value = first ? (first.dataset.enrollmentId||'') : '';
-    await onGroupChange();
-}
-
-async function onGroupChange(){
-    document.getElementById('pChit').value='';
-    document.getElementById('pPaid').value='';
-    document.getElementById('totalChitRef').style.display='none';
-    const mid=document.getElementById('pMember').value;
-    const gid=document.getElementById('pGroup').value;
-    if(mid&&gid){
-        const ps=await getCollection('payments');
-        const alreadyPicked=ps.some(p=>p.memberId===mid&&p.groupId===gid&&p.chitPicked==='Yes');
-        const sel=document.getElementById('pChitPicked');
-        if(alreadyPicked){
-            sel.value='No';
-            [...sel.options].forEach(o=>{if(o.value==='Yes')o.disabled=true;});
-            sel.title='This member already picked the chit in this group';
-            document.getElementById('chitPickedNameDiv').style.display='none';
-        } else {
-            [...sel.options].forEach(o=>o.disabled=false);
-            sel.title='';
+    m.enrollments.forEach(e=>{
+        const g=gs.find(x=>x.id===e.groupId);
+        const qty = parseInt(e.qty||1);
+        for(let i=1; i<=qty; i++){
+            opts += `<option value="${e.groupId}" data-enrollment-id="${e.enrollmentId}" data-slot="${i}">${g.name} (Chit ${i})</option>`;
         }
-    }
-    if(document.getElementById('pNumMonths').value==='multi') await buildMonthSelectorGrid();
+    });
+    document.getElementById('pGroup').innerHTML = opts;
 }
 
 async function savePayment(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
     const mid=document.getElementById('pMember').value;
-    const gid=document.getElementById('pGroup').value;
+    const sel=document.getElementById('pGroup');
+    const opt=sel.options[sel.selectedIndex];
+    const gid=sel.value;
     const date=document.getElementById('pDate').value;
-    const chitPerMonth=parseFloat(document.getElementById('pChit').value)||0;
+    const chit=parseFloat(document.getElementById('pChit').value)||0;
     const paid=parseFloat(document.getElementById('pPaid').value)||0;
-    const paidBy=document.getElementById('pPaidBy').value;
-    const chitPicked=document.getElementById('pChitPicked').value;
-    const chitPickedBy=document.getElementById('pChitPickedBy').value.trim();
-    const isMulti=document.getElementById('pNumMonths').value==='multi';
-
-    if(!mid)return showToast('❌ Select a member',false);
-    if(!gid)return showToast('❌ Select a group',false);
-    if(!date)return showToast('❌ Enter date',false);
-    if(!paid)return showToast('❌ Enter amount paid',false);
-
-    if(chitPicked==='Yes'){
-        const ps=await getCollection('payments');
-        const alreadyPicked=ps.some(p=>p.memberId===mid&&p.groupId===gid&&p.chitPicked==='Yes');
-        if(alreadyPicked)return showToast('❌ This member already picked the chit',false);
-    }
-
-    if(isMulti){
-        const monthSlots=getSelectedMonthSlots();
-        if(monthSlots.length===0)return showToast('❌ Select at least one month',false);
-        const numMonths=monthSlots.length;
-        const totalChit=chitPerMonth*numMonths;
-        const balance=Math.max(0,totalChit-paid);
-        const enrollmentId1 = document.getElementById('pEnrollmentId').value||'';
-        await db.collection('payments').add({
-            memberId:mid, groupId:gid, enrollmentId:enrollmentId1, date,
-            chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
-            numMonths, monthSlots, monthSlot:monthSlots[0],
-            paidPerMonth:paid/numMonths, balPerMonth:balance/numMonths
-        });
-        bustCache('payments');
-        showToast(`✅ ${numMonths}-month payment saved!`);
-    } else {
-        const gs=await getCollection('groups');
-        const grp=gs.find(g=>g.id===gid);
-        const dueDates=grp?getGroupDueDates(grp):[];
-        const slotIdx=getMonthSlot(dueDates,date);
-        const balance=Math.max(0,chitPerMonth-paid);
-        const enrollmentId2 = document.getElementById('pEnrollmentId').value||'';
-        await db.collection('payments').add({
-            memberId:mid, groupId:gid, enrollmentId:enrollmentId2, date,
-            chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
-            numMonths:1, monthSlot:slotIdx>=0?slotIdx:null,
-            monthSlots:slotIdx>=0?[slotIdx]:[]
-        });
-        bustCache('payments');
-        showToast('✅ Payment saved!');
-    }
-
-    closeModal('paymentModal');
-    updateUI();
-    if(document.getElementById('summaryView').value===mid) loadMemberLedger();
-}
-
-// ══════════════════════════════════════════
-// EDIT / DELETE EXISTING PAYMENT
-// ══════════════════════════════════════════
-async function openEditPayment(pid){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const ps=await getCollection('payments');
-    const p=ps.find(x=>x.id===pid);if(!p)return;
-    document.getElementById('epId').value=pid;
-    document.getElementById('epDate').value=p.date||'';
-    document.getElementById('epChit').value=p.chit||'';
-    document.getElementById('epPaid').value=p.paid||'';
-    document.getElementById('epBal').value=p.balance||'';
-    document.getElementById('epPaidBy').value=p.paidBy||'';
-    document.getElementById('epChitPicked').value=p.chitPicked||'No';
-    document.getElementById('epChitPickedBy').value=p.chitPickedBy||'';
-    document.getElementById('epChitPickedNameDiv').style.display=p.chitPicked==='Yes'?'block':'none';
-
-    const infoBox=document.getElementById('epMultiMonthInfo');
-    const detailEl=document.getElementById('epMultiMonthDetail');
-    if(p.numMonths&&p.numMonths>1){
-        infoBox.style.display='block';
-        const gs=await getCollection('groups');
-        const grp=gs.find(g=>g.id===p.groupId);
-        let slotLabels='';
-        if(grp&&p.monthSlots){
-            const dueDates=getGroupDueDates(grp);
-            slotLabels=p.monthSlots.map((s,i)=>dueDates[s]?fmtDate(dueDates[s]):`Month ${s+1}`).join(' → ');
-        }
-        detailEl.innerHTML=`Covers <strong>${p.numMonths} months</strong>${slotLabels?': '+slotLabels:''}`;
-    } else {
-        infoBox.style.display='none';
-    }
-
-    openModal('editPaymentModal');
-}
-
-function epCalcBalance(){
-    const chit=parseFloat(document.getElementById('epChit').value)||0;
-    const paid=parseFloat(document.getElementById('epPaid').value)||0;
-    document.getElementById('epBal').value=Math.max(0,chit-paid);
-}
-function epTogglePickedName(){
-    document.getElementById('epChitPickedNameDiv').style.display=document.getElementById('epChitPicked').value==='Yes'?'block':'none';
-}
-
-async function saveEditPayment(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const pid=document.getElementById('epId').value;if(!pid)return;
-    const date=document.getElementById('epDate').value;
-    const chit=parseFloat(document.getElementById('epChit').value)||0;
-    const paid=parseFloat(document.getElementById('epPaid').value)||0;
-    const balance=Math.max(0,chit-paid);
-    const paidBy=document.getElementById('epPaidBy').value;
-    const chitPicked=document.getElementById('epChitPicked').value;
-    const chitPickedBy=document.getElementById('epChitPickedBy').value.trim();
-    if(!date)return showToast('❌ Enter date',false);
-    if(!paid)return showToast('❌ Enter amount paid',false);
-    await db.collection('payments').doc(pid).update({date,chit,paid,balance,paidBy,chitPicked,chitPickedBy});
-    bustCache('payments');
-    closeModal('editPaymentModal');showToast('✅ Payment updated!');updateUI();
-    const mid=document.getElementById('summaryView').value;
-    if(mid)loadMemberLedger();
-}
-
-async function deletePayment(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const pid=document.getElementById('epId').value;if(!pid)return;
-    showConfirm('🗑','Delete Payment?','This will permanently delete this payment record.',async()=>{
-        await db.collection('payments').doc(pid).delete();
-        bustCache('payments');
-        closeModal('editPaymentModal');showToast('🗑 Payment deleted');updateUI();
-        const mid=document.getElementById('summaryView').value;
-        if(mid)loadMemberLedger();
+    const enrollmentId = opt.dataset.enrollmentId;
+    const slotNum = parseInt(opt.dataset.slot);
+    
+    await db.collection('payments').add({
+        memberId:mid, groupId:gid, enrollmentId, slotNum, date,
+        chit, paid, balance: Math.max(0, chit-paid),
+        numMonths:1, monthSlot:0, monthSlots:[0]
     });
+    bustCache('payments'); closeModal('paymentModal'); updateUI();
 }
 
 // ══════════════════════════════════════════
@@ -1360,589 +1234,82 @@ async function deletePayment(){
 // ══════════════════════════════════════════
 async function renderGroupsTab(){
     const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');
-    if(!gs.length){document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';return;}
     document.getElementById('groupListArea').innerHTML=gs.map((g,gIdx)=>{
-        const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
+        const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id));
         const gPays=ps.filter(p=>p.groupId===g.id);
-        const tPaid=gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal=gPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const picked=gPays.filter(p=>p.chitPicked==='Yes').length;
-        const totalMonths=parseInt(g.duration||g.gDuration)||21;
-        let elapsed=0;
-        if(g.startDate||g.gStart){const _s=new Date(g.startDate||g.gStart),_n=new Date();elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));}
-        const left=Math.max(0,totalMonths-elapsed);const pct=Math.min(100,Math.round(elapsed/totalMonths*100));
+        const bodyId=`grpBody_${gIdx}`;
+        
+        const expandedSlots=[];
+        gMs.forEach(m=>{
+            const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
+            const qty=enr?parseInt(enr.qty||1):1;
+            for(let q=0;q<qty;q++) expandedSlots.push({m,slotNum:q+1});
+        });
 
-        const memberRows=gMs.map((m,i)=>{
-            const mp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
+        const rows = expandedSlots.map(({m,slotNum},i)=>{
+            const mp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id&&p.slotNum===slotNum);
             const paid=mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
             const bal=mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-            const pickedPay=mp.find(p=>p.chitPicked==='Yes');
-            const pickedAmt=pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
-            const pickedBy=pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
-            const monthsCovered=mp.reduce((s,p)=>s+(p.numMonths||1),0);
-            return`<tr${pickedPay?' class="chit-picked"':''}>
+            return `<tr>
                 <td>${i+1}</td>
-                <td><strong>${m.name}</strong><br><span style="font-size:0.6rem;color:var(--text-dim);">${m.phone||''}</span></td>
+                <td><strong>${m.name}</strong> (Chit ${slotNum})</td>
                 <td style="color:#34d399;">${fmtAmt(paid)}</td>
                 <td style="color:#f59e0b;">${fmtAmt(bal)}</td>
-                <td style="color:#a5b4fc;font-size:0.65rem;">${monthsCovered}/${totalMonths}</td>
-                <td>${pickedPay
-                    ?`<div><span class="chit-yes-badge">✅ Picked</span><div style="color:#34d399;font-weight:800;font-size:0.72rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.58rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
-                    :'<span class="chit-no">—</span>'}</td>
-                <td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button></td>
-            </tr>`;}).join('');
+                <td>
+                    <button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button>
+                    <button class="btn-whatsapp-sm" onclick="sendWhatsAppReminder('${m.id}', '${g.id}')">📲 Reminder</button>
+                </td>
+            </tr>`;
+        }).join('');
 
-        const gStartDisp=fmtDate(g.startDate||g.gStart||'');
-        const gDueDayDisp=g.dueDay?`${g.dueDay}${['st','nd','rd'][((g.dueDay%100-11)%10)-1]||'th'} of month`:'—';
-        const bodyId=`grpBody_${gIdx}`;
         return`<div class="group-card">
             <div class="group-card-header" onclick="toggleGroupCard('${bodyId}',this)">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                    <div>
-                        <div style="font-size:1rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
-                        <div style="font-size:0.68rem;color:var(--text-dim);">${gMs.length} members · ${gPays.length} payment entries</div>
-                        <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
-                            <span style="font-size:0.62rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:2px 7px;color:#a5b4fc;">🗓 Started: ${gStartDisp}</span>
-                            ${g.dueDay?`<span style="font-size:0.62rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:2px 7px;color:#f39c12;">📅 Due: ${gDueDayDisp}</span>`:''}
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                        <button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:5px 10px;font-size:0.7rem;">📄 PDF</button>
-                        <button onclick="openEditGroup('${g.id}');event.stopPropagation();" class="btn-edit-sm">✏️ Edit</button>
-                        <span class="chevron-icon closed">▼</span>
-                    </div>
+                <div style="display:flex;justify-content:space-between;">
+                    <div style="font-size:1rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
+                    <span class="chevron-icon closed">▼</span>
                 </div>
-                <div class="row g-2 mt-2">
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Collected</div><div class="mini-stat-val" style="color:#34d399;">${fmtAmt(tPaid)}</div></div></div>
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #f59e0b;"><div class="mini-stat-lbl">Balance</div><div class="mini-stat-val" style="color:#f59e0b;">${fmtAmt(tBal)}</div></div></div>
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #a5b4fc;"><div class="mini-stat-lbl">Pending</div><div class="mini-stat-val" style="color:#a5b4fc;">${left}/${totalMonths}</div></div></div>
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Picked</div><div class="mini-stat-val" style="color:#34d399;">${picked}</div></div></div>
-                </div>
-                <div class="prog-bar-outer mt-2"><div class="prog-bar-inner" style="width:${pct}%"></div></div>
-                <div class="prog-label" style="margin-top:3px;"><span>Month ${elapsed}/${totalMonths}</span><span>${left}/${totalMonths} months pending</span></div>
             </div>
-            <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
-                ${gMs.length?`<div style="overflow-x:auto;"><table class="table-custom">
-                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Chit Picked Amt</th><th></th></tr></thead>
-                    <tbody>${memberRows}</tbody>
-                </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:0.8rem;padding:10px;">No members yet</div>'}
+            <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;">
+                <table class="table-custom">
+                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Bal</th><th></th></tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
             </div>
         </div>`;
     }).join('');
 }
 
-
 function toggleGroupCard(bodyId, header){
     const body=document.getElementById(bodyId);
-    const chevron=header.querySelector('.chevron-icon');
-    if(!body) return;
-    const isOpen=body.style.maxHeight!=='0px'&&!body.classList.contains('collapsed');
-    if(isOpen){
-        body.style.maxHeight='0px';body.style.opacity='0';body.style.marginTop='0';
-        if(chevron){chevron.classList.remove('open');chevron.classList.add('closed');}
-    } else {
-        body.style.maxHeight='2000px';body.style.opacity='1';body.style.marginTop='12px';
-        if(chevron){chevron.classList.remove('closed');chevron.classList.add('open');}
-    }
+    const isOpen=body.style.maxHeight!=='0px';
+    body.style.maxHeight=isOpen?'0px':'2000px';
+    body.style.opacity=isOpen?'0':'1';
 }
 
 function toggleLedgerTable(id, header){
     const el=document.getElementById(id);
-    if(!el)return;
-    const chevron=header.querySelector('.ledger-chevron');
-    const isOpen=el.style.display!=='none';
-    el.style.display=isOpen?'none':'block';
-    if(chevron)chevron.style.transform=isOpen?'rotate(0deg)':'rotate(90deg)';
+    el.style.display=el.style.display==='none'?'block':'none';
 }
 
 async function renderListTab(){
     const gs=await getCollection('groups');const ms=await getCollection('members');
-
-    // ── Existing member list (unchanged)
     document.getElementById('simpleListArea').innerHTML=gs.map((g,gi)=>{
-        const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
+        const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id));
         const listId=`listGroup_${gi}`;
         return`<div class="list-group-header" onclick="toggleListGroup('${listId}',this)">
             <span>${g.name}</span>
-            <span style="display:flex;align-items:center;gap:8px;">
-                <span style="font-size:0.72rem;color:var(--text-dim);">${gMs.length} members</span>
-                <span class="list-chevron" style="font-size:0.8rem;color:var(--text-dim);transition:transform .25s;transform:rotate(-90deg);">▼</span>
-            </span>
+            <span class="list-chevron">▼</span>
         </div>
         <div id="${listId}" style="display:none;">
-            ${gMs.map((m,i)=>`<div style="padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:10px;">
-                <span style="width:28px;color:var(--text-dim);font-size:0.72rem;">${i+1}.</span>
-                <span style="flex:1;font-size:0.9rem;">${m.name}</span>
-                <span style="font-size:0.72rem;color:var(--text-dim);">${m.phone||''}</span>
-                <button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button>
-            </div>`).join('')}
+            ${gMs.map(m=>`<div style="padding:10px 20px;">${m.name} <button onclick="openEditMember('${m.id}')">✏️</button></div>`).join('')}
         </div>`;
-    }).join('')||'<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';
-
-
-
-// ══════════════════════════════════════════
-// NEW CHIT PLANNER (standalone, no Firestore)
-// ══════════════════════════════════════════
-function ncpGetDueDate(base, monthIndex, dueDay){
-    if(!base) return '—';
-    const d = new Date(base.getFullYear(), base.getMonth() + monthIndex, 1);
-    const maxDay = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
-    return new Date(d.getFullYear(), d.getMonth(), Math.min(dueDay, maxDay))
-        .toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-}
-
-function ncpUpdateTotalsAndPct(){
-    const rows = document.querySelectorAll('#ncp_rows .ncp-row');
-    let totalPay = 0;
-    rows.forEach(row => { totalPay += parseFloat(row.querySelector('.ncp-pay').value)||0; });
-    const totalPayout = Array.from(rows).reduce((s,row)=>s+(parseFloat(row.querySelector('.ncp-chit').value)||0),0);
-    const tpEl = document.getElementById('ncp_totalPay');
-    const tcEl = document.getElementById('ncp_totalPayout');
-    if(tpEl) tpEl.textContent = '₹'+totalPay.toLocaleString('en-IN');
-    if(tcEl) tcEl.textContent = '₹'+totalPayout.toLocaleString('en-IN');
-    rows.forEach(row => {
-        const cp = parseFloat(row.querySelector('.ncp-chit').value)||0;
-        const pct = totalPay>0 ? ((cp/totalPay)*100).toFixed(1) : '—';
-        const pctNum = totalPay>0 ? (cp/totalPay)*100 : 0;
-        const el = row.querySelector('.ncp-pct');
-        if(el){
-            el.textContent = pct!=='—' ? pct+'%' : '—';
-            el.style.color = pctNum>=100?'#34d399':pctNum>=80?'#f59e0b':'#f87171';
-        }
-    });
-}
-
-function ncpGenerate(){
-    const amount   = parseFloat(document.getElementById('ncp_amount').value)||0;
-    const members  = parseInt(document.getElementById('ncp_members').value)||0;
-    const duration = parseInt(document.getElementById('ncp_duration').value)||0;
-    const startVal = document.getElementById('ncp_start').value;
-    const dueDay   = parseInt(document.getElementById('ncp_dueday').value)||1;
-    if(!duration){ showToast('❌ Enter Duration (months)', false); return; }
-    if(!amount)  { showToast('❌ Enter Chit Amount', false); return; }
-    const base = startVal ? new Date(startVal) : null;
-    const monthlyPay = members>0 ? Math.round(amount/members) : 0;
-    const chips = [
-        ['Duration', duration+' mo'],
-        ['Members', members||'—'],
-        ['Chit Amt', amount?'₹'+amount.toLocaleString('en-IN'):'—'],
-        ['Monthly Pay', monthlyPay?'₹'+monthlyPay.toLocaleString('en-IN'):'—'],
-        ['Start', base?base.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):'—'],
-        ['Due Day', dueDay],
-    ];
-    document.getElementById('ncp_chips').innerHTML = chips.map((c,i)=>`
-        <div style="flex:1;padding:8px 4px;text-align:center;${i<chips.length-1?'border-right:1px solid var(--border);':''}">
-            <div style="font-size:0.72rem;font-weight:800;color:#a5b4fc;">${c[1]}</div>
-            <div style="font-size:0.52rem;color:var(--text-dim);text-transform:uppercase;margin-top:1px;">${c[0]}</div>
-        </div>`).join('');
-    const rowsEl = document.getElementById('ncp_rows');
-    rowsEl.innerHTML = '';
-    for(let i=0;i<duration;i++){
-        const dueStr = ncpGetDueDate(base, i, dueDay);
-        const div = document.createElement('div');
-        div.className = 'ncp-row';
-        div.style.cssText = 'display:flex;gap:4px;align-items:center;';
-        div.innerHTML = `
-            <span style="width:30px;font-size:0.65rem;color:var(--text-dim);font-weight:700;text-align:center;flex-shrink:0;">${i+1}</span>
-            <span class="ncp-due" style="flex:1.2;font-size:0.62rem;color:#a5b4fc;white-space:nowrap;">${dueStr}</span>
-            <input type="number" class="ncp-pay form-input" value="${monthlyPay||''}" placeholder="Monthly Pay" style="flex:1;margin-bottom:0;padding:6px 7px;font-size:0.72rem;" oninput="ncpUpdateTotalsAndPct()">
-            <input type="number" class="ncp-chit form-input" value="" placeholder="Chit Payout" style="flex:1;margin-bottom:0;padding:6px 7px;font-size:0.72rem;" oninput="ncpUpdateTotalsAndPct()">
-            <span class="ncp-pct" style="width:60px;text-align:center;font-size:0.68rem;font-weight:800;color:var(--text-dim);">—</span>`;
-        rowsEl.appendChild(div);
-    }
-    document.getElementById('ncp_tableWrap').style.display = 'block';
-    ncpUpdateTotalsAndPct();
-    showToast('✅ Schedule generated — fill in Chit Payout per month', true);
-}
-
-function ncpPrint(){
-    const name       = document.getElementById('ncp_name').value.trim() || 'New Chit Group';
-    const memberName = document.getElementById('ncp_member').value.trim();
-    const amount     = parseFloat(document.getElementById('ncp_amount').value)||0;
-    const members    = parseInt(document.getElementById('ncp_members').value)||0;
-    const duration   = parseInt(document.getElementById('ncp_duration').value)||0;
-    const startVal   = document.getElementById('ncp_start').value;
-    const dueDay     = parseInt(document.getElementById('ncp_dueday').value)||1;
-    const base       = startVal ? new Date(startVal) : null;
-    const startDisp  = base ? base.toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'}) : '—';
-    const today      = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-    const monthlyPayBase = members>0 ? Math.round(amount/members) : 0;
-    const rows = document.querySelectorAll('#ncp_rows .ncp-row');
-    let totalPay=0;
-    const rowData=[];
-    rows.forEach((row,i)=>{
-        const mp = parseFloat(row.querySelector('.ncp-pay').value)||0;
-        const cp = parseFloat(row.querySelector('.ncp-chit').value)||0;
-        const due = row.querySelector('.ncp-due').textContent;
-        totalPay += mp;
-        rowData.push({i,mp,cp,due});
-    });
-    const tableRows = rowData.map(({i,mp,cp,due})=>{
-        const pct = totalPay>0 ? ((cp/totalPay)*100).toFixed(1) : '—';
-        const pctNum = totalPay>0 ? (cp/totalPay)*100 : 0;
-        const pctColor = pctNum>=100?'#065f46':pctNum>=80?'#92400e':'#991b1b';
-        return `<tr style="background:${i%2===0?'#f9fafb':'#fff'};">
-            <td style="text-align:center;color:#888;font-weight:700;">${i+1}</td>
-            <td>${due}</td>
-            <td style="color:#065f46;font-weight:700;">&#8377;${mp.toLocaleString('en-IN')}</td>
-            <td style="color:#92400e;font-weight:700;">${cp?'&#8377;'+cp.toLocaleString('en-IN'):'—'}</td>
-            <td style="text-align:center;font-weight:800;color:${pctColor};">${pct!=='—'?pct+'%':'—'}</td>
-            <td style="text-align:center;color:#ccc;font-size:8px;">____________________</td>
-        </tr>`;
     }).join('');
-    const printHTML=`<div id="gsContent">
-    <style>
-        #gsContent{font-family:Arial,sans-serif;color:#111;max-width:820px;margin:0 auto;padding:16px;}
-        #gsContent .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #f39c12;padding-bottom:10px;margin-bottom:14px;}
-        #gsContent .brand{font-size:20px;font-weight:900;color:#f39c12;}
-        #gsContent .info-box{background:#fffbf0;border:2px solid #f39c12;border-radius:8px;padding:12px 16px;margin-bottom:12px;}
-        #gsContent .chip{background:#fff;padding:6px 10px;font-size:9px;text-align:center;}
-        #gsContent .chip-v{font-size:13px;font-weight:800;margin-bottom:1px;}
-        #gsContent .chip-l{font-size:8px;color:#888;text-transform:uppercase;}
-        #gsContent table{width:100%;border-collapse:collapse;font-size:9.5px;margin-bottom:10px;}
-        #gsContent thead tr{background:#fef3c7;}
-        #gsContent th{border:1px solid #d1a832;padding:6px 8px;font-size:8px;text-transform:uppercase;color:#555;font-weight:800;}
-        #gsContent td{border:1px solid #e5e7eb;padding:6px 8px;}
-        #gsContent tfoot td{background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;}
-        #gsContent .notice{background:#fffbe6;border:1px solid #f5d060;border-radius:6px;padding:10px 14px;font-size:8.5px;color:#555;margin-bottom:12px;line-height:1.6;}
-        #gsContent .ftr{margin-top:14px;border-top:1px solid #ddd;padding-top:8px;display:flex;justify-content:space-between;font-size:8px;color:#aaa;}
-        #gsContent .pbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;}
-        #gsContent .pbtn{background:linear-gradient(90deg,#f39c12,#f57c00);color:#000;border:none;padding:10px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;}
-        #gsContent .cbtn{background:#eee;color:#333;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;}
-        @media print{body>*:not(#printOverlay){display:none!important;}#printOverlay{position:fixed!important;top:0!important;left:0!important;width:100%!important;background:white!important;z-index:99999!important;}#gsContent .pbar{display:none!important;}@page{size:A4;margin:10mm;}}
-    </style>
-    <div class="pbar">
-        <button class="pbtn" onclick="window.print()">🖨️ Print / Save as PDF</button>
-        <button class="cbtn" onclick="closePrintStatement()">✕ Close</button>
-    </div>
-    <div class="hdr">
-        <div><div class="brand">&#127942; AK CHIT FUNDS</div><div style="font-size:9px;color:#888;">Chit Fund Management &bull; Official Group Schedule</div></div>
-        <div style="text-align:right;"><div style="font-size:13px;font-weight:800;">CHIT SCHEDULE REPORT</div><div style="font-size:9px;color:#888;">Generated: ${today}</div></div>
-    </div>
-    <div class="info-box">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div style="font-size:16px;font-weight:900;">&#128194; ${name}</div>
-            ${memberName?`<div style="background:#fff8e1;border:1px solid #f5d060;border-radius:6px;padding:4px 10px;font-size:9px;font-weight:700;color:#92400e;white-space:nowrap;">&#128100; Prepared for: ${memberName}</div>`:''}
-        </div>
-        <div style="display:flex;gap:0;border:1px solid #e5c76b;border-radius:8px;overflow:hidden;">
-            <div class="chip" style="flex:1;border-right:1px solid #e5c76b;"><div class="chip-v">${duration}</div><div class="chip-l">Duration (Months)</div></div>
-            <div class="chip" style="flex:1;border-right:1px solid #e5c76b;"><div class="chip-v">${members||'—'}</div><div class="chip-l">Members</div></div>
-            <div class="chip" style="flex:1;border-right:1px solid #e5c76b;"><div class="chip-v">${dueDay}</div><div class="chip-l">Due Day / Month</div></div>
-            <div class="chip" style="flex:1;border-right:1px solid #e5c76b;"><div class="chip-v">${startDisp}</div><div class="chip-l">Start Date</div></div>
-            <div class="chip" style="flex:1;"><div class="chip-v" style="color:#065f46;">&#8377;${totalPay.toLocaleString('en-IN')}</div><div class="chip-l">Total Monthly Pay</div></div>
-        </div>
-    </div>
-    <div class="notice">&#128161; <b>How this Chit Works:</b> This group runs for <b>${duration} months</b> with <b>${members||'?'} members</b>. Chit amount is <b>&#8377;${amount.toLocaleString('en-IN')}</b>. Each member pays approx <b>&#8377;${monthlyPayBase.toLocaleString('en-IN')}/month</b>. Monthly pay increases gradually. Every member wins once over the full cycle.</div>
-    <table>
-        <thead><tr>
-            <th style="width:5%;text-align:center;">Month #</th>
-            <th style="width:18%;">Due Date</th>
-            <th style="width:22%;">Monthly Pay<br><span style="font-weight:400;font-size:7px;">(Amount each member pays)</span></th>
-            <th style="width:22%;">Chit Payout<br><span style="font-weight:400;font-size:7px;">(Prize the winner receives)</span></th>
-            <th style="width:13%;text-align:center;">% Return<br><span style="font-weight:400;font-size:7px;">(if picked this month)</span></th>
-            <th style="width:20%;text-align:center;">Chit Won By</th>
-        </tr></thead>
-        <tbody>${tableRows}</tbody>
-        <tfoot><tr>
-            <td colspan="2" style="text-align:right;padding-right:10px;font-size:8px;">GRAND TOTAL</td>
-            <td>&#8377;${totalPay.toLocaleString('en-IN')}</td>
-            <td></td><td></td><td></td>
-        </tr></tfoot>
-    </table>
-    <div class="ftr"><span>AK Chit Funds &bull; Admin Portal</span><span>${name} &bull; ${today}</span><span>CONFIDENTIAL</span></div>
-    </div>`;
-    let ov=document.getElementById('printOverlay');
-    if(!ov){ov=document.createElement('div');ov.id='printOverlay';ov.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99999;overflow-y:auto;padding:16px;';document.body.appendChild(ov);}
-    ov.innerHTML=printHTML;
-    ov.style.display='block';
-    showToast('✅ Ready — tap Print / Save as PDF',true);
 }
 
 function toggleListGroup(id,header){
     const el=document.getElementById(id);
-    const ch=header.querySelector('.list-chevron');
-    const open=el.style.display!=='none';
-    el.style.display=open?'none':'block';
-    ch.style.transform=open?'rotate(-90deg)':'rotate(0deg)';
+    el.style.display=el.style.display==='none'?'block':'none';
 }
-
-// ══════════════════════════════════════════
-// BACKUP / RESTORE
-// ══════════════════════════════════════════
-async function exportFullBackup(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const d={m:await getCollection('members'),g:await getCollection('groups'),p:await getCollection('payments')};
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,2)],{type:'application/json'}));
-    a.download=`AK_Chit_Backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();showToast('✅ Backup downloaded!');
-}
-
-async function exportToExcel(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    showToast('⏳ Generating Excel…',true);
-    const members=await getCollection('members');
-    const groups=await getCollection('groups');
-    const payments=await getCollection('payments');
-    const wb=XLSX.utils.book_new();
-    const today=new Date().toISOString().split('T')[0];
-
-    const mRows=members.map(m=>({'Name':m.name||'','Phone':m.phone||'','Groups':((m.groupIds||[]).map(gid=>{const g=groups.find(x=>x.id===gid);return g?g.name:gid;})).join(', ')}));
-    const wsM=XLSX.utils.json_to_sheet(mRows.length?mRows:[{'Name':'','Phone':'','Groups':''}]);
-    wsM['!cols']=[{wch:28},{wch:16},{wch:40}];
-    XLSX.utils.book_append_sheet(wb,wsM,'Members');
-
-    const gRows=groups.map(g=>{
-        const gPays=payments.filter(p=>p.groupId===g.id);
-        const gMs=members.filter(m=>m.groupIds&&m.groupIds.includes(g.id));
-        return{'Group Name':g.name||'','Duration (Months)':g.duration||g.gDuration||'','Start Date':g.startDate||g.gStart||'','Due Day':g.dueDay||'','Members':gMs.length,'Total Collected':gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0),'Total Balance':gPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0),'Chits Picked':gPays.filter(p=>p.chitPicked==='Yes').length};
-    });
-    const wsG=XLSX.utils.json_to_sheet(gRows.length?gRows:[{}]);
-    wsG['!cols']=[{wch:24},{wch:18},{wch:14},{wch:10},{wch:10},{wch:18},{wch:14},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,wsG,'Groups');
-
-    const pRows=payments.map(p=>{
-        const m=members.find(x=>x.id===p.memberId);
-        const g=groups.find(x=>x.id===p.groupId);
-        return{'Date':p.date||'','Member':m?m.name:'Unknown','Phone':m?m.phone||'':'','Group':g?g.name:'Unknown','Chit/Month':parseFloat(p.chit)||0,'Months':p.numMonths||1,'Total Paid':parseFloat(p.paid)||0,'Balance':parseFloat(p.balance)||0,'Mode':p.paidBy||'','Chit Picked':p.chitPicked||'No','Chit Picked Value':p.chitPickedBy||''};
-    }).sort((a,b)=>a['Date'].localeCompare(b['Date']));
-    const wsP=XLSX.utils.json_to_sheet(pRows.length?pRows:[{}]);
-    wsP['!cols']=[{wch:12},{wch:24},{wch:14},{wch:20},{wch:12},{wch:8},{wch:12},{wch:12},{wch:14},{wch:12},{wch:18}];
-    XLSX.utils.book_append_sheet(wb,wsP,'All Payments');
-
-    const sumRows=[];
-    members.forEach(m=>{
-        (m.groupIds||[]).forEach(gid=>{
-            const g=groups.find(x=>x.id===gid);
-            const mp=payments.filter(p=>p.memberId===m.id&&p.groupId===gid);
-            const pickedPay=mp.find(p=>p.chitPicked==='Yes');
-            sumRows.push({'Member':m.name||'','Phone':m.phone||'','Group':g?g.name:'','Months Paid':mp.reduce((s,p)=>s+(p.numMonths||1),0),'Total Paid':mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0),'Total Balance':mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0),'Chit Picked':pickedPay?'Yes':'No','Chit Picked Value':pickedPay?pickedPay.chitPickedBy||'':'','Last Payment':mp.length?mp.sort((a,b)=>b.date.localeCompare(a.date))[0].date:''});
-        });
-    });
-    const wsS=XLSX.utils.json_to_sheet(sumRows.length?sumRows:[{}]);
-    wsS['!cols']=[{wch:24},{wch:14},{wch:20},{wch:12},{wch:12},{wch:14},{wch:12},{wch:18},{wch:14}];
-    XLSX.utils.book_append_sheet(wb,wsS,'Member Summary');
-
-    XLSX.writeFile(wb,`AKChitFunds_Export_${today}.xlsx`);
-    showToast('✅ Excel exported!');
-}
-
-function confirmRestore(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const file=document.getElementById('restoreFile').files[0];
-    if(!file)return showToast('❌ Select a backup file first',false);
-    showConfirm('🔄','Restore All Data?','This will overwrite ALL existing data.',()=>executeRestore());
-}
-
-async function executeRestore(){
-    const file=document.getElementById('restoreFile').files[0];if(!file)return;
-    showToast('⏳ Restoring…',true);
-    const reader=new FileReader();
-    reader.onload=async(e)=>{
-        try{
-            const data=JSON.parse(e.target.result);
-            const delCol=async(col)=>{const s=await db.collection(col).get();const batch=db.batch();s.docs.forEach(d=>batch.delete(d.ref));if(s.docs.length)await batch.commit();};
-            await delCol('members');await delCol('groups');await delCol('payments');
-            let count=0;
-            if(data.m)for(let x of data.m){const {id,...rest}=x;await db.collection('members').doc(id).set(rest);count++;}
-            if(data.g)for(let x of data.g){const {id,...rest}=x;await db.collection('groups').doc(id).set(rest);count++;}
-            if(data.p)for(let x of data.p){const {id,...rest}=x;await db.collection('payments').doc(id).set(rest);count++;}
-            showToast(`✅ Restored ${count} records!`);updateUI();
-        }catch(err){console.error(err);showToast('❌ Invalid backup file',false);}
-    };
-    reader.readAsText(file);
-}
-
-// ══════════════════════════════════════════
-
-
-// ── Mobile-safe PDF save
-// iOS Safari blocks programmatic download links — open as blob URL in new tab instead
-
-// ══════════════════════════════════════════
-// PRINT MEMBER STATEMENT — window.print()
-// Works on ALL devices: mobile, tablet, desktop
-// No popups, no downloads, no new tabs needed
-// ══════════════════════════════════════════
-async function printMemberStatement(mid){
-    showToast('⏳ Preparing statement…', true);
-    const ms=await getCollection('members');
-    const gs=await getCollection('groups');
-    const ps=await getCollection('payments');
-    const m=ms.find(x=>x.id===mid); if(!m){showToast('❌ Member not found',false);return;}
-    const mPays=ps.filter(p=>p.memberId===mid);
-    const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-    const totalBal=mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-    const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
-    let enrollments=m.enrollments;
-    if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:''}));
-    const memberGroups=gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id));
-    const today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
-
-    const groupSections = enrollments.map(enr=>{
-        const g=gs.find(x=>x.id===enr.groupId);if(!g)return'';
-        const pays=mPays.filter(p=>{
-            if(enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId;
-            return p.groupId===enr.groupId;
-        }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-        const totalMonths=parseInt(g.duration||g.gDuration)||21;
-        let elapsed=0;
-        if(g.startDate||g.gStart){const _s=new Date(g.startDate||g.gStart),_n=new Date();elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));}
-        const left=Math.max(0,totalMonths-elapsed);
-        const pct=Math.min(100,Math.round(elapsed/totalMonths*100));
-        const gPaid=pays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const gBal=pays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const allDueDates=getGroupDueDates(g);
-        const gStartDisp=fmtDate(g.startDate||g.gStart||'');
-        const gDueDayDisp=g.dueDay?`${g.dueDay}${['st','nd','rd'][((g.dueDay%100-11)%10)-1]||'th'} of month`:'—';
-        const totalMonthsCovered=pays.reduce((s,p)=>s+(p.numMonths||1),0);
-
-        const rows=pays.map((p,idx)=>{
-            const cp=p.chitPicked==='Yes';
-            const isMulti=p.numMonths&&p.numMonths>1;
-            let monthLabel='—';
-            if(isMulti&&p.monthSlots&&p.monthSlots.length>0){
-                const f=allDueDates[p.monthSlots[0]]?fmtDate(allDueDates[p.monthSlots[0]]):'—';
-                const l=allDueDates[p.monthSlots[p.monthSlots.length-1]]?fmtDate(allDueDates[p.monthSlots[p.monthSlots.length-1]]):'—';
-                monthLabel=`${f} to ${l}`;
-            } else {
-                const slotIdx=p.monthSlot!==undefined?p.monthSlot:getMonthSlot(allDueDates,p.date);
-                monthLabel=slotIdx>=0&&allDueDates[slotIdx]?fmtDate(allDueDates[slotIdx]):'—';
-            }
-            const chitDisp=isMulti?`Rs.${(parseFloat(p.chit)||0).toLocaleString('en-IN')}/mo x${p.numMonths}`:`Rs.${(parseFloat(p.chit)||0).toLocaleString('en-IN')}`;
-            const bg=cp?'#f0fff8':(isMulti?'#eef2ff':'#fff');
-            const borderLeft=cp?'border-left:3px solid #10b981;':(isMulti?'border-left:3px solid #818cf8;':'');
-            return `<tr style="background:${bg};${borderLeft}">
-                <td style="text-align:center;">${idx+1}</td>
-                <td>${monthLabel}${isMulti?` <small style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:9px;">${p.numMonths}mo</small>`:''}</td>
-                <td>${fmtDate(p.date)}</td>
-                <td>${chitDisp}</td>
-                <td style="color:#065f46;font-weight:700;">Rs.${(parseFloat(p.paid)||0).toLocaleString('en-IN')}</td>
-                <td style="color:${(parseFloat(p.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;">Rs.${(parseFloat(p.balance)||0).toLocaleString('en-IN')}</td>
-                <td>${p.paidBy||'—'}</td>
-                <td style="text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
-            </tr>`;
-        }).join('');
-
-        return `<div class="grp-block">
-            <div class="grp-title">&#128194; ${g.name}${enr.label?' <span style="background:#fff3cd;color:#92400e;border-radius:3px;padding:1px 5px;font-size:9px;">'+enr.label+'</span>':''}</div>
-            <div class="grp-meta">Start: <b>${gStartDisp}</b> &nbsp;|&nbsp; Due: <b>${gDueDayDisp}</b> &nbsp;|&nbsp; Month <b>${elapsed}/${totalMonths}</b> &nbsp;|&nbsp; Covered: <b>${totalMonthsCovered}/${totalMonths}</b> &nbsp;|&nbsp; <b>${left} pending</b></div>
-            <div class="prog-outer"><div class="prog-inner" style="width:${pct}%"></div></div>
-            <div class="grp-totals">Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> &nbsp;&nbsp; Balance: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b></div>
-            ${pays.length?`<table>
-                <colgroup><col style="width:4%"><col style="width:24%"><col style="width:12%"><col style="width:16%"><col style="width:13%"><col style="width:13%"><col style="width:10%"><col style="width:8%"></colgroup>
-                <thead><tr><th>#</th><th>Month(s) Covered</th><th>Pay Date</th><th>Chit Amt</th><th>Paid</th><th>Balance</th><th>Mode</th><th>Chit?</th></tr></thead>
-                <tbody>${rows}
-                <tr style="background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;">
-                    <td colspan="4">Total</td>
-                    <td style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</td>
-                    <td style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</td>
-                    <td colspan="2"></td>
-                </tr></tbody>
-            </table>`:'<p style="color:#888;padding:6px 0;font-size:10px;">No payments recorded.</p>'}
-        </div>`;
-    }).join('');
-
-    // Build the full print HTML
-    const printHTML = `
-    <div id="printStatement">
-        <style>
-            #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; }
-            #printStatement .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; }
-            #printStatement .brand { font-size:20px; font-weight:900; color:#f39c12; }
-            #printStatement .brand-sub { font-size:9px; color:#888; }
-            #printStatement .doc-title { font-size:14px; font-weight:800; text-align:right; }
-            #printStatement .doc-sub { font-size:9px; color:#888; text-align:right; }
-            #printStatement .mbox { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:12px 16px; margin-bottom:14px; }
-            #printStatement .mname { font-size:16px; font-weight:800; margin-bottom:4px; }
-            #printStatement .msub { font-size:10px; color:#555; margin-top:3px; }
-            #printStatement .stats { display:flex; gap:8px; margin-top:10px; }
-            #printStatement .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:6px; text-align:center; }
-            #printStatement .stat-v { font-size:13px; font-weight:800; }
-            #printStatement .stat-l { font-size:8px; color:#888; text-transform:uppercase; }
-            #printStatement .sec-title { font-size:8px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:14px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; }
-            #printStatement .grp-block { margin-bottom:16px; page-break-inside:avoid; }
-            #printStatement .grp-title { font-size:12px; font-weight:800; margin-bottom:3px; }
-            #printStatement .grp-meta { font-size:8.5px; color:#666; margin-bottom:3px; }
-            #printStatement .grp-totals { font-size:9px; text-align:right; margin-bottom:5px; }
-            #printStatement .prog-outer { background:#eee; height:5px; border-radius:3px; margin-bottom:3px; overflow:hidden; }
-            #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-            #printStatement table { width:100%; border-collapse:collapse; font-size:9.5px; table-layout:fixed; margin-bottom:4px; }
-            #printStatement thead { display:table-header-group; }
-            #printStatement th { background:#f5f5f5; border:1px solid #ccc; padding:4px 5px; font-size:8px; text-transform:uppercase; color:#555; font-weight:700; }
-            #printStatement td { border:1px solid #e0e0e0; padding:4px 5px; vertical-align:middle; word-break:break-word; }
-            #printStatement tr { page-break-inside:avoid; }
-            #printStatement .ftr { margin-top:14px; border-top:1px solid #ddd; padding-top:6px; display:flex; justify-content:space-between; font-size:8px; color:#aaa; }
-            #printStatement .print-btn-bar { display:flex; gap:10px; margin-bottom:16px; }
-            #printStatement .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
-            #printStatement .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
-            @media print {
-                body > *:not(#printOverlay) { display:none !important; }
-                #printOverlay { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; background:white !important; z-index:99999 !important; }
-                #printStatement .print-btn-bar { display:none !important; }
-                @page { size:A4; margin:10mm; }
-            }
-        </style>
-        <div class="print-btn-bar">
-            <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
-            <button class="close-btn" onclick="closePrintStatement()">✕ Close</button>
-        </div>
-        <div class="hdr">
-            <div><div class="brand">&#127942; AK CHIT FUNDS</div><div class="brand-sub">Chit Fund Management &bull; Member Statement</div></div>
-            <div><div class="doc-title">MEMBER STATEMENT</div><div class="doc-sub">Generated: ${today}</div></div>
-        </div>
-        <div class="mbox">
-            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-                <div>
-                    <div class="mname">${m.name}</div>
-                    <div class="msub">&#128222; ${m.phone||'—'}</div>
-                    <div class="msub">Groups: ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);return g?(g.name+(e.label?' ('+e.label+')':'')):'?';}).join(', ')||'—'}</div>
-                </div>
-                <div class="stats">
-                    <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
-                    <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
-                    <div class="stat"><div class="stat-v">${mPays.length}</div><div class="stat-l">Payments</div></div>
-                    <div class="stat"><div class="stat-v" style="color:#065f46;">${chitsPicked}</div><div class="stat-l">Chits Picked</div></div>
-                </div>
-            </div>
-        </div>
-        <div class="sec-title">Payment History &mdash; Group Wise</div>
-        ${groupSections||'<p style="color:#888;font-size:10px;">No payments recorded.</p>'}
-        <div class="ftr">
-            <span>AK Chit Funds &bull; Admin Portal</span>
-            <span>Member: ${m.name} &bull; ${today}</span>
-            <span>CONFIDENTIAL</span>
-        </div>
-    </div>`;
-
-    // Show as full-screen overlay ON THIS PAGE — no popups needed!
-    let overlay = document.getElementById('printOverlay');
-    if(!overlay){
-        overlay = document.createElement('div');
-        overlay.id = 'printOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:99999;overflow-y:auto;padding:16px;';
-        document.body.appendChild(overlay);
-    }
-    overlay.innerHTML = printHTML;
-    overlay.style.display = 'block';
-    showToast('✅ Statement ready — tap Print', true);
-}
-
-function closePrintStatement(){
-    const el = document.getElementById('printOverlay');
-    if(el) el.style.display = 'none';
-}
-
-async function generateMemberPDF(mid){ return printMemberStatement(mid); }
-
-async function generateGroupPDF(gid){
-    showToast('ℹ️ Use the PDF button on the Groups tab', true);
-}
-
-
-
-
 
 // ══════════════════════════════════════════
 // AUTH SYSTEM
@@ -1950,284 +1317,45 @@ async function generateGroupPDF(gid){
 const ADMIN_PHONE = '9876543210';
 let CURRENT_USER = null;
 
-function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
-function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
-function clearSession(){ sessionStorage.removeItem('akdf_session'); }
-
 async function initAuth(){
     const saved = sessionStorage.getItem('akdf_session');
-    if(saved){
-        try{
-            const u = JSON.parse(saved);
-            CURRENT_USER = u;
-            applyUserSession(u);
-            return;
-        }catch(e){}
-    }
-    document.getElementById('loginScreen').style.display='flex';
+    if(saved){ CURRENT_USER = JSON.parse(saved); applyUserSession(CURRENT_USER); }
+    else document.getElementById('loginScreen').style.display='flex';
 }
 
 async function handleLoginSubmit(){
     const phone = document.getElementById('loginPhone').value.trim();
-    if(phone.length !== 10){ showToast('❌ Enter valid 10-digit mobile number', false); return; }
-    showToast('⏳ Checking access…', true);
     if(phone === ADMIN_PHONE){
-        const user = {phone, role:'admin', name:'Admin'};
-        CURRENT_USER = user;
-        sessionStorage.setItem('akdf_session', JSON.stringify(user));
-        applyUserSession(user);
-        return;
-    }
-    const members = await getCollection('members');
-    const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
-    if(matched){
-        const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
-        if(!reqs.empty){
-            const req = reqs.docs[0].data();
-            if(req.status === 'approved'){
-                const user = {phone, role:'member', memberId: matched.id, name: matched.name};
-                CURRENT_USER = user;
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
-                applyUserSession(user);
-                return;
-            } else if(req.status === 'denied'){
-                showLoginStep('loginStep3');
-                return;
-            } else {
-                document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
-                showLoginStep('loginStep2');
-                return;
-            }
-        } else {
-            await db.collection('accessRequests').add({
-                phone, name: matched.name, memberId: matched.id,
-                status: 'pending', requestedAt: new Date().toISOString()
-            });
-            document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
-            showLoginStep('loginStep2');
-            showToast('📨 Access request sent to admin', true);
-            return;
-        }
+        CURRENT_USER = {phone, role:'admin', name:'Admin'};
+        sessionStorage.setItem('akdf_session', JSON.stringify(CURRENT_USER));
+        applyUserSession(CURRENT_USER);
     } else {
-        showToast('❌ Mobile number not registered. Contact admin.', false);
-        return;
-    }
-}
-
-async function checkAccessStatus(){
-    const phone = document.getElementById('loginPhone').value.trim() ||
-                  (CURRENT_USER && CURRENT_USER.phone) || '';
-    if(!phone){ goBackToLogin(); return; }
-    const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
-    if(!reqs.empty){
-        const req = reqs.docs[0].data();
-        if(req.status === 'approved'){
-            const members = await getCollection('members');
-            const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
-            if(matched){
-                const user = {phone, role:'member', memberId: matched.id, name: matched.name};
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
-                showToast('✅ Access approved! Loading…', true);
-                setTimeout(()=>location.reload(), 800);
-                return;
-            }
-        } else if(req.status === 'denied'){
-            showLoginStep('loginStep3');
-            return;
-        }
-    }
-    showToast('⏳ Still pending approval', true);
-}
-
-let _pendingPollTimer = null;
-
-function showLoginStep(stepId){
-    ['loginStep1','loginStep2','loginStep3'].forEach(id=>{
-        document.getElementById(id).classList.remove('active');
-    });
-    document.getElementById(stepId).classList.add('active');
-    if(stepId === 'loginStep2'){
-        if(_pendingPollTimer) clearInterval(_pendingPollTimer);
-        _pendingPollTimer = setInterval(silentCheckStatus, 5000);
-    } else {
-        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer=null; }
-    }
-}
-
-async function silentCheckStatus(){
-    const phone = document.getElementById('loginPhone').value.trim();
-    if(!phone) return;
-    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(()=>({docs:[]}));
-    if(!reqs.docs || reqs.docs.length===0) return;
-    const req = reqs.docs[0].data();
-    if(req.status === 'approved'){
-        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer=null; }
         const members = await getCollection('members');
-        const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
+        const matched = members.find(m => m.phone === phone);
         if(matched){
-            const user = {phone, role:'member', memberId: matched.id, name: matched.name};
-            sessionStorage.setItem('akdf_session', JSON.stringify(user));
-            showToast('✅ Access approved! Loading…', true);
-            setTimeout(()=>location.reload(), 1000);
-        }
-    } else if(req.status === 'denied'){
-        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer=null; }
-        showLoginStep('loginStep3');
+            CURRENT_USER = {phone, role:'member', memberId: matched.id, name: matched.name};
+            sessionStorage.setItem('akdf_session', JSON.stringify(CURRENT_USER));
+            applyUserSession(CURRENT_USER);
+        } else { showToast('Not Registered', false); }
     }
-}
-
-function goBackToLogin(){
-    document.getElementById('loginPhone').value='';
-    showLoginStep('loginStep1');
 }
 
 function applyUserSession(user){
     document.getElementById('loginScreen').style.display='none';
-    document.getElementById('logoutBtn').style.display='block';
-    if(user.role === 'admin'){
-        document.getElementById('adminHeader').style.display='flex';
-        document.getElementById('memberHeader').style.display='none';
-        document.getElementById('headerRoleBadge').textContent='ADMIN';
-        document.getElementById('headerRoleBadge').style.display='inline';
-        document.getElementById('accessReqBtn').style.display='inline-flex';
-        document.getElementById('logoutBtn').style.display='block';
-        document.getElementById('adminStatCards').style.display='';
-        document.getElementById('adminActionBtns').style.display='flex';
-        document.getElementById('adminMemberSearch').style.display='';
-        document.getElementById('memberLedgerArea').style.display='none';
-        document.getElementById('adminQuickBtns').style.display='flex';
-        updateUI();
-        pollPendingRequests();
-    } else {
-        document.getElementById('adminHeader').style.display='none';
+    if(user.role === 'admin') updateUI();
+    else {
         document.getElementById('memberHeader').style.display='block';
-        document.getElementById('logoutBtn').style.display='none';
-        document.getElementById('memberHeaderAvatar').textContent = ini(user.name);
+        document.getElementById('adminHeader').style.display='none';
         document.getElementById('memberHeaderName').textContent = user.name;
-        document.getElementById('memberHeaderPhone').textContent = `📱 +91 ${user.phone}`;
-        document.getElementById('adminStatCards').style.display='none';
-        document.getElementById('adminActionBtns').style.display='none';
-        document.getElementById('adminMemberSearch').style.display='none';
-        document.getElementById('adminQuickBtns').style.display='none';
-        document.getElementById('navGroups').style.display='none';
-        document.getElementById('navList').style.display='none';
-        document.getElementById('navBackup').style.display='none';
-        document.querySelector('.nav-bar').style.display='none';
         document.getElementById('memberLedgerArea').style.display='block';
-        document.getElementById('summaryView').value = user.memberId;
         loadMemberLedger();
     }
 }
 
-function handleLogout(){
-    sessionStorage.removeItem('akdf_session');
-    CURRENT_USER = null;
-    document.body.classList.remove('member-mode');
-    document.getElementById('adminHeader').style.display='flex';
-    document.getElementById('memberHeader').style.display='none';
-    document.getElementById('navGroups').style.display='';
-    document.getElementById('navList').style.display='';
-    document.getElementById('navBackup').style.display='';
-    document.querySelector('.nav-bar').style.display='';
-    document.getElementById('adminStatCards').style.display='';
-    document.getElementById('adminActionBtns').style.display='flex';
-    document.getElementById('adminMemberSearch').style.display='';
-    document.getElementById('memberLedgerArea').style.display='none';
-    document.getElementById('adminQuickBtns').style.display='flex';
-    document.getElementById('logoutBtn').style.display='none';
-    document.getElementById('accessReqBtn').style.display='none';
-    document.getElementById('headerRoleBadge').textContent='ADMIN';
-    document.getElementById('headerRoleBadge').className='badge text-warning border border-warning px-2';
-    document.getElementById('ledgerData').innerHTML='';
-    document.getElementById('memberLedgerData').innerHTML='';
-    document.getElementById('summarySearch').value='';
-    document.getElementById('summaryView').value='';
-    showLoginStep('loginStep1');
-    document.getElementById('loginPhone').value='';
-    document.getElementById('loginScreen').style.display='flex';
-}
+function handleLogout(){ sessionStorage.removeItem('akdf_session'); location.reload(); }
 
-// ACCESS REQUESTS PANEL
-let _reqFilter = 'pending';
-async function openAccessRequests(){
-    _reqFilter = 'pending';
-    await renderAccessRequests();
-    openModal('accessModal');
-}
-
-async function filterRequests(type){
-    _reqFilter = type;
-    ['pending','approved','all'].forEach(t=>{
-        const btn = document.getElementById(`reqTab${t.charAt(0).toUpperCase()+t.slice(1)}`);
-        if(btn) btn.className = t===type ? 'btn-save' : 'btn-cancel';
-    });
-    await renderAccessRequests();
-}
-
-async function renderAccessRequests(){
-    const list = document.getElementById('accessRequestsList');
-    list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:16px;">Loading…</div>';
-    let q = db.collection('accessRequests');
-    const snap = await q.orderBy('requestedAt','desc').get().catch(()=> db.collection('accessRequests').get());
-    const all = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const filtered = _reqFilter==='all' ? all : all.filter(r=>r.status===_reqFilter);
-    if(!filtered.length){
-        list.innerHTML=`<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:0.85rem;">No ${_reqFilter==='all'?'':_reqFilter} requests</div>`;
-        return;
-    }
-    list.innerHTML = filtered.map(r=>`
-        <div class="req-card">
-            <div style="flex:1;min-width:0;">
-                <div class="req-name">${r.name||'Unknown'}</div>
-                <div class="req-phone">📱 +91 ${r.phone} &nbsp;·&nbsp; ${r.requestedAt?new Date(r.requestedAt).toLocaleDateString('en-IN'):'—'}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-                ${r.status==='pending'
-                    ? `<button class="btn-approve" onclick="handleApprove('${r.id}','${r.phone}')">✅ Approve</button>
-                       <button class="btn-deny" onclick="handleDeny('${r.id}')">✕ Deny</button>`
-                    : r.status==='approved'
-                        ? `<span class="badge-approved">✅ Approved</span><button class="btn-deny" style="font-size:0.62rem;padding:4px 8px;" onclick="handleDeny('${r.id}')">Revoke</button>`
-                        : `<span class="badge-denied">🚫 Denied</span><button class="btn-approve" style="font-size:0.62rem;padding:4px 8px;" onclick="handleApprove('${r.id}','${r.phone}')">Re-approve</button>`
-                }
-            </div>
-        </div>`).join('');
-}
-
-async function handleApprove(reqId, phone){
-    await db.collection('accessRequests').doc(reqId).update({status:'approved', approvedAt: new Date().toISOString()});
-    showToast('✅ Access approved!');
-    await renderAccessRequests();
-    await pollPendingRequests();
-}
-
-async function handleDeny(reqId){
-    await db.collection('accessRequests').doc(reqId).update({status:'denied', deniedAt: new Date().toISOString()});
-    showToast('🚫 Access denied');
-    await renderAccessRequests();
-    await pollPendingRequests();
-}
-
-async function pollPendingRequests(){
-    if(!CURRENT_USER || CURRENT_USER.role!=='admin') return;
-    const snap = await db.collection('accessRequests').where('status','==','pending').get().catch(()=>({docs:[]}));
-    const count = snap.docs.length;
-    const badge = document.getElementById('pendingCount');
-    if(count > 0){
-        badge.style.display='flex';
-        badge.textContent=count;
-    } else {
-        badge.style.display='none';
-    }
-}
-
-// ══════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function(){
-    document.getElementById('pDate').value=new Date().toISOString().split('T')[0];
-    setTimeout(migrateData,800);
+document.addEventListener('DOMContentLoaded', ()=>{
     initAuth();
-    setInterval(()=>{ if(CURRENT_USER&&CURRENT_USER.role==='admin') pollPendingRequests(); }, 60000);
 });
 </script>
 </body>
