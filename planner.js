@@ -1,41 +1,44 @@
-function ncpCalculateFull() {
+function ncpCalculateAdvanced() {
     const totalValue = parseFloat(document.getElementById('ncp_amount').value);
     const members = parseInt(document.getElementById('ncp_members').value);
-    const commPerc = parseFloat(document.getElementById('ncp_comm')?.value || 5) / 100;
+    const duration = parseInt(document.getElementById('ncp_duration').value) || members;
+    const commRate = 0.05; // Fixed 5% Commission
     
-    if(!totalValue || !members) { alert("Please enter Amount and Members"); return; }
+    if(!totalValue || !members) { alert("Please enter Amount and Members count."); return; }
 
-    const commission = totalValue * commPerc;
-    const installAmount = totalValue / members;
-    
-    let html = `<table class="table-custom">
+    let html = `<table class="table-planner">
         <thead>
-            <tr><th>Month</th><th>Chit Value</th><th>Commission</th><th>Dividend</th><th>Net Pay</th></tr>
+            <tr>
+                <th>Month</th>
+                <th>Auction Amt</th>
+                <th>Comm (5%)</th>
+                <th>Total Dividend</th>
+                <th>Div / Head</th>
+                <th>Net Installment</th>
+            </tr>
         </thead><tbody>`;
 
-    for (let i = 1; i <= members; i++) {
-        const bidAmount = (i === 1) ? commission : (totalValue * 0.10); 
-        const dividendPerPerson = (bidAmount - commission) / members;
-        const netPay = installAmount - dividendPerPerson;
+    const installBase = totalValue / members;
+    const commission = totalValue * commRate;
+
+    for (let i = 1; i <= duration; i++) {
+        // Auction Logic based on your Screenshot
+        let auctionBid = (i === 1) ? commission : (totalValue * 0.08); // Example Auction logic
+        let totalDividend = auctionBid - commission;
+        let divPerHead = totalDividend / members;
+        let netInstall = installBase - divPerHead;
 
         html += `<tr>
             <td>${i}</td>
-            <td>₹${totalValue.toLocaleString()}</td>
+            <td>₹${auctionBid.toLocaleString()}</td>
             <td>₹${commission.toLocaleString()}</td>
-            <td>₹${Math.round(dividendPerPerson).toLocaleString()}</td>
-            <td style="color:#34d399; font-weight:bold;">₹${Math.round(netPay).toLocaleString()}</td>
+            <td>₹${totalDividend.toLocaleString()}</td>
+            <td>₹${Math.round(divPerHead).toLocaleString()}</td>
+            <td style="color:#34d399; font-weight:bold;">₹${Math.round(netInstall).toLocaleString()}</td>
         </tr>`;
     }
     
     html += `</tbody></table>`;
     document.getElementById('ncp_result_area').innerHTML = html;
     document.getElementById('btnPrint').style.display = 'block';
-}
-
-function ncpPrint() {
-    const content = document.getElementById('ncp_result_area').innerHTML;
-    const overlay = document.getElementById('printOverlay');
-    overlay.innerHTML = `<h1>🏆 AK CHIT FUNDS - Official Schedule</h1><hr>${content}`;
-    overlay.style.display = 'block';
-    window.print();
 }
