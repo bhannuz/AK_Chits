@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <title>AK Chit Funds - Admin Portal v3.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -15,34 +14,31 @@
         body { background-color:var(--bg-dark); color:var(--text-main); font-family:'Segoe UI',sans-serif; padding-bottom:120px; }
         
         /* DOUBLED LOGO SIZE */
-        .brand { display:flex; align-items:center; gap:15px; color:#f39c12; font-weight:bold; font-size:1.8rem; }
-        .brand-logo { font-size:4rem !important; line-height: 1; }
+        .brand { display:flex; align-items:center; gap:15px; color:#f39c12; font-weight:bold; font-size:1.6rem; }
+        .brand-logo { font-size:3.5rem !important; line-height: 1; }
 
         .app-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
         .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:12px 0; border-top:1px solid var(--border); z-index:1000; }
-        .nav-item { cursor:pointer; text-align:center; font-size:0.75rem; color:var(--text-dim); }
+        .nav-item { cursor:pointer; text-align:center; font-size:0.65rem; color:var(--text-dim); }
         .nav-item.active { color:#f39c12; }
         .tab-content { display:none; }
         .tab-content.active { display:block; }
 
-        /* SEARCH & TABLE STYLES */
-        .suggestions-list { background:var(--input-bg); border:1px solid var(--border); border-radius:12px; position:absolute; width:100%; z-index:2000; max-height:200px; overflow-y:auto; display:none; }
-        .suggestion-item { padding:12px; border-bottom:1px solid var(--border); cursor:pointer; }
-        .suggestion-item:hover { background:#252f48; color:#f39c12; }
+        /* Tables & Inputs */
         .table-custom { color:white; font-size:0.75rem; width:100%; border-collapse:collapse; }
         .table-custom th { color:var(--text-dim); border-bottom:1px solid var(--border); padding:8px 5px; text-transform:uppercase; }
         .table-custom td { padding:10px 5px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:0.9rem; }
+        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; cursor:pointer; }
 
-        /* PRINT RULES (BLACK FONT) */
-        #printOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:99999; padding:24px; color: black !important; display:none; }
+        /* Print Override */
+        #printOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:99999; padding:24px; color:black !important; display:none; }
         @media print {
             body > *:not(#printOverlay) { display:none !important; }
             #printOverlay { position:absolute; top:0; left:0; width:100%; display:block !important; }
-            #printOverlay * { color: black !important; border-color: #000 !important; }
-            .no-print-col { display: none !important; }
+            #printOverlay * { color:black !important; border-color:black !important; }
+            .no-print-col { display:none !important; }
         }
-        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; cursor:pointer; }
-        .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:0.9rem; }
     </style>
 </head>
 <body>
@@ -63,110 +59,90 @@
 
     <div id="homeTab" class="tab-content active">
         <div class="row g-2 mt-3 text-center">
-            <div class="col-6"><div style="background:var(--card-bg); padding:15px; border-radius:15px;"><span id="mCount" style="font-weight:bold; font-size:1.3rem;">0</span><br><small style="color:var(--text-dim);">Members</small></div></div>
-            <div class="col-6"><div style="background:var(--card-bg); padding:15px; border-radius:15px;"><span id="gCount" style="font-weight:bold; font-size:1.3rem;">0</span><br><small style="color:var(--text-dim);">Groups</small></div></div>
+            <div class="col-6"><div style="background:var(--card-bg); padding:15px; border-radius:15px;"><span id="mCount" style="font-weight:bold; font-size:1.3rem;">0</span><br><small class="text-dim">Members</small></div></div>
+            <div class="col-6"><div style="background:var(--card-bg); padding:15px; border-radius:15px;"><span id="gCount" style="font-weight:bold; font-size:1.3rem;">0</span><br><small class="text-dim">Groups</small></div></div>
         </div>
-        <div class="mt-4 position-relative">
-            <input type="text" id="homeSearch" class="form-input" placeholder="🔍 Search Member History..." oninput="filterSearch('homeSearch','homeList')">
-            <div id="homeList" class="suggestions-list"></div>
+        <div class="mt-4"><input type="text" id="globalSearch" class="form-input" placeholder="🔍 Search Members..." oninput="updateUI()"></div>
+        <div class="d-flex gap-2 mt-2">
+            <button class="btn btn-warning w-50" onclick="openModal('memberModal')">+ New Member</button>
+            <button class="btn btn-outline-warning w-50" onclick="openModal('groupModal')">+ New Group</button>
         </div>
-        <button class="btn-save mt-3" onclick="openModal('paymentModal')">💳 Record Payment</button>
         <div id="ledgerData" class="mt-4"></div>
+    </div>
+
+    <div id="groupsTab" class="tab-content">
+        <div id="groupListArea" class="mt-2"></div>
     </div>
 
     <div id="listTab" class="tab-content">
         <div class="p-3 mt-4" style="background:var(--card-bg); border:1px solid var(--border); border-radius:18px;">
             <h6 style="color:#f39c12; margin-bottom:15px;">📋 Chit Planner</h6>
-            <div class="row g-2">
-                <input type="text" id="ncp_name" class="form-input" placeholder="Group Name">
-                <input type="number" id="ncp_amount" class="form-input" placeholder="Total Amount (₹)">
-                <input type="number" id="ncp_members" class="form-input" placeholder="No. of Members">
-                <input type="number" id="ncp_duration" class="form-input" placeholder="Months">
-                <input type="text" id="ncp_upi_id" class="form-input" placeholder="Your UPI ID (e.g. 8121723153@ybl)">
-            </div>
+            <input type="text" id="ncp_name" class="form-input" placeholder="Group Name">
+            <input type="number" id="ncp_amount" class="form-input" placeholder="Amount (₹)">
+            <input type="number" id="ncp_members" class="form-input" placeholder="Members">
+            <input type="text" id="ncp_upi_id" class="form-input" placeholder="UPI ID (e.g. 8121723153@ybl)">
             <button class="btn-save" onclick="ncpGenerate()">⚡ Generate Schedule</button>
-            <div id="ncp_tableWrap" style="display:none;" class="mt-3">
-                <div id="ncp_rows"></div>
-                <button class="btn-save mt-2" onclick="ncpPrint()">🖨️ Print Schedule</button>
-            </div>
+            <div id="ncp_rows" class="mt-3"></div>
+            <button id="btnPrint" class="btn btn-outline-light w-100 mt-2" onclick="ncpPrint()" style="display:none;">🖨️ Print Schedule</button>
         </div>
     </div>
 
     <div id="backupTab" class="tab-content">
-        <div class="p-4 mt-3 text-center" style="background:var(--card-bg); border:1px solid var(--border); border-radius:20px;">
-            <button class="btn btn-outline-warning w-100 mb-2 py-3" onclick="exportFullBackup()">💾 Download Backup (JSON)</button>
-            <hr style="border-color:var(--border);">
-            <input type="file" id="restoreFile" class="form-control bg-dark text-white mb-2" accept=".json">
-            <button class="btn btn-danger w-100 py-3" onclick="confirmRestore()">Restore All Data</button>
+        <div class="p-4 mt-3 text-center" style="background:var(--card-bg); border-radius:20px; border:1px solid var(--border);">
+            <button class="btn btn-outline-success w-100 mb-2 py-3" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
+            <button class="btn btn-outline-warning w-100 py-3" onclick="exportFullBackup()">💾 Download JSON Backup</button>
         </div>
     </div>
-</div>
-
-<div id="printOverlay"></div>
-<div class="nav-bar">
-    <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
-    <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
-    <div class="nav-item" id="navList" onclick="switchTab('list')">📜<br>List</div>
-    <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
 </div>
 <script>
     const firebaseConfig = { apiKey: "AIzaSyCqb7gAbpa3UabPU3g_YhNITuPWtWPY4KU", authDomain: "ak-events-2016.firebaseapp.com", projectId: "ak-events-2016", storageBucket: "ak-events-2016.firebasestorage.app", messagingSenderId: "78066764444", appId: "1:78066764444:web:5bb9e0d48c128a8632fb59" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     let _dbCache = { members: [], groups: [] };
-    let waWindow = null; 
+    let waWindow = null;
 
     async function updateUI() {
-        const [mSnap, gSnap] = await Promise.all([
-            db.collection('members').get(),
-            db.collection('groups').get()
-        ]);
+        const [mSnap, gSnap] = await Promise.all([db.collection('members').get(), db.collection('groups').get()]);
         _dbCache.members = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
         _dbCache.groups = gSnap.docs.map(d => ({id: d.id, ...d.data()}));
         document.getElementById('mCount').innerText = _dbCache.members.length;
         document.getElementById('gCount').innerText = _dbCache.groups.length;
+        renderGroups();
     }
 
-    function filterSearch(inputId, listId) {
-        const query = document.getElementById(inputId).value.toLowerCase();
-        const list = document.getElementById(listId);
-        list.innerHTML = "";
-        if(!query) { list.style.display="none"; return; }
-        const matched = _dbCache.members.filter(m => m.name.toLowerCase().includes(query));
-        if(matched.length > 0) {
-            list.style.display="block";
-            matched.forEach(m => {
-                const div = document.createElement("div");
-                div.className = "suggestion-item";
-                div.innerText = m.name;
-                div.onclick = () => { document.getElementById(inputId).value = m.name; list.style.display="none"; };
-                list.appendChild(div);
-            });
-        }
+    function renderGroups() {
+        let html = '';
+        _dbCache.groups.forEach(g => {
+            const ms = _dbCache.members.filter(m => m.groupIds && m.groupIds.includes(g.id));
+            html += `<div class="p-3 mb-3" style="background:var(--card-bg); border:1px solid var(--border); border-radius:15px;">
+                <h6 class="text-warning">📂 ${g.name} (${ms.length} Members)</h6>
+                <table class="table-custom">
+                    <tbody>${ms.map(m => `<tr><td><b>${m.name}</b><br><small>${m.phone}</small></td><td class="text-end"><button class="btn btn-sm btn-success" onclick="sendWhatsAppReminder('${m.id}','${g.id}')">📲 Remind</button></td></tr>`).join('')}</tbody>
+                </table></div>`;
+        });
+        document.getElementById('groupListArea').innerHTML = html;
     }
 
     function sendWhatsAppReminder(mId, gId) {
         const m = _dbCache.members.find(x => x.id === mId);
         const g = _dbCache.groups.find(x => x.id === gId);
         const upiId = document.getElementById('ncp_upi_id')?.value || "8121723153@ybl";
-        const amount = Math.round(parseFloat(document.getElementById('ncp_amount')?.value || 0) / parseInt(document.getElementById('ncp_members')?.value || 1));
-        
-        const upiLink = `upi://pay?pa=${upiId}&pn=AK%20Chit%20Funds&am=${amount}&cu=INR`;
+        const upiLink = `upi://pay?pa=${upiId}&pn=AK%20Chit%20Funds&cu=INR`;
         const phone = '91' + m.phone.replace(/\D/g, '').slice(-10);
-        const msg = encodeURIComponent(`*PAYMENT REMINDER* 🏆\n\nDear *${m.name}*,\nReminder for *${g.name}*.\n\n📲 *Pay via UPI:*\n${upiLink}`);
-        
+        const msg = encodeURIComponent(`*PAYMENT REMINDER* 🏆\nDear *${m.name}*, reminder for *${g.name}*.\n\n📲 *Pay via UPI:*\n${upiLink}`);
         if (waWindow && !waWindow.closed) { waWindow.location.href = `https://wa.me/${phone}?text=${msg}`; }
         else { waWindow = window.open(`https://wa.me/${phone}?text=${msg}`, "wa_chat"); }
     }
+
     function ncpGenerate() {
         const amt = parseFloat(document.getElementById('ncp_amount').value);
         const mems = parseInt(document.getElementById('ncp_members').value);
-        let html = '<table class="table-custom"><thead><tr><th>#</th><th>Pay</th><th>Payout</th><th class="no-print-col">Payout %</th></tr></thead><tbody>';
-        for (let i = 1; i <= parseInt(document.getElementById('ncp_duration').value); i++) {
-            html += `<tr><td>${i}</td><td>₹${Math.round(amt / mems)}</td><td>₹${amt - (amt * 0.05)}</td><td class="no-print-col">95%</td></tr>`;
+        let html = '<table class="table-custom"><thead><tr><th>Month</th><th>Pay</th><th>Payout</th></tr></thead><tbody>';
+        for (let i = 1; i <= 10; i++) {
+            html += `<tr><td>${i}</td><td>₹${Math.round(amt/mems)}</td><td>₹${amt - (amt * 0.05)}</td></tr>`;
         }
         document.getElementById('ncp_rows').innerHTML = html + '</tbody></table>';
-        document.getElementById('ncp_tableWrap').style.display = 'block';
+        document.getElementById('btnPrint').style.display = 'block';
     }
 
     function switchTab(t) {
@@ -176,7 +152,6 @@
         document.getElementById('nav' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('active');
     }
 
-    function handleLogout() { location.reload(); }
     function handleLoginSubmit() { document.getElementById('loginScreen').style.display = 'none'; updateUI(); }
 </script>
 </body>
