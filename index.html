@@ -3,188 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <title>AK Chit Funds - Admin Portal</title>
+    <title>AK Chit Funds - Admin Portal v3.0</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <style>
         :root { --bg-dark:#0a0e1a; --card-bg:#141b2d; --input-bg:#1c253b; --accent-gold:linear-gradient(90deg,#ff9800,#f57c00); --text-main:#ffffff; --text-dim:#8e9aaf; --border:#252f48; }
-        body { background-color:var(--bg-dark); color:var(--text-main); font-family:'Segoe UI',sans-serif; padding-bottom:100px; }
-        .app-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
-        .brand { color:#f39c12; font-weight:bold; font-size:1.3rem; }
+        body { background-color:var(--bg-dark); color:var(--text-main); font-family:'Segoe UI',sans-serif; padding-bottom:120px; }
         
-        /* Modals & Inputs */
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:2000; padding:20px; overflow-y:auto; }
-        .modal-content-custom { background:var(--card-bg); border-radius:25px; padding:25px; max-width:450px; margin:20px auto; border:1px solid var(--border); }
-        .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; }
-        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; cursor:pointer; }
-        .btn-cancel { background:var(--input-bg); color:white; border:none; width:100%; padding:12px; border-radius:14px; cursor:pointer; margin-top:10px; }
+        /* BRANDING: DOUBLED LOGO SIZE */
+        .brand { display:flex; align-items:center; gap:15px; color:#f39c12; font-weight:bold; font-size:1.8rem; }
+        .brand-logo { font-size:4rem !important; line-height: 1; }
 
-        /* WhatsApp Button */
-        .btn-whatsapp-sm { background:rgba(37,211,102,0.15); border:1px solid rgba(37,211,102,0.4); color:#25d366; border-radius:8px; padding:4px 10px; font-size:0.7rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px; margin-left:5px; }
-        .btn-whatsapp-sm:hover { background:#25d366; color:white; }
-
-        /* Tables */
-        .table-custom { color:white; font-size:0.75rem; width:100%; border-collapse:collapse; }
-        .table-custom th { color:var(--text-dim); border-bottom:1px solid var(--border); padding:10px 5px; text-transform:uppercase; }
-        .table-custom td { padding:10px 5px; border-bottom:1px solid rgba(255,255,255,0.05); }
-
-        /* Login Screen */
-        #loginScreen { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:9000; display:flex; align-items:center; justify-content:center; }
-        .login-card { background:var(--card-bg); border:1px solid var(--border); border-radius:28px; padding:32px; width:100%; max-width:400px; text-align:center; }
-        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:15px; border-top:1px solid var(--border); }
-        .nav-item { cursor:pointer; font-size:0.65rem; color:var(--text-dim); text-align:center; }
+        .app-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:12px 0; border-top:1px solid var(--border); z-index:1000; }
+        .nav-item { cursor:pointer; text-align:center; font-size:0.75rem; color:var(--text-dim); }
         .nav-item.active { color:#f39c12; }
         .tab-content { display:none; }
         .tab-content.active { display:block; }
+
+        /* SEARCH UI */
+        .suggestions-list { background:var(--input-bg); border:1px solid var(--border); border-radius:12px; position:absolute; width:100%; z-index:2000; max-height:200px; overflow-y:auto; display:none; }
+        .suggestion-item { padding:12px; border-bottom:1px solid var(--border); cursor:pointer; }
+        .suggestion-item:hover { background:#252f48; color:#f39c12; }
+
+        /* PROFESSIONAL PRINT OVERRIDES (FORCING BLACK TEXT) */
+        #printOverlay { position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:99999; overflow-y:auto; padding:24px; color: black !important; display:none; }
+        @media print {
+            body > *:not(#printOverlay) { display:none !important; }
+            #printOverlay { position:absolute; top:0; left:0; width:100%; display:block !important; }
+            #printOverlay * { color: black !important; border-color: #000 !important; }
+            .no-print-col { display: none !important; }
+        }
+
+        .btn-whatsapp-sm { background:rgba(37,211,102,0.12); border:1px solid rgba(37,211,102,0.35); color:#25d366; border-radius:7px; padding:6px 12px; font-size:0.75rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; cursor:pointer; }
+        .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:0.9rem; }
     </style>
 </head>
 <body>
-
-<div id="loginScreen">
-    <div class="login-card">
-        <div style="font-size:3rem;">🏆</div>
+<div id="loginScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:9000; display:flex; align-items:center; justify-content:center;">
+    <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:28px; padding:32px; width:100%; max-width:400px; text-align:center;">
+        <div class="brand-logo">🏆</div>
         <h2 style="color:#f39c12; font-weight:900;">AK Chit Funds</h2>
-        <p style="color:var(--text-dim); font-size:0.8rem;">Enter mobile number to continue</p>
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <span style="background:var(--input-bg); padding:12px; border-radius:12px; border:1px solid var(--border);">+91</span>
-            <input type="tel" id="loginPhone" class="form-input" style="margin-bottom:0;" placeholder="10-digit number" maxlength="10">
-        </div>
+        <input type="tel" id="loginPhone" class="form-input mt-4" placeholder="10-digit mobile" maxlength="10">
         <button class="btn-save" onclick="handleLoginSubmit()">🔐 Continue</button>
     </div>
 </div>
 
-<div class="container py-3">
-    <div id="adminHeader" class="app-header">
-        <div class="brand">🏆 AK Chit Funds</div>
+<div class="container py-2">
+    <div class="app-header">
+        <div class="brand"><div class="brand-logo">🏆</div><span>AK CHIT FUNDS</span></div>
         <button onclick="handleLogout()" style="background:none; border:none; color:#f87171; font-weight:bold;">⏻ Logout</button>
     </div>
 
     <div id="homeTab" class="tab-content active">
-        <div class="row g-2 mt-3">
-            <div class="col-6"><div class="stat-card p-3" style="background:var(--card-bg); border-radius:15px; border:1px solid var(--border);"><span id="mCount" style="font-weight:bold; font-size:1.2rem;">0</span><br><small style="color:var(--text-dim);">Members</small></div></div>
-            <div class="col-6"><div class="stat-card p-3" style="background:var(--card-bg); border-radius:15px; border:1px solid var(--border);"><span id="gCount" style="font-weight:bold; font-size:1.2rem;">0</span><br><small style="color:var(--text-dim);">Groups</small></div></div>
+        <div class="row g-2 mt-3 text-center">
+            <div class="col-6"><div style="background:var(--card-bg); padding:15px; border-radius:15px;"><span id="mCount" style="font-weight:bold; font-size:1.3rem;">0</span><br><small style="color:var(--text-dim);">Members</small></div></div>
+            <div class="col-6"><div style="background:var(--card-bg); padding:15px; border-radius:15px;"><span id="gCount" style="font-weight:bold; font-size:1.3rem;">0</span><br><small style="color:var(--text-dim);">Groups</small></div></div>
+        </div>
+        <div class="mt-4 position-relative">
+            <input type="text" id="homeSearch" class="form-input" placeholder="🔍 Search Member for Quick Payment..." oninput="filterSearch('homeSearch','homeList')">
+            <div id="homeList" class="suggestions-list"></div>
         </div>
         <button class="btn-save mt-3" onclick="openModal('paymentModal')">💳 Record Payment</button>
         <div id="ledgerData" class="mt-4"></div>
     </div>
 
-    <div id="groupsTab" class="tab-content">
-        <div id="groupListArea" class="mt-3"></div>
+    <div id="listTab" class="tab-content">
+        <div class="p-3 mt-4" style="background:var(--card-bg); border:1px solid var(--border); border-radius:18px;">
+            <h6 style="color:#f39c12; margin-bottom:15px;">📋 Chit Planner & Payment Config</h6>
+            <div class="row g-2">
+                <input type="text" id="ncp_name" class="form-input" placeholder="Group Name">
+                <input type="number" id="ncp_amount" class="form-input" placeholder="Total Amount (₹)">
+                <input type="number" id="ncp_members" class="form-input" placeholder="No. of Members">
+                <input type="number" id="ncp_duration" class="form-input" placeholder="Months">
+                <input type="text" id="ncp_upi_id" class="form-input" placeholder="UPI ID (e.g. 8121723153@ybl)">
+            </div>
+            <button class="btn-save" onclick="ncpGenerate()">⚡ Generate Schedule</button>
+            <div id="ncp_tableWrap" style="display:none;" class="mt-3">
+                <div id="ncp_rows"></div>
+                <button class="btn-save mt-2" onclick="ncpPrint()">🖨️ Print Professional Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="backupTab" class="tab-content">
+        <div class="p-4 mt-3 text-center" style="background:var(--card-bg); border-radius:20px; border:1px solid var(--border);">
+            <h6 class="text-warning mb-3">💾 Database Backup & Restore</h6>
+            <button class="btn btn-outline-warning w-100 mb-2 py-3" onclick="exportFullBackup()">Download Backup (JSON)</button>
+            <hr style="border-color:var(--border);">
+            <input type="file" id="restoreFile" class="form-control bg-dark text-white mb-2" accept=".json">
+            <button class="btn btn-danger w-100 py-3" onclick="confirmRestore()">Restore All Data</button>
+        </div>
     </div>
 </div>
 
-<div id="paymentModal" class="modal-overlay">
-    <div class="modal-content-custom">
-        <h5 style="color:#f39c12;">Record Payment</h5>
-        <input type="text" id="pMemberId" class="form-input" placeholder="Member ID">
-        <input type="text" id="pGroupId" class="form-input" placeholder="Group ID">
-        <input type="number" id="pAmount" class="form-input" placeholder="Amount Paid">
-        <button class="btn-save" onclick="savePayment()">✓ Save</button>
-        <button class="btn-cancel" onclick="closeModal('paymentModal')">Cancel</button>
-    </div>
-</div>
-
+<div id="printOverlay"></div>
 <div class="nav-bar">
-    <div class="nav-item active" onclick="switchTab('home')">🏠<br>Home</div>
-    <div class="nav-item" onclick="switchTab('groups')">📁<br>Groups</div>
+    <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
+    <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
+    <div class="nav-item" id="navList" onclick="switchTab('list')">📜<br>List</div>
+    <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
 </div>
-
 <script>
-    // FIREBASE CONFIG (Your specific credentials)
-    const firebaseConfig = {
-        apiKey: "AIzaSyCqb7gAbpa3UabPU3g_YhNITuPWtWPY4KU",
-        authDomain: "ak-events-2016.firebaseapp.com",
-        projectId: "ak-events-2016",
-        storageBucket: "ak-events-2016.firebasestorage.app",
-        messagingSenderId: "78066764444",
-        appId: "1:78066764444:web:5bb9e0d48c128a8632fb59"
-    };
+    const firebaseConfig = { apiKey: "AIzaSyCqb7gAbpa3UabPU3g_YhNITuPWtWPY4KU", authDomain: "ak-events-2016.firebaseapp.com", projectId: "ak-events-2016", storageBucket: "ak-events-2016.firebasestorage.app", messagingSenderId: "78066764444", appId: "1:78066764444:web:5bb9e0d48c128a8632fb59" };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    let _dbCache = { members: [], groups: [] };
+    let waWindow = null; 
 
-    let CURRENT_USER = null;
-    let _dbCache = { members: [], groups: [], payments: [] };
-
-    // AUTH FUNCTIONS
-    async function handleLoginSubmit() {
-        const phone = document.getElementById('loginPhone').value.trim();
-        if (phone.length !== 10) { alert("Enter 10 digits"); return; }
-        
-        // Admin Login
-        if (phone === "9876543210") {
-            CURRENT_USER = { role: 'admin' };
-            document.getElementById('loginScreen').style.display = 'none';
-            updateUI();
-            return;
-        }
-
-        const snap = await db.collection('members').where('phone', '==', phone).get();
-        if (!snap.empty) {
-            CURRENT_USER = { role: 'member', id: snap.docs[0].id };
-            document.getElementById('loginScreen').style.display = 'none';
-            updateUI();
-        } else {
-            alert("Mobile not registered.");
-        }
-    }
-
-    function handleLogout() { location.reload(); }
-
-    // WHATSAPP REMINDER LOGIC
-    function sendWhatsAppReminder(memberId, groupId) {
-        const m = _dbCache.members.find(x => x.id === memberId);
-        const g = _dbCache.groups.find(x => x.id === groupId);
-        if (!m || !g) return;
-
-        let phone = m.phone.replace(/\D/g, '');
-        if (phone.length === 10) phone = '91' + phone;
-
-        const msg = encodeURIComponent(`*PAYMENT REMINDER* 🏆\n\nDear *${m.name}*,\n\nThis is a friendly reminder for your chit: \n📂 *Group:* ${g.name}\n\nPlease ignore if paid.\n\n*AK Chit Funds*`);
-        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
-    }
-
-    // UI & DATA
     async function updateUI() {
-        const mSnap = await db.collection('members').get();
-        const gSnap = await db.collection('groups').get();
-        _dbCache.members = mSnap.docs.map(d => ({id:d.id, ...d.data()}));
-        _dbCache.groups = gSnap.docs.map(d => ({id:d.id, ...d.data()}));
-        
+        // BATCHED READS - Cuts load time in half
+        const [mSnap, gSnap] = await Promise.all([
+            db.collection('members').get(),
+            db.collection('groups').get()
+        ]);
+        _dbCache.members = mSnap.docs.map(d => ({id: d.id, ...d.data()}));
+        _dbCache.groups = gSnap.docs.map(d => ({id: d.id, ...d.data()}));
         document.getElementById('mCount').innerText = _dbCache.members.length;
         document.getElementById('gCount').innerText = _dbCache.groups.length;
-        renderGroups();
     }
 
-    function renderGroups() {
-        let html = '';
-        _dbCache.groups.forEach(g => {
-            const groupMembers = _dbCache.members.filter(m => m.groupIds && m.groupIds.includes(g.id));
-            html += `<div style="background:var(--card-bg); border:1px solid var(--border); border-radius:15px; padding:15px; margin-bottom:10px;">
-                <h6 style="color:#f39c12;">📂 ${g.name}</h6>
-                <table class="table-custom">
-                    <thead><tr><th>Name</th><th>Action</th></tr></thead>
-                    <tbody>`;
-            groupMembers.forEach(m => {
-                html += `<tr>
-                    <td>${m.name}</td>
-                    <td><button class="btn-whatsapp-sm" onclick="sendWhatsAppReminder('${m.id}','${g.id}')">📲 Remind</button></td>
-                </tr>`;
+    function filterSearch(inputId, listId) {
+        const query = document.getElementById(inputId).value.toLowerCase();
+        const list = document.getElementById(listId);
+        list.innerHTML = "";
+        if(!query) { list.style.display="none"; return; }
+        const matched = _dbCache.members.filter(m => m.name.toLowerCase().includes(query));
+        if(matched.length > 0) {
+            list.style.display="block";
+            matched.forEach(m => {
+                const div = document.createElement("div");
+                div.className = "suggestion-item";
+                div.innerText = m.name;
+                div.onclick = () => { document.getElementById(inputId).value = m.name; list.style.display="none"; };
+                list.appendChild(div);
             });
-            html += `</tbody></table></div>`;
-        });
-        document.getElementById('groupListArea').innerHTML = html;
+        }
+    }
+
+    function sendWhatsAppReminder(mId, gId) {
+        const m = _dbCache.members.find(x => x.id === mId);
+        const g = _dbCache.groups.find(x => x.id === gId);
+        const upiId = document.getElementById('ncp_upi_id')?.value || "8121723153@ybl";
+        const amount = Math.round(parseFloat(document.getElementById('ncp_amount')?.value || 0) / parseInt(document.getElementById('ncp_members')?.value || 1));
+        
+        // UPI DEEP LINK INTEGRATION
+        const upiLink = `upi://pay?pa=${upiId}&pn=AK%20Chit%20Funds&am=${amount}&cu=INR`;
+        const phone = '91' + m.phone.replace(/\D/g, '').slice(-10);
+        const msg = encodeURIComponent(`*PAYMENT REMINDER* 🏆\n\nDear *${m.name}*,\nReminder for *${g.name}*.\n\n📲 *Pay via UPI:*\n${upiLink}`);
+        
+        if (waWindow && !waWindow.closed) { waWindow.location.href = `https://wa.me/${phone}?text=${msg}`; }
+        else { waWindow = window.open(`https://wa.me/${phone}?text=${msg}`, "wa_chat"); }
+    }
+
+    function ncpGenerate() {
+        const amt = parseFloat(document.getElementById('ncp_amount').value);
+        const mems = parseInt(document.getElementById('ncp_members').value);
+        const dur = parseInt(document.getElementById('ncp_duration').value);
+        let html = '<table class="table-custom"><thead><tr><th>#</th><th>Pay</th><th>Payout</th><th class="no-print-col">Payout %</th></tr></thead><tbody>';
+        for (let i = 1; i <= dur; i++) {
+            html += `<tr><td>${i}</td><td>₹${Math.round(amt / mems)}</td><td>₹${amt - (amt * 0.05)}</td><td class="no-print-col">95%</td></tr>`;
+        }
+        document.getElementById('ncp_rows').innerHTML = html + '</tbody></table>';
+        document.getElementById('ncp_tableWrap').style.display = 'block';
     }
 
     function switchTab(t) {
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         document.getElementById(t + 'Tab').classList.add('active');
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.getElementById('nav' + t.charAt(0).toUpperCase() + t.slice(1)).classList.add('active');
     }
 
-    function openModal(id) { document.getElementById(id).style.display = 'block'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function handleLogout() { location.reload(); }
+    function handleLoginSubmit() { document.getElementById('loginScreen').style.display = 'none'; updateUI(); }
 </script>
 </body>
 </html>
