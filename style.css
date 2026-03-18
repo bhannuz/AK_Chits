@@ -1,33 +1,31 @@
+/* Professional Theme for AK Admin */
 :root { 
-    --bg-dark:#0a0e1a; --card-bg:#141b2d; --input-bg:#1c253b; 
-    --accent-gold:linear-gradient(90deg,#ff9800,#f57c00); 
-    --text-main:#ffffff; --text-dim:#8e9aaf; --border:#252f48; 
+    --bg-dark: #0a0e1a; 
+    --card-bg: #141b2d; 
+    --input-bg: #1c253b; 
+    --accent-gold: linear-gradient(90deg, #ff9800, #f57c00); 
+    --text-main: #ffffff; 
+    --text-dim: #8e9aaf; 
+    --border: #252f48; 
 }
 
-body { background-color:var(--bg-dark); color:var(--text-main); font-family:'Segoe UI',sans-serif; padding-bottom:120px; }
-
-/* BRANDING: DOUBLED LOGO */
-.brand { display:flex; align-items:center; gap:15px; color:#f39c12; font-weight:bold; font-size:1.8rem; }
-.brand-logo { font-size:4rem !important; line-height: 1; }
-
-.app-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
-.nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:12px 0; border-top:1px solid var(--border); z-index:1000; }
-.nav-item { cursor:pointer; text-align:center; font-size:0.75rem; color:var(--text-dim); }
-.nav-item.active { color:#f39c12; }
-.tab-content { display:none; }
-.tab-content.active { display:block; }
-
-/* THE EXACT TABLE STYLE FROM YOUR 2ND IMAGE */
-.table-planner { color:white; font-size:0.75rem; width:100%; border-collapse:collapse; margin-top:15px; border: 1px solid #444; }
-.table-planner th { background: #1c253b; color: #f39c12; padding:12px 5px; text-transform:uppercase; border: 1px solid #444; text-align:center; }
-.table-planner td { padding:10px 5px; border: 1px solid #444; text-align:center; }
-
-.btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; cursor:pointer; }
-.form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:0.9rem; }
-
-/* PRINT OVERRIDES */
-@media print {
-    body * { visibility: hidden; }
-    #printArea, #printArea * { visibility: visible; color: black !important; }
-    #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+body { 
+    background-color: var(--bg-dark); 
+    color: var(--text-main); 
+    font-family: 'Segoe UI', sans-serif; 
+    padding-bottom: 120px; 
 }
+
+.app-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.stat-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 15px; padding: 15px; text-align: center; }
+.form-input { background: var(--input-bg); border: 1px solid var(--border); color: white; padding: 12px; border-radius: 12px; width: 100%; margin-bottom: 12px; }
+
+.nav-bar { 
+    position: fixed; bottom: 0; width: 100%; background: #070b14; 
+    display: flex; justify-content: space-around; padding: 12px 0; 
+    border-top: 1px solid var(--border); z-index: 1000; 
+}
+.nav-item { cursor: pointer; text-align: center; font-size: 0.62rem; color: var(--text-dim); }
+.nav-item.active { color: #f39c12; }
+.tab-content { display: none; } 
+.tab-content.active { display: block; }
