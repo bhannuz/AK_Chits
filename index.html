@@ -2367,7 +2367,7 @@ async function handleLoginSubmit(){
     showToast('⏳ Checking access…', true);
 
     // 1. Check if it's the Primary Admin Number
-    if(phone === '8121723153'){ 
+    if(phone === '0987654321'){ 
         const user = {phone, role:'admin', name:'Admin'};
         CURRENT_USER = user;
         sessionStorage.setItem('akdf_session', JSON.stringify(user));
