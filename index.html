@@ -6,37 +6,41 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>AK Chit Funds - Portal v5.0</title>
+    <title>AK Chit Funds - Admin Portal v5.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --bg-dark:#0a0e1a; --card-bg:#141b2d; --input-bg:#1c253b; --accent-gold:linear-gradient(90deg,#ff9800,#f57c00); --text-main:#ffffff; --text-dim:#8e9aaf; --border:#252f48; }
         * { box-sizing:border-box; }
         body { background-color:var(--bg-dark); color:var(--text-main); font-family:'Segoe UI',sans-serif; padding-bottom:120px; }
-        .app-header { display:flex; justify-content:space-between; align-items:center; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--card-bg); }
+        .app-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--card-bg); }
         .brand { color:#f39c12; font-weight:bold; font-size:1.3rem; }
         .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:15px; padding:15px; text-align:center; }
         .stat-num { font-size:1.3rem; font-weight:bold; display:block; }
         .stat-label { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; }
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:2000; padding:20px; overflow-y:auto; }
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:2000; padding:20px; overflow-y:auto; }
         .modal-content-custom { background:var(--card-bg); border-radius:25px; padding:25px; max-width:450px; margin:20px auto; border:1px solid var(--border); }
         .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:0.9rem; }
+        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; margin-bottom:10px; cursor:pointer; }
+        .btn-cancel { background:var(--input-bg); color:white; border:none; width:100%; padding:12px; border-radius:14px; cursor:pointer; }
         .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:12px 0; border-top:1px solid var(--border); z-index:1000; }
         .nav-item { cursor:pointer; text-align:center; font-size:0.65rem; color:var(--text-dim); }
         .nav-item.active { color:#f39c12; font-weight:bold; }
         .tab-content { display:none; } .tab-content.active { display:block; }
-        .table-custom { color:white; font-size:0.7rem; width:100%; border-collapse:collapse; }
-        .table-custom th { color:var(--text-dim); border-bottom:1px solid var(--border); padding:8px 5px; text-transform:uppercase; }
-        .table-custom td { padding:9px 5px; border-bottom:1px solid rgba(255,255,255,0.05); }
-        .suggestions-list { position:absolute; top:100%; left:0; right:0; background:var(--input-bg); border:1px solid var(--border); z-index:3000; max-height:200px; overflow-y:auto; display:none; }
+        .suggestions-list { position:absolute; top:100%; left:0; right:0; background:var(--input-bg); border:1px solid var(--border); z-index:3000; max-height:200px; overflow-y:auto; display:none; border-radius:10px; }
         .suggestion-item { padding:12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .suggestion-item:hover { background:#252f48; color:#f39c12; }
         #loginScreen { position:fixed; inset:0; background:var(--bg-dark); z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; }
         .login-card { background:var(--card-bg); border:1px solid var(--border); border-radius:28px; padding:32px; width:100%; max-width:400px; text-align:center; }
-        .chit-picked { background: rgba(16,185,129,0.1); border-left: 3px solid #10b981; }
+        .prog-bar-outer { background:#252f48; border-radius:5px; height:7px; overflow:hidden; margin:6px 0; }
+        .prog-bar-inner { height:100%; background:var(--accent-gold); }
+        .chit-picked-row { background:rgba(16,185,129,0.08); border-left:3px solid #10b981; }
+        .table-custom { font-size:0.7rem; color:white; width:100%; }
+        .table-custom th { color:var(--text-dim); text-transform:uppercase; padding:8px; border-bottom:1px solid var(--border); }
+        .table-custom td { padding:8px; border-bottom:1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -45,12 +49,12 @@
     <div class="login-card">
         <img src="logo.png" style="width: 120px; height: auto; margin-bottom: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);" onerror="this.src='https://via.placeholder.com/120?text=AK'">
         <div style="font-size:1.6rem; font-weight:900; color:#f39c12;">AK Chit Funds</div>
-        <div style="font-size:0.75rem; color:var(--text-dim); margin-bottom:20px;">Portal Login</div>
-        <div style="display:flex; gap:8px;">
-            <span style="background:var(--input-bg); border:1px solid var(--border); color:var(--text-dim); padding:12px; border-radius:12px;">+91</span>
+        <p style="color:var(--text-dim); font-size:0.75rem;">Portal Login</p>
+        <div style="display:flex; gap:8px; margin-top:20px;">
+            <span style="background:var(--input-bg); border:1px solid var(--border); padding:12px; border-radius:12px;">+91</span>
             <input type="tel" id="loginPhone" class="form-input" style="margin-bottom:0;" placeholder="0987654321" maxlength="10">
         </div>
-        <button class="btn btn-warning w-100 py-3 mt-3 fw-bold" onclick="handleLoginSubmit()">🔐 Access Portal</button>
+        <button class="btn-save mt-3 w-100" onclick="handleLoginSubmit()">🔐 Continue</button>
     </div>
 </div>
 
@@ -60,60 +64,80 @@
             <img src="logo.png" style="height: 80px; width: auto; margin-right: 12px; border-radius: 5px;" onerror="this.style.display='none'">
             <div class="brand">AK Chit Funds <small style="font-size:0.5em;color:#2ecc71;">☁ CLOUD</small></div>
         </div>
-        <button id="logoutBtn" onclick="handleLogout()" class="btn btn-sm btn-outline-danger">Logout</button>
+        <button onclick="handleLogout()" class="btn btn-sm btn-outline-danger">Logout</button>
     </div>
 
     <div id="homeTab" class="tab-content active">
-        <div class="row g-2 mt-3 text-center" id="adminStats">
-            <div class="col-4"><div class="stat-card"><span class="stat-num" id="memberCount">0</span><span class="stat-label">Members</span></div></div>
-            <div class="col-4"><div class="stat-card"><span class="stat-num" id="groupCount">0</span><span class="stat-label">Groups</span></div></div>
-            <div class="col-4"><div class="stat-card"><span class="stat-num text-success" id="todayColl">₹0</span><span class="stat-label">Today</span></div></div>
+        <div class="row g-2 mt-3 text-center" id="statsRow">
+            <div class="col-4"><div class="stat-card"><span class="stat-num" id="countM">0</span><span class="stat-label">Members</span></div></div>
+            <div class="col-4"><div class="stat-card"><span class="stat-num" id="countG">0</span><span class="stat-label">Groups</span></div></div>
+            <div class="col-4"><div class="stat-card"><span class="stat-num text-success" id="countT">₹0</span><span class="stat-label">Today</span></div></div>
         </div>
 
-        <div id="adminActionBtns" class="mt-4">
-            <button class="btn btn-warning w-100 py-3 fw-bold shadow" onclick="openPaymentModal()" style="border-radius:20px;">💳 Record Payment</button>
+        <button class="btn btn-warning w-100 py-3 fw-bold mt-4 shadow" onclick="openModal('payModal')" style="border-radius:20px;">💳 Record Payment</button>
+
+        <div class="p-3 my-3" style="background:var(--card-bg); border-radius:20px; border:1px solid var(--border); position: relative;">
+            <input type="text" id="ledgerSearch" class="form-input" placeholder="🔍 Search Member Ledger..." oninput="doSearch(this.value)">
+            <div id="suggestList" class="suggestions-list"></div>
+            <div id="ledgerContent" class="mt-3"></div>
         </div>
 
-        <div id="ledgerContainer" class="p-3 my-3" style="background:var(--card-bg); border-radius:20px; border:1px solid var(--border); position: relative;">
-            <input type="text" id="summarySearch" class="form-input" placeholder="🔍 Search Member Ledger..." oninput="filterSearch(this.value)">
-            <div id="summaryList" class="suggestions-list"></div>
-            <div id="ledgerData" class="mt-3"></div>
-        </div>
-
-        <div class="d-flex gap-2" id="adminQuickBtns">
-            <button class="btn btn-outline-warning w-100 py-3" onclick="openAddMember()">👤 Create Member</button>
-            <button class="btn btn-outline-success w-100 py-3" onclick="openAddGroup()">🏦 New Group</button>
+        <div class="d-flex gap-2" id="actionBtns">
+            <button class="btn btn-outline-warning w-100 py-3" onclick="openModal('memModal')">👤 Create Member</button>
+            <button class="btn btn-outline-success w-100 py-3" onclick="openModal('grpModal')">🏦 New Group</button>
         </div>
     </div>
 
     <div id="groupsTab" class="tab-content">
-        <div id="groupListArea" class="mt-3 p-2"></div>
+        <div id="groupList" class="p-2"></div>
     </div>
 
     <div id="backupTab" class="tab-content">
         <div class="stat-card p-4 mt-5">
-            <button class="btn btn-warning w-100 py-3 mb-2" onclick="exportFullBackup()">💾 Backup JSON</button>
+            <button class="btn btn-warning w-100 py-3 mb-2" onclick="exportFullBackup()">💾 Download JSON</button>
             <button class="btn btn-success w-100 py-3" onclick="exportToExcel()">📊 Export Excel</button>
         </div>
     </div>
 </div>
 
-<div class="nav-bar" id="footerNav">
-    <div class="nav-item active" id="navHome" onclick="switchTab('home', this)">🏠<br>Home</div>
-    <div class="nav-item" id="navGroups" onclick="switchTab('groups', this)">📁<br>Groups</div>
-    <div class="nav-item" id="navBackup" onclick="switchTab('backup', this)">💾<br>Backup</div>
+<div class="nav-bar" id="bottomNav">
+    <div class="nav-item active" onclick="switchTab('home', this)">🏠<br>Home</div>
+    <div class="nav-item" onclick="switchTab('groups', this)">📁<br>Groups</div>
+    <div class="nav-item" onclick="switchTab('backup', this)">💾<br>Backup</div>
 </div>
 
 <div id="payModal" class="modal-overlay">
     <div class="modal-content-custom">
         <h5>Record Payment</h5>
         <input type="date" id="pDate" class="form-input">
-        <select id="pMember" class="form-input" onchange="updateGroupDrop()"></select>
+        <select id="pMember" class="form-input" onchange="autoGroup()"></select>
         <select id="pGroup" class="form-input"></select>
         <input type="number" id="pAmt" class="form-input" placeholder="Amount ₹">
-        <select id="pPicked" class="form-input"><option value="No">Picked: No</option><option value="Yes">Picked: Yes ✅</option></select>
-        <button class="btn-save w-100" onclick="savePayment()">Sync Payment</button>
+        <select id="pPicked" class="form-input"><option value="No">Chit Picked: No</option><option value="Yes">Chit Picked: Yes ✅</option></select>
+        <button class="btn-save w-100" onclick="savePay()">✓ Save to Cloud</button>
         <button class="btn-cancel w-100" onclick="closeModal('payModal')">Cancel</button>
+    </div>
+</div>
+
+<div id="memModal" class="modal-overlay">
+    <div class="modal-content-custom">
+        <h5>New Member</h5>
+        <input type="text" id="mName" class="form-input" placeholder="Full Name">
+        <input type="tel" id="mPhone" class="form-input" placeholder="Phone Number">
+        <select id="mGroup" class="form-input"></select>
+        <button class="btn-save w-100" onclick="saveMem()">Create Member</button>
+        <button class="btn-cancel w-100" onclick="closeModal('memModal')">Cancel</button>
+    </div>
+</div>
+
+<div id="grpModal" class="modal-overlay">
+    <div class="modal-content-custom">
+        <h5>New Group</h5>
+        <input type="text" id="gName" class="form-input" placeholder="Group Name (e.g. 5L V3)">
+        <input type="number" id="gDur" class="form-input" placeholder="Duration (Months)">
+        <input type="date" id="gStart" class="form-input" title="Start Date">
+        <button class="btn-save w-100" onclick="saveGrp()">Create Group</button>
+        <button class="btn-cancel w-100" onclick="closeModal('grpModal')">Cancel</button>
     </div>
 </div>
 
@@ -122,7 +146,6 @@ const firebaseConfig={apiKey:"AIzaSyCqb7gAbpa3UabPU3g_YhNITuPWtWPY4KU",authDomai
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const ADMIN_PHONE = '0987654321';
-let CURRENT_USER = null;
 let _cache = { m: [], g: [], p: [] };
 
 async function sync() {
@@ -131,109 +154,114 @@ async function sync() {
         db.collection('groups').get(),
         db.collection('payments').get()
     ]);
-    _cache.m = m.docs.map(d=>({id:d.id,...d.data()}));
-    _cache.g = g.docs.map(d=>({id:d.id,...d.data()}));
-    _cache.p = p.docs.map(d=>({id:d.id,...d.data()}));
-    updateUI();
+    _cache.m = m.docs.map(d=>({id:d.id, ...d.data()}));
+    _cache.g = g.docs.map(d=>({id:d.id, ...d.data()}));
+    _cache.p = p.docs.map(d=>({id:d.id, ...d.data()}));
+    
+    document.getElementById('countM').innerText = _cache.m.length;
+    document.getElementById('countG').innerText = _cache.g.length;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const todayAmt = _cache.p.filter(x=>x.date===today).reduce((s,x)=>s+(parseFloat(x.amt)||0),0);
+    document.getElementById('countT').innerText = '₹' + todayAmt.toLocaleString('en-IN');
+    
+    renderGroups();
 }
 
 function initAuth() {
     const saved = sessionStorage.getItem('akdf_session');
-    if(saved) applyUserSession(JSON.parse(saved));
-    else document.getElementById('loginScreen').style.display = 'flex';
-}
-
-function applyUserSession(user) {
-    CURRENT_USER = user;
-    document.getElementById('loginScreen').style.display = 'none';
-    sync();
+    if(saved) {
+        document.getElementById('loginScreen').style.display='none';
+        sync();
+    } else {
+        document.getElementById('loginScreen').style.display='flex';
+    }
 }
 
 async function handleLoginSubmit() {
     const phone = document.getElementById('loginPhone').value.trim();
     if(phone === ADMIN_PHONE) {
-        const user = {phone, role:'admin', name:'Admin'};
-        sessionStorage.setItem('akdf_session', JSON.stringify(user));
-        applyUserSession(user);
+        sessionStorage.setItem('akdf_session', JSON.stringify({role:'admin'}));
+        location.reload();
     } else {
-        const members = await db.collection('members').get();
-        const matched = members.docs.find(d => d.data().phone === phone);
+        const matched = _cache.m.find(m => m.phone === phone);
         if(matched) {
-            const user = {phone, role:'member', name: matched.data().name, id: matched.id};
-            sessionStorage.setItem('akdf_session', JSON.stringify(user));
-            applyUserSession(user);
-        } else { alert("Login failed. Check number."); }
+            sessionStorage.setItem('akdf_session', JSON.stringify({role:'member', id: matched.id, name: matched.name}));
+            location.reload();
+        } else { alert("Unauthorized"); }
     }
 }
 
-function updateUI() {
-    document.getElementById('memberCount').innerText = _cache.m.length;
-    document.getElementById('groupCount').innerText = _cache.g.length;
-    renderGroups();
-}
-
 function renderGroups() {
-    const area = document.getElementById('groupListArea');
+    const area = document.getElementById('groupList');
     area.innerHTML = _cache.g.map(g => {
-        const mms = _cache.m.filter(m => m.groupId === g.id);
+        const ms = _cache.m.filter(m => m.groupId === g.id);
+        const ps = _cache.p.filter(p => p.groupId === g.id);
+        const totalCollected = ps.reduce((s,x)=>s+(parseFloat(x.amt)||0),0);
         return `<div class="group-card">
             <h6 style="color:#f39c12">📂 ${g.name}</h6>
-            <small class="text-dim">${mms.length} members enrolled</small>
-            <div class="mt-2" style="font-size:0.75rem">
-                ${mms.map(m => `• ${m.name}`).join('<br>')}
-            </div>
+            <div class="prog-bar-outer"><div class="prog-bar-inner" style="width:50%"></div></div>
+            <small class="text-dim">Collection: ₹${totalCollected.toLocaleString()}</small><br>
+            <small class="text-dim">${ms.length} Members Enrolled</small>
+            <div class="mt-2" style="font-size:0.75rem;">${ms.map(m=>`• ${m.name}`).join('<br>')}</div>
         </div>`;
     }).join('');
 }
 
-function filterSearch(val) {
-    const list = document.getElementById('summaryList');
+function doSearch(val) {
+    const list = document.getElementById('suggestList');
     if(!val) { list.style.display='none'; return; }
     const filtered = _cache.m.filter(m => m.name.toLowerCase().includes(val.toLowerCase()));
-    list.innerHTML = filtered.map(m => `<div class="suggestion-item" onclick="selectMember('${m.id}','${m.name}')">${m.name}</div>`).join('');
+    list.innerHTML = filtered.map(m => `<div class="suggestion-item" onclick="showLedger('${m.id}','${m.name}')">${m.name}</div>`).join('');
     list.style.display = 'block';
 }
 
-function selectMember(id, name) {
-    document.getElementById('summarySearch').value = name;
-    document.getElementById('summaryList').style.display = 'none';
-    const mp = _cache.p.filter(p => p.memberId === id);
-    document.getElementById('ledgerData').innerHTML = `
+function showLedger(id, name) {
+    document.getElementById('ledgerSearch').value = name;
+    document.getElementById('suggestList').style.display = 'none';
+    const ps = _cache.p.filter(p => p.memberId === id);
+    document.getElementById('ledgerContent').innerHTML = `
         <div class="stat-card">
-            <h6>${name} Ledger</h6>
+            <h6 style="color:#f39c12">${name} Statement</h6>
             <table class="table-custom w-100">
                 <thead><tr><th>Date</th><th>Amount</th><th>Picked</th></tr></thead>
-                <tbody>${mp.map(p=>`<tr><td>${p.date}</td><td class="text-success">₹${p.amt}</td><td>${p.picked||'No'}</td></tr>`).join('')}</tbody>
+                <tbody>${ps.map(p=>`<tr class="${p.picked==='Yes'?'chit-picked-row':''}"><td>${p.date}</td><td>₹${p.amt}</td><td>${p.picked||'No'}</td></tr>`).join('')}</tbody>
             </table>
         </div>`;
 }
 
-function openPaymentModal() {
-    const memDrop = document.getElementById('pMember');
-    memDrop.innerHTML = '<option value="">Select Member</option>' + _cache.m.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
-    document.getElementById('pDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('payModal').style.display = 'block';
+function openModal(id) {
+    if(id==='payModal') {
+        document.getElementById('pMember').innerHTML = '<option value="">Select Member</option>' + _cache.m.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        document.getElementById('pDate').value = new Date().toISOString().split('T')[0];
+    }
+    if(id==='memModal') {
+        document.getElementById('mGroup').innerHTML = _cache.g.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    }
+    document.getElementById(id).style.display = 'block';
 }
 
-function updateGroupDrop() {
+function autoGroup() {
     const mid = document.getElementById('pMember').value;
     const member = _cache.m.find(m => m.id === mid);
-    const gDrop = document.getElementById('pGroup');
     const group = _cache.g.find(g => g.id === member.groupId);
-    gDrop.innerHTML = group ? `<option value="${group.id}">${group.name}</option>` : '<option>No Group</option>';
+    document.getElementById('pGroup').innerHTML = group ? `<option value="${group.id}">${group.name}</option>` : '<option>No Group</option>';
 }
 
-async function savePayment() {
-    const data = {
-        memberId: document.getElementById('pMember').value,
-        groupId: document.getElementById('pGroup').value,
-        amt: document.getElementById('pAmt').value,
-        date: document.getElementById('pDate').value,
-        picked: document.getElementById('pPicked').value
-    };
+async function savePay() {
+    const data = { memberId: document.getElementById('pMember').value, groupId: document.getElementById('pGroup').value, amt: document.getElementById('pAmt').value, date: document.getElementById('pDate').value, picked: document.getElementById('pPicked').value };
     await db.collection('payments').add(data);
-    closeModal('payModal');
-    sync();
+    closeModal('payModal'); sync();
+}
+
+async function saveMem() {
+    await db.collection('members').add({ name: document.getElementById('mName').value, phone: document.getElementById('mPhone').value, groupId: document.getElementById('mGroup').value });
+    closeModal('memModal'); sync();
+}
+
+async function saveGrp() {
+    await db.collection('groups').add({ name: document.getElementById('gName').value, duration: document.getElementById('gDur').value, startDate: document.getElementById('gStart').value });
+    closeModal('grpModal'); sync();
 }
 
 function switchTab(t, el) {
