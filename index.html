@@ -467,5 +467,19 @@
     <!-- 5. Init always last -->
     <script src="js/init.js"></script>
 
+    <script>
+/* Make all required functions global so HTML can access them */
+
+window.switchTab = window.switchTab || function(){};
+window.updateUI = window.updateUI || function(){};
+window.filterSearch = window.filterSearch || function(){};
+window.migrateData = window.migrateData || function(){};
+window.openMembersQuickView = window.openMembersQuickView || function(){};
+window.openGroupsQuickView = window.openGroupsQuickView || function(){};
+window.openPaymentModal = window.openPaymentModal || function(){};
+window.openAddMember = window.openAddMember || function(){};
+window.openAddGroup = window.openAddGroup || function(){};
+window.handleLogout = window.handleLogout || function(){};
+</script>
 </body>
 </html>
