@@ -8,17 +8,17 @@
     <meta http-equiv="Expires" content="0">
     <title>AK Chit Funds - Admin Portal</title>
 
-    <!-- ── External Libraries ── -->
+    <!-- ── External Libraries (CSS) ── -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- ── App Styles ── -->
+    <link rel="stylesheet" href="css/app.css">
+    <!-- ── External JS libraries — must load synchronously before deferred app scripts ── -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-
-    <!-- ── App Styles ── -->
-    <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
 
@@ -443,29 +443,29 @@
 <!-- BOTTOM NAV -->
 <div class="nav-bar">
     <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
-    <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
     <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
+    <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
 </div>
 
 
-    <!-- ══ APP SCRIPTS — load order matters ══ -->
+    <!-- ══ APP SCRIPTS — defer ensures strict load order ══ -->
     <!-- 1. Firebase must be first (db + cache used by everything) -->
-    <script src="js/firebase.js"></script>
+    <script src="js/firebase.js" defer></script>
     <!-- 2. Shared utilities used by all other files -->
-    <script src="js/helpers.js"></script>
+    <script src="js/helpers.js" defer></script>
     <!-- 3. UI helpers, nav, toast, modal, search -->
-    <script src="js/ui.js"></script>
-    <!-- 4. Feature modules (order independent) -->
-    <script src="js/ledger.js"></script>
-    <script src="js/members.js"></script>
-    <script src="js/groups.js"></script>
-    <script src="js/payments.js"></script>
-    <script src="js/backup.js"></script>
-    <script src="js/print.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/quickview.js"></script>
+    <script src="js/ui.js" defer></script>
+    <!-- 4. Feature modules -->
+    <script src="js/ledger.js" defer></script>
+    <script src="js/members.js" defer></script>
+    <script src="js/groups.js" defer></script>
+    <script src="js/payments.js" defer></script>
+    <script src="js/backup.js" defer></script>
+    <script src="js/print.js" defer></script>
+    <script src="js/auth.js" defer></script>
+    <script src="js/quickview.js" defer></script>
     <!-- 5. Init always last -->
-    <script src="js/init.js"></script>
+    <script src="js/init.js" defer></script>
 
 </body>
 </html>
