@@ -2355,31 +2355,11 @@ async function generateGroupPDF(gid){
 }
 
 
-
-
-
 // ══════════════════════════════════════════
 // AUTH SYSTEM
 // ══════════════════════════════════════════
-const ADMIN_PHONE = '9876543210';
+const ADMIN_PHONE = '8121723153'; // Set your real admin number here
 let CURRENT_USER = null;
-
-function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
-function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
-function clearSession(){ sessionStorage.removeItem('akdf_session'); }
-
-async function initAuth(){
-    const saved = sessionStorage.getItem('akdf_session');
-    if(saved){
-        try{
-            const u = JSON.parse(saved);
-            CURRENT_USER = u;
-            applyUserSession(u);
-            return;
-        }catch(e){}
-    }
-    document.getElementById('loginScreen').style.display='flex';
-}
 
 async function handleLoginSubmit(){
     const phone = document.getElementById('loginPhone').value.trim();
@@ -2388,13 +2368,19 @@ async function handleLoginSubmit(){
     showToast('⏳ Checking access…', true);
 
     // 1. Check if it's the Primary Admin Number
-    if(phone === '8121723153'){ // Replace with your actual admin number
+    if(phone === ADMIN_PHONE){ 
         const user = {phone, role:'admin', name:'Admin'};
         CURRENT_USER = user;
         sessionStorage.setItem('akdf_session', JSON.stringify(user));
         applyUserSession(user);
         return;
     }
+    
+    // ... rest of your existing member login logic remains the same ...
+}
+
+
+
 
     // 2. If not admin, check if member exists in Firestore
     const members = await getCollection('members');
@@ -2502,44 +2488,45 @@ function goBackToLogin(){
     document.getElementById('loginPhone').value='';
     showLoginStep('loginStep1');
 }
-
 function applyUserSession(user){
     document.getElementById('loginScreen').style.display='none';
-    document.getElementById('logoutBtn').style.display='block';
+    
+    // Make sure logout button is shown regardless of role
+    const globalLogout = document.getElementById('logoutBtn');
+    if(globalLogout) globalLogout.style.display = 'block';
+
     if(user.role === 'admin'){
+        document.body.classList.remove('member-mode');
         document.getElementById('adminHeader').style.display='flex';
         document.getElementById('memberHeader').style.display='none';
-        document.getElementById('headerRoleBadge').textContent='ADMIN';
-        document.getElementById('headerRoleBadge').style.display='inline';
-        document.getElementById('accessReqBtn').style.display='inline-flex';
-        document.getElementById('logoutBtn').style.display='block';
+        
+        // Admin specific UI elements
         document.getElementById('adminStatCards').style.display='';
         document.getElementById('adminActionBtns').style.display='flex';
         document.getElementById('adminMemberSearch').style.display='';
-        document.getElementById('memberLedgerArea').style.display='none';
         document.getElementById('adminQuickBtns').style.display='flex';
+        document.querySelector('.nav-bar').style.display='flex';
+        
         updateUI();
         pollPendingRequests();
     } else {
+        // Member specific UI elements
+        document.body.classList.add('member-mode');
         document.getElementById('adminHeader').style.display='none';
         document.getElementById('memberHeader').style.display='block';
-        document.getElementById('logoutBtn').style.display='none';
+        
         document.getElementById('memberHeaderAvatar').textContent = ini(user.name);
         document.getElementById('memberHeaderName').textContent = user.name;
         document.getElementById('memberHeaderPhone').textContent = `📱 +91 ${user.phone}`;
-        document.getElementById('adminStatCards').style.display='none';
-        document.getElementById('adminActionBtns').style.display='none';
-        document.getElementById('adminMemberSearch').style.display='none';
-        document.getElementById('adminQuickBtns').style.display='none';
-        document.getElementById('navGroups').style.display='none';
-        document.getElementById('navList').style.display='none';
-        document.getElementById('navBackup').style.display='none';
-        document.querySelector('.nav-bar').style.display='none';
+        
+        // Hide Admin tools
         document.getElementById('memberLedgerArea').style.display='block';
-        document.getElementById('summaryView').value = user.memberId;
+        document.querySelector('.nav-bar').style.display='none';
+        
         loadMemberLedger();
     }
 }
+
 
 function handleLogout(){
     sessionStorage.removeItem('akdf_session');
