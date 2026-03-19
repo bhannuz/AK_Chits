@@ -2358,9 +2358,8 @@ async function generateGroupPDF(gid){
 // ══════════════════════════════════════════
 // AUTH SYSTEM
 // ══════════════════════════════════════════
-const ADMIN_PHONE = '8121723153'; // Set your real admin number here
+const ADMIN_PHONE = '0987654321'; // Set your real admin number here
 let CURRENT_USER = null;
-
 async function handleLoginSubmit(){
     const phone = document.getElementById('loginPhone').value.trim();
     if(phone.length !== 10){ showToast('❌ Enter valid 10-digit mobile number', false); return; }
@@ -2368,26 +2367,20 @@ async function handleLoginSubmit(){
     showToast('⏳ Checking access…', true);
 
     // 1. Check if it's the Primary Admin Number
-    if(phone === ADMIN_PHONE){ 
+    if(phone === '8121723153'){ 
         const user = {phone, role:'admin', name:'Admin'};
         CURRENT_USER = user;
         sessionStorage.setItem('akdf_session', JSON.stringify(user));
         applyUserSession(user);
+        showToast('✅ Welcome Admin', true);
         return;
     }
-    
-    // ... rest of your existing member login logic remains the same ...
-}
-
-
-
 
     // 2. If not admin, check if member exists in Firestore
     const members = await getCollection('members');
     const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
 
     if(matched){
-        // Check if there is already a request for this number
         const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
         
         if(!reqs.empty){
@@ -2400,25 +2393,20 @@ async function handleLoginSubmit(){
             } else if(req.status === 'denied'){
                 showLoginStep('loginStep3');
             } else {
-                // Still pending
                 document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
                 showLoginStep('loginStep2');
             }
         } else {
-            // NEW REQUEST: Add to Firestore so Admin sees it
             await db.collection('accessRequests').add({
-                phone, 
-                name: matched.name, 
-                memberId: matched.id,
-                status: 'pending', 
-                requestedAt: new Date().toISOString()
+                phone, name: matched.name, memberId: matched.id,
+                status: 'pending', requestedAt: new Date().toISOString()
             });
             document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
             showLoginStep('loginStep2');
             showToast('📨 Access request sent to admin', true);
         }
     } else {
-        showToast('❌ Mobile number not registered. Contact admin to be added as a member.', false);
+        showToast('❌ Mobile number not registered. Contact admin.', false);
     }
 }
 
