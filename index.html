@@ -116,62 +116,7 @@
     <!-- BACKUP TAB -->
     <div id="backupTab" class="tab-content">
         <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
-
-        <!-- ── Daily Backup Status Card ── -->
-        <div id="backupStatusCard" style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-                <div style="font-size:1rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.6px;">📅 Daily Auto-Backup Status</div>
-                <div id="backupStatusBadge" style="font-size:1.05rem;font-weight:700;padding:3px 10px;border-radius:6px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);">Not done today</div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-                <div style="background:var(--input-bg);border-radius:10px;padding:10px;text-align:center;">
-                    <div id="lastBackupDate" style="font-size:0.98rem;font-weight:800;color:#f39c12;">—</div>
-                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Last Backup</div>
-                </div>
-                <div style="background:var(--input-bg);border-radius:10px;padding:10px;text-align:center;">
-                    <div id="totalBackupCount" style="font-size:0.98rem;font-weight:800;color:#a5b4fc;">0</div>
-                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Backups Sent</div>
-                </div>
-            </div>
-            <button onclick="sendEmailBackup(true)" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:12px;font-size:0.98rem;font-weight:800;cursor:pointer;">
-                📧 Send Backup Email Now
-            </button>
-        </div>
-
-        <!-- ── Email Configuration ── -->
-        <div class="email-config-box">
-            <div class="email-config-title">⚙️ Email Configuration (EmailJS)</div>
-            <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:0.92rem;color:#fbbf24;line-height:1.6;">
-                <strong>Setup (one-time, 2 min):</strong><br>
-                1. Go to <strong>emailjs.com</strong> → Sign up free<br>
-                2. Add Email Service → connect Gmail → copy <strong>Service ID</strong><br>
-                3. Create Template with variables: <code>{{backup_date}}</code>, <code>{{member_count}}</code>, <code>{{group_count}}</code>, <code>{{payment_count}}</code>, <code>{{backup_data}}</code> → copy <strong>Template ID</strong><br>
-                4. Go to Account → copy <strong>Public Key</strong><br>
-                5. Fill fields below and tap Save
-            </div>
-            <label class="form-label-small">EmailJS Public Key</label>
-            <input type="text" id="ejs_pubkey" class="form-input" placeholder="e.g. user_xxxxxxxxxxxxxxxxx">
-            <label class="form-label-small">Service ID</label>
-            <input type="text" id="ejs_service" class="form-input" placeholder="e.g. service_xxxxxxx">
-            <label class="form-label-small">Template ID</label>
-            <input type="text" id="ejs_template" class="form-input" placeholder="e.g. template_xxxxxxx">
-            <label class="form-label-small">Send Backup To (Gmail)</label>
-            <input type="email" id="ejs_to_email" class="form-input" placeholder="e.g. yourname@gmail.com">
-            <button onclick="saveEmailConfig()" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:12px;border-radius:12px;font-size:0.98rem;font-weight:800;cursor:pointer;margin-bottom:4px;">
-                ✅ Save Email Config
-            </button>
-            <div id="emailConfigStatus" style="font-size:1rem;text-align:center;color:var(--text-dim);margin-top:6px;min-height:16px;"></div>
-        </div>
-
-        <!-- ── Backup History ── -->
-        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;">
-            <div style="font-size:1rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">📋 Backup History (last 7)</div>
-            <div id="backupHistoryList"><div style="text-align:center;color:var(--text-dim);font-size:0.98rem;padding:12px;">No backups sent yet</div></div>
-        </div>
-
-        <!-- ── Manual Backup / Restore ── -->
         <div class="stat-card p-4">
-            <div style="font-size:1rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">🛠 Manual Backup & Restore</div>
             <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
             <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
             <hr style="border-color:var(--border);">
@@ -448,38 +393,8 @@
 </div>
 
 
-    <!-- ══ APP SCRIPTS — defer ensures strict load order ══ -->
-    <!-- 1. Firebase must be first (db + cache used by everything) -->
-    <script src="js/firebase.js"></script>
-    <!-- 2. Shared utilities used by all other files -->
-    <script src="js/helpers.js"></script>
-    <!-- 3. UI helpers, nav, toast, modal, search -->
-    <script src="js/ui.js"></script>
-    <!-- 4. Feature modules -->
-    <script src="js/ledger.js"></script>
-    <script src="js/members.js"></script>
-    <script src="js/groups.js"></script>
-    <script src="js/payments.js"></script>
-    <script src="js/backup.js"></script>
-    <script src="js/print.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/quickview.js"></script>
-    <!-- 5. Init always last -->
-    <script src="js/init.js"></script>
+    <!-- ══ APP SCRIPTS — app.js loads all JS files in strict sequence ══ -->
+    <script src="app.js"></script>
 
-    <script>
-/* Make all required functions global so HTML can access them */
-
-window.switchTab = window.switchTab || function(){};
-window.updateUI = window.updateUI || function(){};
-window.filterSearch = window.filterSearch || function(){};
-window.migrateData = window.migrateData || function(){};
-window.openMembersQuickView = window.openMembersQuickView || function(){};
-window.openGroupsQuickView = window.openGroupsQuickView || function(){};
-window.openPaymentModal = window.openPaymentModal || function(){};
-window.openAddMember = window.openAddMember || function(){};
-window.openAddGroup = window.openAddGroup || function(){};
-window.handleLogout = window.handleLogout || function(){};
-</script>
 </body>
 </html>
