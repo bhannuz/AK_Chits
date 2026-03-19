@@ -255,14 +255,18 @@
         <div id="newChitPlanner" style="background:var(--card-bg);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:16px;">
 
             <!-- Planner Header with Version Label -->
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
-                <div style="font-size:0.65rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;">⚙️ Chit Parameters</div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <input id="ncp_version_label" type="text" placeholder="Version name (e.g. v1, Draft A)" style="background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 10px;border-radius:9px;font-size:0.75rem;width:160px;">
-                    <button onclick="ncpSaveVersion()" style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:6px 14px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">💾 Save</button>
-                    <button onclick="ncpNewPlanner()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:6px 12px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">＋ New</button>
-                </div>
-            </div>
+<div id="adminHeader" class="app-header">
+    <div style="display: flex; align-items: center;">
+        <img src="logo.png" style="height: 80px; width: auto; margin-right: 12px; border-radius: 5px;">
+        <div class="brand">AK Chit Funds <small style="font-size:0.5em;color:#2ecc71;">☁ CLOUD</small></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <button id="accessReqBtn" onclick="openAccessRequests()" style="display:inline-flex; background:rgba(243,156,18,.12); border:1px solid rgba(243,156,18,.3); color:#f39c12; border-radius:10px; padding:5px 10px; font-size:0.75rem; font-weight:700; cursor:pointer; position:relative;">
+            🔐 Requests <span id="pendingCount" style="display:none; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:0.6rem; position:absolute; top:-8px; right:-8px; align-items:center; justify-content:center; border:2px solid var(--bg-dark);">0</span>
+        </button>
+        <button id="logoutBtn" onclick="handleLogout()" style="display:block; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#f87171; border-radius:10px; padding:5px 10px; font-size:0.75rem; font-weight:700; cursor:pointer;">⏻ Logout</button>
+    </div>
+</div>
 
             <!-- Planner Inputs -->
             <div style="padding:16px 16px 14px;border-bottom:1px solid var(--border);">
@@ -2380,18 +2384,26 @@ async function initAuth(){
 async function handleLoginSubmit(){
     const phone = document.getElementById('loginPhone').value.trim();
     if(phone.length !== 10){ showToast('❌ Enter valid 10-digit mobile number', false); return; }
+    
     showToast('⏳ Checking access…', true);
-    if(phone === ADMIN_PHONE){
+
+    // 1. Check if it's the Primary Admin Number
+    if(phone === '8121723153'){ // Replace with your actual admin number
         const user = {phone, role:'admin', name:'Admin'};
         CURRENT_USER = user;
         sessionStorage.setItem('akdf_session', JSON.stringify(user));
         applyUserSession(user);
         return;
     }
+
+    // 2. If not admin, check if member exists in Firestore
     const members = await getCollection('members');
     const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
+
     if(matched){
+        // Check if there is already a request for this number
         const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
+        
         if(!reqs.empty){
             const req = reqs.docs[0].data();
             if(req.status === 'approved'){
@@ -2399,28 +2411,28 @@ async function handleLoginSubmit(){
                 CURRENT_USER = user;
                 sessionStorage.setItem('akdf_session', JSON.stringify(user));
                 applyUserSession(user);
-                return;
             } else if(req.status === 'denied'){
                 showLoginStep('loginStep3');
-                return;
             } else {
+                // Still pending
                 document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
                 showLoginStep('loginStep2');
-                return;
             }
         } else {
+            // NEW REQUEST: Add to Firestore so Admin sees it
             await db.collection('accessRequests').add({
-                phone, name: matched.name, memberId: matched.id,
-                status: 'pending', requestedAt: new Date().toISOString()
+                phone, 
+                name: matched.name, 
+                memberId: matched.id,
+                status: 'pending', 
+                requestedAt: new Date().toISOString()
             });
             document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
             showLoginStep('loginStep2');
             showToast('📨 Access request sent to admin', true);
-            return;
         }
     } else {
-        showToast('❌ Mobile number not registered. Contact admin.', false);
-        return;
+        showToast('❌ Mobile number not registered. Contact admin to be added as a member.', false);
     }
 }
 
