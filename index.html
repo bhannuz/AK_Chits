@@ -168,10 +168,14 @@
 <div class="container py-2">
     <!-- ADMIN HEADER -->
     <div id="adminHeader" class="app-header">
-    <div style="display: flex; align-items: center;">
-        <img src="logo.png" style="height: 80px; width: auto; margin-right: 12px; border-radius: 5px;">
-        <div class="brand">AK Chit Funds <small style="font-size:0.5em;color:#2ecc71;">☁ CLOUD</small></div>
-    </div>
+        <div class="brand">🏆 AK Chit Funds <small style="font-size:0.5em;color:#2ecc71;">☁ CLOUD</small></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span id="headerRoleBadge" class="badge text-warning border border-warning px-2">ADMIN</span>
+            <button id="accessReqBtn" onclick="openAccessRequests()" title="Access Requests" style="display:none;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:5px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;position:relative;">
+                🔐 Requests <span id="pendingCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:0.55rem;font-weight:900;position:absolute;top:-5px;right:-5px;display:flex;align-items:center;justify-content:center;"></span>
+            </button>
+            <button id="logoutBtn" onclick="handleLogout()" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:5px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;">⏻ Logout</button>
+        </div>
     </div>
 
     <!-- MEMBER PROFILE HEADER -->
@@ -255,18 +259,14 @@
         <div id="newChitPlanner" style="background:var(--card-bg);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:16px;">
 
             <!-- Planner Header with Version Label -->
-<div id="adminHeader" class="app-header">
-    <div style="display: flex; align-items: center;">
-        <img src="logo.png" style="height: 80px; width: auto; margin-right: 12px; border-radius: 5px;">
-        <div class="brand">AK Chit Funds <small style="font-size:0.5em;color:#2ecc71;">☁ CLOUD</small></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;">
-        <button id="accessReqBtn" onclick="openAccessRequests()" style="display:inline-flex; background:rgba(243,156,18,.12); border:1px solid rgba(243,156,18,.3); color:#f39c12; border-radius:10px; padding:5px 10px; font-size:0.75rem; font-weight:700; cursor:pointer; position:relative;">
-            🔐 Requests <span id="pendingCount" style="display:none; background:#ef4444; color:white; border-radius:50%; width:18px; height:18px; font-size:0.6rem; position:absolute; top:-8px; right:-8px; align-items:center; justify-content:center; border:2px solid var(--bg-dark);">0</span>
-        </button>
-        <button id="logoutBtn" onclick="handleLogout()" style="display:block; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#f87171; border-radius:10px; padding:5px 10px; font-size:0.75rem; font-weight:700; cursor:pointer;">⏻ Logout</button>
-    </div>
-</div>
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                <div style="font-size:0.65rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;">⚙️ Chit Parameters</div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <input id="ncp_version_label" type="text" placeholder="Version name (e.g. v1, Draft A)" style="background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 10px;border-radius:9px;font-size:0.75rem;width:160px;">
+                    <button onclick="ncpSaveVersion()" style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:6px 14px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">💾 Save</button>
+                    <button onclick="ncpNewPlanner()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:6px 12px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">＋ New</button>
+                </div>
+            </div>
 
             <!-- Planner Inputs -->
             <div style="padding:16px 16px 14px;border-bottom:1px solid var(--border);">
@@ -540,10 +540,10 @@
 <div id="loginScreen">
     <div class="login-card">
         <div class="login-brand">
-    <img src="logo.png" style="width: 120px; height: auto; margin-bottom: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);" onerror="this.src='https://via.placeholder.com/120?text=AK'">
-    <div class="login-brand-title">AK Chit Funds</div>
-    <div class="login-brand-sub">Enter your mobile number to continue</div>
-</div>
+            <div style="font-size:2.5rem;margin-bottom:8px;">🏆</div>
+            <div class="login-brand-title">AK Chit Funds</div>
+            <div class="login-brand-sub">Enter your mobile number to continue</div>
+        </div>
         <div id="loginStep1" class="login-step active">
             <label class="form-label-small">Mobile Number</label>
             <div class="login-phone-input">
@@ -2355,34 +2355,47 @@ async function generateGroupPDF(gid){
 }
 
 
+
+
+
 // ══════════════════════════════════════════
 // AUTH SYSTEM
 // ══════════════════════════════════════════
-const ADMIN_PHONE = '0987654321'; // Set your real admin number here
+const ADMIN_PHONE = '9876543210';
 let CURRENT_USER = null;
+
+function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
+function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
+function clearSession(){ sessionStorage.removeItem('akdf_session'); }
+
+async function initAuth(){
+    const saved = sessionStorage.getItem('akdf_session');
+    if(saved){
+        try{
+            const u = JSON.parse(saved);
+            CURRENT_USER = u;
+            applyUserSession(u);
+            return;
+        }catch(e){}
+    }
+    document.getElementById('loginScreen').style.display='flex';
+}
+
 async function handleLoginSubmit(){
     const phone = document.getElementById('loginPhone').value.trim();
     if(phone.length !== 10){ showToast('❌ Enter valid 10-digit mobile number', false); return; }
-    
     showToast('⏳ Checking access…', true);
-
-    // 1. Check if it's the Primary Admin Number
-    if(phone === '0987654321'){ 
+    if(phone === ADMIN_PHONE){
         const user = {phone, role:'admin', name:'Admin'};
         CURRENT_USER = user;
         sessionStorage.setItem('akdf_session', JSON.stringify(user));
         applyUserSession(user);
-        showToast('✅ Welcome Admin', true);
         return;
     }
-
-    // 2. If not admin, check if member exists in Firestore
     const members = await getCollection('members');
     const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
-
     if(matched){
         const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
-        
         if(!reqs.empty){
             const req = reqs.docs[0].data();
             if(req.status === 'approved'){
@@ -2390,11 +2403,14 @@ async function handleLoginSubmit(){
                 CURRENT_USER = user;
                 sessionStorage.setItem('akdf_session', JSON.stringify(user));
                 applyUserSession(user);
+                return;
             } else if(req.status === 'denied'){
                 showLoginStep('loginStep3');
+                return;
             } else {
                 document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
                 showLoginStep('loginStep2');
+                return;
             }
         } else {
             await db.collection('accessRequests').add({
@@ -2404,9 +2420,11 @@ async function handleLoginSubmit(){
             document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
             showLoginStep('loginStep2');
             showToast('📨 Access request sent to admin', true);
+            return;
         }
     } else {
         showToast('❌ Mobile number not registered. Contact admin.', false);
+        return;
     }
 }
 
@@ -2476,50 +2494,48 @@ function goBackToLogin(){
     document.getElementById('loginPhone').value='';
     showLoginStep('loginStep1');
 }
+
 function applyUserSession(user){
     document.getElementById('loginScreen').style.display='none';
-    
-    // Make sure logout button is shown regardless of role
-    const globalLogout = document.getElementById('logoutBtn');
-    if(globalLogout) globalLogout.style.display = 'block';
-
+    document.getElementById('logoutBtn').style.display='block';
     if(user.role === 'admin'){
-        document.body.classList.remove('member-mode');
         document.getElementById('adminHeader').style.display='flex';
         document.getElementById('memberHeader').style.display='none';
-        
-        // Admin specific UI elements
+        document.getElementById('headerRoleBadge').textContent='ADMIN';
+        document.getElementById('headerRoleBadge').style.display='inline';
+        document.getElementById('accessReqBtn').style.display='inline-flex';
+        document.getElementById('logoutBtn').style.display='block';
         document.getElementById('adminStatCards').style.display='';
         document.getElementById('adminActionBtns').style.display='flex';
         document.getElementById('adminMemberSearch').style.display='';
+        document.getElementById('memberLedgerArea').style.display='none';
         document.getElementById('adminQuickBtns').style.display='flex';
-        document.querySelector('.nav-bar').style.display='flex';
-        
         updateUI();
         pollPendingRequests();
     } else {
-        // Member specific UI elements
-        document.body.classList.add('member-mode');
         document.getElementById('adminHeader').style.display='none';
         document.getElementById('memberHeader').style.display='block';
-        
+        document.getElementById('logoutBtn').style.display='none';
         document.getElementById('memberHeaderAvatar').textContent = ini(user.name);
         document.getElementById('memberHeaderName').textContent = user.name;
         document.getElementById('memberHeaderPhone').textContent = `📱 +91 ${user.phone}`;
-        
-        // Hide Admin tools
-        document.getElementById('memberLedgerArea').style.display='block';
+        document.getElementById('adminStatCards').style.display='none';
+        document.getElementById('adminActionBtns').style.display='none';
+        document.getElementById('adminMemberSearch').style.display='none';
+        document.getElementById('adminQuickBtns').style.display='none';
+        document.getElementById('navGroups').style.display='none';
+        document.getElementById('navList').style.display='none';
+        document.getElementById('navBackup').style.display='none';
         document.querySelector('.nav-bar').style.display='none';
-        
+        document.getElementById('memberLedgerArea').style.display='block';
+        document.getElementById('summaryView').value = user.memberId;
         loadMemberLedger();
     }
 }
 
-
 function handleLogout(){
     sessionStorage.removeItem('akdf_session');
     CURRENT_USER = null;
-    location.reload();
     document.body.classList.remove('member-mode');
     document.getElementById('adminHeader').style.display='flex';
     document.getElementById('memberHeader').style.display='none';
@@ -2812,23 +2828,13 @@ function ncpSave(){ ncpAutoSave(); }
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
-async function initAuth(){
-    const saved = sessionStorage.getItem('akdf_session');
-    if(saved){
-        try {
-            const u = JSON.parse(saved);
-            CURRENT_USER = u; // Restores the user object to memory
-            applyUserSession(u); // Forces the dashboard to show and login screen to hide
-            console.log("Session restored for:", u.name);
-            return;
-        } catch(e) {
-            console.error("Session restore failed", e);
-            sessionStorage.removeItem('akdf_session');
-        }
-    }
-    // No valid session? Show the login screen
-    document.getElementById('loginScreen').style.display = 'flex';
-}
+document.addEventListener('DOMContentLoaded', function(){
+    document.getElementById('pDate').value=new Date().toISOString().split('T')[0];
+    setTimeout(migrateData,800);
+    initAuth();
+    setTimeout(ncpRestoreSession, 300);
+    setInterval(()=>{ if(CURRENT_USER&&CURRENT_USER.role==='admin') pollPendingRequests(); }, 60000);
+});
 </script>
 </body>
 </html>
