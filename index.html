@@ -6,145 +6,186 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>AK Chit Funds - Admin Portal v2.2</title>
+    <title>AK Chit Funds - Admin Portal v2.5</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <style>
-        :root { --bg-dark:#0a0e1a; --card-bg:#141b2d; --input-bg:#1c253b; --accent-gold:linear-gradient(90deg,#ff9800,#f57c00); --text-main:#ffffff; --text-dim:#8e9aaf; --border:#252f48; }
-        * { box-sizing:border-box; }
-        body { background-color:var(--bg-dark); color:var(--text-main); font-family:'Segoe UI',sans-serif; padding-bottom:120px; }
+        /* ══ MOBILE-FIRST CSS — v2.5 ══ */
+        :root {
+            --bg-dark:#0a0e1a; --card-bg:#141b2d; --input-bg:#1c253b;
+            --accent-gold:linear-gradient(90deg,#ff9800,#f57c00);
+            --text-main:#ffffff; --text-dim:#8e9aaf; --border:#252f48;
+            /* Mobile-first base font — scales up on desktop */
+            --fs-xs:0.72rem;   /* was 0.6rem  */
+            --fs-sm:0.82rem;   /* was 0.7rem  */
+            --fs-md:0.95rem;   /* was 0.82rem */
+            --fs-base:1rem;
+            --fs-lg:1.1rem;
+            --fs-xl:1.25rem;
+        }
+        * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        html { font-size:16px; } /* anchors rem to 16px on all devices */
+        body {
+            background-color:var(--bg-dark); color:var(--text-main);
+            font-family:'Segoe UI',system-ui,sans-serif;
+            padding-bottom:80px;
+            -webkit-text-size-adjust:100%; /* prevent iOS font inflation */
+        }
 
-        /* ── LOGO ── */
-        .app-header { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); background:var(--card-bg); }
+        /* ── HEADER ── */
+        .app-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); background:var(--card-bg); position:sticky; top:0; z-index:500; }
         .brand-wrap { display:flex; align-items:center; gap:10px; }
         .brand-logo { flex-shrink:0; }
-        .brand-logo svg { display:block; }
-        .brand-text { line-height:1.15; }
-        .brand-name { color:#f39c12; font-weight:900; font-size:1.2rem; letter-spacing:-.3px; display:flex; align-items:center; gap:6px; }
-        .brand-cloud { font-size:0.45rem; background:rgba(46,204,113,.15); color:#2ecc71; border:1px solid rgba(46,204,113,.3); border-radius:4px; padding:2px 5px; font-weight:800; letter-spacing:.5px; vertical-align:middle; }
-        .brand-sub { font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.8px; margin-top:1px; }
+        .brand-name { color:#f39c12; font-weight:900; font-size:var(--fs-lg); letter-spacing:-.3px; display:flex; align-items:center; gap:6px; }
+        .brand-cloud { font-size:0.62rem; background:rgba(46,204,113,.15); color:#2ecc71; border:1px solid rgba(46,204,113,.3); border-radius:4px; padding:2px 6px; font-weight:800; }
+        .brand-sub { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.6px; margin-top:2px; }
 
-        .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:15px; padding:15px; text-align:center; }
-        .stat-num { font-size:1.3rem; font-weight:bold; display:block; }
-        .stat-label { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; }
+        /* ── STAT CARDS ── */
+        .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:14px 10px; text-align:center; }
+        .stat-num { font-size:var(--fs-xl); font-weight:800; display:block; }
+        .stat-label { font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; margin-top:2px; display:block; }
 
-        /* MODALS */
-        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:2000; padding:20px; overflow-y:auto; }
-        .modal-content-custom { background:var(--card-bg); border-radius:25px; padding:25px; max-width:450px; margin:20px auto; border:1px solid var(--border); }
-        .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:0.9rem; }
+        /* ── MODALS ── */
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:2000; padding:12px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+        .modal-content-custom { background:var(--card-bg); border-radius:22px; padding:22px 18px; max-width:480px; margin:10px auto; border:1px solid var(--border); }
+        .form-input { background:var(--input-bg); border:1px solid var(--border); color:white; padding:14px 12px; border-radius:12px; width:100%; margin-bottom:12px; font-size:var(--fs-md); min-height:48px; }
         .form-input option { background:#1c253b; }
-        .form-label-small { font-size:0.72rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; margin-bottom:5px; display:block; }
-        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:14px; border-radius:14px; font-weight:bold; margin-bottom:10px; cursor:pointer; font-size:0.95rem; }
-        .btn-cancel { background:var(--input-bg); color:white; border:none; width:100%; padding:12px; border-radius:14px; cursor:pointer; }
-        .btn-danger-full { background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; width:100%; padding:12px; border-radius:14px; font-weight:700; cursor:pointer; margin-bottom:10px; }
-        .modal-title { font-size:1.1rem; font-weight:800; margin-bottom:16px; }
+        .form-label-small { font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block; }
+        .btn-save { background:var(--accent-gold); color:black; border:none; width:100%; padding:15px; border-radius:14px; font-weight:800; margin-bottom:10px; cursor:pointer; font-size:var(--fs-md); min-height:50px; }
+        .btn-cancel { background:var(--input-bg); color:white; border:none; width:100%; padding:14px; border-radius:14px; cursor:pointer; font-size:var(--fs-sm); min-height:48px; }
+        .btn-danger-full { background:linear-gradient(135deg,#ef4444,#dc2626); color:white; border:none; width:100%; padding:14px; border-radius:14px; font-weight:700; cursor:pointer; margin-bottom:10px; font-size:var(--fs-sm); min-height:48px; }
+        .modal-title { font-size:var(--fs-lg); font-weight:800; margin-bottom:16px; }
 
-        /* NAV */
-        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:12px 0 calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); z-index:1000; }
-        .nav-item { cursor:pointer; text-align:center; font-size:0.62rem; color:var(--text-dim); padding:4px 10px; }
+        /* ── NAV BAR ── */
+        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); z-index:1000; }
+        .nav-item { cursor:pointer; text-align:center; font-size:0.72rem; color:var(--text-dim); padding:4px 16px; min-width:60px; }
         .nav-item.active { color:#f39c12; }
         .tab-content { display:none; }
         .tab-content.active { display:block; }
 
-        /* TABLES */
-        .table-custom { color:white; font-size:0.7rem; width:100%; border-collapse:collapse; }
-        .table-custom th { color:var(--text-dim); border-bottom:1px solid var(--border); padding:8px 5px; font-size:0.6rem; text-transform:uppercase; white-space:nowrap; }
-        .table-custom td { padding:9px 5px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; white-space:nowrap; }
+        /* ── TABLES — horizontal scroll on mobile ── */
+        .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:0 0 12px 12px; }
+        .table-custom { color:white; font-size:0.78rem; width:100%; border-collapse:collapse; min-width:520px; }
+        .table-custom th { color:var(--text-dim); border-bottom:1px solid var(--border); padding:10px 8px; font-size:0.68rem; text-transform:uppercase; white-space:nowrap; }
+        .table-custom td { padding:11px 8px; border-bottom:1px solid rgba(255,255,255,0.05); vertical-align:middle; white-space:nowrap; font-size:0.78rem; }
         .table-custom tr.chit-picked { background:rgba(16,185,129,0.08); }
         .table-custom tr.chit-picked td:first-child { border-left:3px solid #10b981; }
         .table-custom tr.due-row { background:rgba(239,68,68,0.07); }
         .table-custom tr.due-row td { color:#f87171; font-style:italic; }
-        .table-custom tr.partial-row { background:rgba(245,158,11,0.07); }
         .table-custom tr.multi-month-row { background:rgba(99,102,241,0.09); }
         .table-custom tr.multi-month-row td:first-child { border-left:3px solid #818cf8; }
-        .due-badge { display:inline-block; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:1px 6px; font-size:0.6rem; font-weight:700; }
-        .partial-badge { display:inline-block; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); border-radius:4px; padding:1px 6px; font-size:0.6rem; font-weight:700; }
-        .chit-yes-badge { display:inline-block; background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); border-radius:5px; padding:2px 7px; font-size:0.6rem; font-weight:800; }
-        .chit-no { color:var(--text-dim); font-size:0.65rem; }
-        .multi-month-badge { display:inline-flex; align-items:center; gap:3px; background:rgba(99,102,241,0.18); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); border-radius:5px; padding:2px 7px; font-size:0.6rem; font-weight:800; }
 
-        /* AUTOCOMPLETE */
-        .suggestions-list { position:absolute; top:100%; left:0; right:0; background:var(--input-bg); border:1px solid var(--border); border-radius:0 0 12px 12px; z-index:3000; max-height:200px; overflow-y:auto; display:none; margin-top:-12px; }
-        .suggestion-item { padding:12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.9rem; }
-        .suggestion-item:hover { background:#252f48; color:#f39c12; }
+        /* ── BADGES ── */
+        .due-badge { display:inline-block; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:2px 7px; font-size:0.68rem; font-weight:700; }
+        .partial-badge { display:inline-block; background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4); border-radius:4px; padding:2px 7px; font-size:0.68rem; font-weight:700; }
+        .chit-yes-badge { display:inline-block; background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4); border-radius:5px; padding:3px 8px; font-size:0.68rem; font-weight:800; }
+        .chit-no { color:var(--text-dim); font-size:0.72rem; }
+        .multi-month-badge { display:inline-flex; align-items:center; gap:3px; background:rgba(99,102,241,0.18); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); border-radius:5px; padding:3px 8px; font-size:0.68rem; font-weight:800; }
 
-        /* GROUP CHECKBOX */
-        .group-checkbox-area { max-height:150px; overflow-y:auto; background:var(--input-bg); padding:10px; border-radius:12px; border:1px solid var(--border); margin-bottom:15px; }
+        /* ── AUTOCOMPLETE ── */
+        .suggestions-list { position:absolute; top:100%; left:0; right:0; background:var(--input-bg); border:1px solid var(--border); border-radius:0 0 12px 12px; z-index:3000; max-height:200px; overflow-y:auto; display:none; }
+        .suggestion-item { padding:14px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.05); font-size:var(--fs-md); }
+        .suggestion-item:active { background:#252f48; color:#f39c12; }
 
-        /* STAT BOXES */
-        .mini-stat { background:var(--input-bg); border-radius:10px; padding:10px 8px; text-align:center; }
-        .mini-stat-val { font-size:0.9rem; font-weight:800; }
-        .mini-stat-lbl { font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; margin-top:2px; }
+        /* ── MINI STAT BOXES ── */
+        .mini-stat { background:var(--input-bg); border-radius:10px; padding:10px 6px; text-align:center; }
+        .mini-stat-val { font-size:0.88rem; font-weight:800; }
+        .mini-stat-lbl { font-size:0.62rem; color:var(--text-dim); text-transform:uppercase; margin-top:2px; }
 
-        /* PROGRESS BAR */
+        /* ── PROGRESS BAR ── */
         .prog-bar-outer { background:#252f48; border-radius:5px; height:7px; overflow:hidden; margin:6px 0 3px; }
         .prog-bar-inner { height:100%; border-radius:5px; background:linear-gradient(90deg,#f39c12,#f57c00); }
-        .prog-label { font-size:0.65rem; color:var(--text-dim); display:flex; justify-content:space-between; }
+        .prog-label { font-size:0.68rem; color:var(--text-dim); display:flex; justify-content:space-between; }
 
-        /* MONTHS BADGE */
-        .months-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); border-radius:8px; padding:4px 10px; font-size:0.72rem; font-weight:700; color:#a5b4fc; }
+        /* ── BUTTONS (touch-friendly) ── */
+        .btn-pdf { background:linear-gradient(135deg,#e74c3c,#c0392b); color:white; border:none; border-radius:8px; padding:8px 14px; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:36px; }
+        .btn-edit-sm { background:rgba(243,156,18,.12); border:1px solid rgba(243,156,18,.35); color:#f39c12; border-radius:8px; padding:7px 12px; font-size:0.72rem; font-weight:700; cursor:pointer; min-height:34px; }
+        .btn-del-sm { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35); color:#f87171; border-radius:8px; padding:7px 12px; font-size:0.72rem; font-weight:700; cursor:pointer; min-height:34px; }
 
-        /* PDF BUTTON */
-        .btn-pdf { background:linear-gradient(135deg,#e74c3c,#c0392b); color:white; border:none; border-radius:8px; padding:7px 13px; font-size:0.75rem; font-weight:700; cursor:pointer; }
-
-        /* EDIT/DELETE SMALL BUTTONS */
-        .btn-edit-sm { background:rgba(243,156,18,.12); border:1px solid rgba(243,156,18,.35); color:#f39c12; border-radius:7px; padding:4px 10px; font-size:0.68rem; font-weight:700; cursor:pointer; }
-        .btn-del-sm { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35); color:#f87171; border-radius:7px; padding:4px 10px; font-size:0.68rem; font-weight:700; cursor:pointer; }
-
-        /* GROUPS TAB COLLAPSIBLE */
-        .enrollment-row select, .enrollment-row input { font-size:0.82rem !important; }
-        .sched-chip { background:rgba(255,255,255,.06); border:1px solid var(--border); border-radius:5px; padding:2px 7px; font-size:0.6rem; font-weight:700; margin-right:3px; }
+        /* ── GROUP CARDS ── */
+        .enrollment-row select, .enrollment-row input { font-size:var(--fs-sm) !important; }
         .group-card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; padding:16px; margin-bottom:14px; overflow:hidden; }
         .group-card-header { cursor:pointer; user-select:none; }
         .group-body { transition:max-height 0.3s ease, opacity 0.3s ease; overflow:hidden; }
         .group-body.collapsed { max-height:0 !important; opacity:0; }
-        .chevron-icon { transition:transform 0.25s ease; display:inline-block; font-size:0.8rem; color:var(--text-dim); }
-        .chevron-icon.open { transform: rotate(0deg); }
-        .chevron-icon.closed { transform: rotate(-90deg); }
+        .chevron-icon { transition:transform 0.25s ease; display:inline-block; font-size:0.9rem; color:var(--text-dim); }
+        .chevron-icon.open { transform:rotate(0deg); }
+        .chevron-icon.closed { transform:rotate(-90deg); }
 
-        /* Multi-month preview box */
-        .multi-month-preview { background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:12px; padding:12px 14px; margin-bottom:12px; display:none; }
-        .multi-month-preview-title { font-size:0.68rem; color:#a5b4fc; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
-        .multi-month-chip { display:inline-flex; align-items:center; background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.35); border-radius:6px; padding:3px 9px; font-size:0.68rem; color:#c7d2fe; margin:2px; font-weight:600; }
-        .month-selector-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; max-height:220px; overflow-y:auto; }
-        .month-cb-item { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:8px; padding:6px 8px; cursor:pointer; transition:all .15s; font-size:0.68rem; }
-        .month-cb-item:hover { background:rgba(99,102,241,0.12); border-color:rgba(99,102,241,0.4); }
-        .month-cb-item.selected { background:rgba(99,102,241,0.2); border-color:rgba(99,102,241,0.6); color:#a5b4fc; font-weight:700; }
+        /* ── MONTH SELECTOR ── */
+        .multi-month-preview { background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.25); border-radius:12px; padding:14px; margin-bottom:12px; display:none; }
+        .multi-month-preview-title { font-size:0.75rem; color:#a5b4fc; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px; }
+        .month-selector-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; max-height:240px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+        .month-cb-item { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:10px; padding:10px 8px; cursor:pointer; transition:all .15s; font-size:0.72rem; min-height:52px; }
         .month-cb-item.already-paid { background:rgba(16,185,129,0.07); border-color:rgba(16,185,129,0.3); color:#34d399; opacity:0.6; cursor:not-allowed; }
-        .month-cb-item input[type=checkbox] { accent-color:#818cf8; width:13px; height:13px; flex-shrink:0; }
-        .selected-summary { font-size:0.68rem; color:#a5b4fc; margin-top:8px; font-weight:700; padding:6px 10px; background:rgba(99,102,241,0.12); border-radius:8px; }
+        .month-cb-item input[type=checkbox] { accent-color:#818cf8; width:16px; height:16px; flex-shrink:0; }
+        .selected-summary { font-size:0.75rem; color:#a5b4fc; margin-top:8px; font-weight:700; padding:8px 12px; background:rgba(99,102,241,0.12); border-radius:8px; }
 
-        /* ══ AUTH / LOGIN ══ */
-        #loginScreen { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; }
-        .login-card { background:var(--card-bg); border:1px solid var(--border); border-radius:28px; padding:32px 28px; width:100%; max-width:400px; }
-        .login-brand { text-align:center; margin-bottom:28px; }
-        .login-brand-title { font-size:1.6rem; font-weight:900; color:#f39c12; }
-        .login-brand-sub { font-size:0.75rem; color:var(--text-dim); margin-top:4px; }
+        /* ── AUTH / LOGIN ── */
+        #loginScreen { position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:9000; display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+        .login-card { background:var(--card-bg); border:1px solid var(--border); border-radius:24px; padding:28px 22px; width:100%; max-width:400px; }
+        .login-brand { text-align:center; margin-bottom:24px; }
+        .login-brand-title { font-size:1.7rem; font-weight:900; color:#f39c12; }
+        .login-brand-sub { font-size:0.8rem; color:var(--text-dim); margin-top:4px; }
         .login-step { display:none; }
         .login-step.active { display:block; }
         .login-phone-input { display:flex; gap:8px; }
-        .phone-prefix { background:var(--input-bg); border:1px solid var(--border); color:var(--text-dim); padding:12px 14px; border-radius:12px; font-size:0.9rem; flex-shrink:0; }
-        .login-info-box { background:rgba(243,156,18,.08); border:1px solid rgba(243,156,18,.25); border-radius:12px; padding:12px 14px; font-size:0.78rem; color:#f39c12; margin-bottom:14px; }
+        .phone-prefix { background:var(--input-bg); border:1px solid var(--border); color:var(--text-dim); padding:14px; border-radius:12px; font-size:var(--fs-md); flex-shrink:0; }
         .pending-box { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.3); border-radius:16px; padding:20px; text-align:center; }
         .denied-box { background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.3); border-radius:16px; padding:20px; text-align:center; }
-        .req-card { background:var(--input-bg); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
-        .req-name { font-weight:700; font-size:0.85rem; }
-        .req-phone { font-size:0.7rem; color:var(--text-dim); }
-        .btn-approve { background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; padding:6px 14px; font-size:0.72rem; font-weight:700; cursor:pointer; }
-        .btn-deny { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#f87171; border-radius:8px; padding:6px 14px; font-size:0.72rem; font-weight:700; cursor:pointer; }
-        .badge-pending { background:rgba(245,158,11,.2); color:#fbbf24; border:1px solid rgba(245,158,11,.4); border-radius:5px; padding:2px 8px; font-size:0.62rem; font-weight:700; }
-        .badge-approved { background:rgba(16,185,129,.2); color:#34d399; border:1px solid rgba(16,185,129,.4); border-radius:5px; padding:2px 8px; font-size:0.62rem; font-weight:700; }
-        .badge-denied { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); border-radius:5px; padding:2px 8px; font-size:0.62rem; font-weight:700; }
+        .req-card { background:var(--input-bg); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .req-name { font-weight:700; font-size:0.9rem; }
+        .req-phone { font-size:0.75rem; color:var(--text-dim); }
+        .btn-approve { background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; border-radius:8px; padding:9px 16px; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:38px; }
+        .btn-deny { background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.4); color:#f87171; border-radius:8px; padding:9px 16px; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:38px; }
+        .badge-pending { background:rgba(245,158,11,.2); color:#fbbf24; border:1px solid rgba(245,158,11,.4); border-radius:5px; padding:3px 9px; font-size:0.68rem; font-weight:700; }
+        .badge-approved { background:rgba(16,185,129,.2); color:#34d399; border:1px solid rgba(16,185,129,.4); border-radius:5px; padding:3px 9px; font-size:0.68rem; font-weight:700; }
+        .badge-denied { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); border-radius:5px; padding:3px 9px; font-size:0.68rem; font-weight:700; }
         body.member-mode .nav-bar { display:none !important; }
+
+        /* ── BACKUP BADGE ── */
+        .backup-badge-btn { position:relative; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35); color:#f87171; border-radius:10px; padding:7px 12px; font-size:0.78rem; font-weight:700; cursor:pointer; display:none; animation:pulse-red 2s infinite; }
+        .backup-badge-btn.done { background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.35); color:#34d399; animation:none; }
+        @keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4);} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0);} }
+
+        /* ── EMAIL CONFIG ── */
+        .email-config-box { background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.3); border-radius:16px; padding:16px; margin-bottom:16px; }
+        .email-config-title { font-size:0.75rem; font-weight:800; color:#a5b4fc; text-transform:uppercase; letter-spacing:.6px; margin-bottom:12px; }
+        .backup-history-item { display:flex; justify-content:space-between; align-items:center; background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:6px; }
+
+        /* ── LEDGER SECTION HEADERS ── */
+        .ledger-section-header { font-size:0.8rem; font-weight:800; color:#f39c12; margin-bottom:4px; }
+        .ledger-meta-badge { font-size:0.65rem; background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); border-radius:5px; padding:2px 7px; color:#a5b4fc; }
+
+        /* ── RESPONSIVE BREAKPOINTS ── */
+        @media (min-width:600px){
+            html { font-size:17px; }
+            .table-custom { font-size:0.85rem; min-width:600px; }
+            .table-custom th { font-size:0.72rem; padding:11px 10px; }
+            .table-custom td { padding:12px 10px; font-size:0.85rem; }
+            .mini-stat-val { font-size:1rem; }
+            .stat-num { font-size:1.4rem; }
+        }
+        @media (min-width:900px){
+            html { font-size:18px; }
+            body { max-width:960px; margin:0 auto; }
+            .modal-content-custom { padding:28px; }
+        }
+
+        /* ── UTILITY: no-shrink inline text ── */
+        .nowrap { white-space:nowrap; }
+        .text-xs { font-size:var(--fs-xs); }
+        .text-sm { font-size:var(--fs-sm); }
     </style>
 </head>
 <body>
 
-<div class="container py-2">
+<div class="container py-2" style="padding-left:12px;padding-right:12px;">
     <!-- ADMIN HEADER -->
     <div id="adminHeader" class="app-header">
         <div class="brand-wrap">
@@ -158,10 +199,13 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
             <span id="headerRoleBadge" class="badge text-warning border border-warning px-2">ADMIN</span>
-            <button id="accessReqBtn" onclick="openAccessRequests()" title="Access Requests" style="display:none;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:5px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;position:relative;">
-                🔐 Requests <span id="pendingCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:0.55rem;font-weight:900;position:absolute;top:-5px;right:-5px;display:flex;align-items:center;justify-content:center;"></span>
+            <button id="accessReqBtn" onclick="openAccessRequests()" title="Access Requests" style="display:none;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:5px 10px;font-size:1.05rem;font-weight:700;cursor:pointer;position:relative;">
+                🔐 Requests <span id="pendingCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:0.98rem;font-weight:900;position:absolute;top:-5px;right:-5px;display:flex;align-items:center;justify-content:center;"></span>
             </button>
-            <button id="logoutBtn" onclick="handleLogout()" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:5px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;">⏻ Logout</button>
+            <button id="backupReminderBtn" onclick="switchTab('backup')" class="backup-badge-btn" title="Daily backup due!">
+                💾 Backup Due
+            </button>
+            <button id="logoutBtn" onclick="handleLogout()" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:5px 10px;font-size:1.05rem;font-weight:700;cursor:pointer;">⏻ Logout</button>
         </div>
     </div>
 
@@ -171,24 +215,24 @@
             <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
                 <div id="memberHeaderAvatar" style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#f39c12,#f57c00);color:black;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;flex-shrink:0;box-shadow:0 4px 14px rgba(243,156,18,.35);"></div>
                 <div style="flex:1;min-width:0;">
-                    <div style="font-size:0.65rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;">Welcome back 👋</div>
+                    <div style="font-size:1.05rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;">Welcome back 👋</div>
                     <div id="memberHeaderName" style="font-size:1.15rem;font-weight:900;color:#f39c12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
-                    <div id="memberHeaderPhone" style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;"></div>
+                    <div id="memberHeaderPhone" style="font-size:0.92rem;color:var(--text-dim);margin-top:1px;"></div>
                 </div>
-                <button onclick="handleLogout()" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:6px 11px;font-size:0.72rem;font-weight:700;cursor:pointer;flex-shrink:0;">⏻</button>
+                <button onclick="handleLogout()" style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:6px 11px;font-size:0.92rem;font-weight:700;cursor:pointer;flex-shrink:0;">⏻</button>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:2px;">
                 <div style="background:rgba(0,0,0,.2);border-radius:12px;padding:10px 8px;text-align:center;">
                     <div id="mhGroups" style="font-size:1rem;font-weight:800;color:#a5b4fc;">—</div>
-                    <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">My Groups</div>
+                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">My Groups</div>
                 </div>
                 <div style="background:rgba(0,0,0,.2);border-radius:12px;padding:10px 8px;text-align:center;">
-                    <div id="mhTotalPaid" style="font-size:0.85rem;font-weight:800;color:#34d399;">—</div>
-                    <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Paid</div>
+                    <div id="mhTotalPaid" style="font-size:1.05rem;font-weight:800;color:#34d399;">—</div>
+                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Paid</div>
                 </div>
                 <div style="background:rgba(0,0,0,.2);border-radius:12px;padding:10px 8px;text-align:center;">
-                    <div id="mhBalance" style="font-size:0.85rem;font-weight:800;color:#f59e0b;">—</div>
-                    <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Balance</div>
+                    <div id="mhBalance" style="font-size:1.05rem;font-weight:800;color:#f59e0b;">—</div>
+                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Balance</div>
                 </div>
             </div>
         </div>
@@ -196,17 +240,17 @@
 
     <!-- HOME TAB -->
     <div id="homeTab" class="tab-content active">
-        <div id="adminStatCards" class="row g-2 mt-3 text-center">
-            <div class="col-4"><div class="stat-card" onclick="openMembersQuickView()" style="cursor:pointer;" title="View all members"><span class="stat-num" id="memberCount">-</span><span class="stat-label">Members</span></div></div>
+        <div id="adminStatCards" class="row g-2 mt-3 text-center" style="margin-left:0;margin-right:0;">
+            <div class="col-4"><div class="stat-card" onclick="openMembersQuickView()" style="cursor:pointer;active:scale(0.97);transition:transform .1s;" title="View all members"><span class="stat-num" id="memberCount">-</span><span class="stat-label">Members</span></div></div>
             <div class="col-4"><div class="stat-card" onclick="openGroupsQuickView()" style="cursor:pointer;" title="View all groups"><span class="stat-num" id="groupCount">-</span><span class="stat-label">Groups</span></div></div>
             <div class="col-4"><div class="stat-card"><span class="stat-num text-success" id="todayColl">₹0</span><span class="stat-label">Today</span></div></div>
         </div>
         <div id="adminActionBtns" style="display:flex;gap:8px;margin-top:12px;">
-            <button class="btn btn-warning w-100 py-3 fw-bold shadow" onclick="openPaymentModal()" style="border-radius:20px;">💳 Record Payment</button>
+            <button class="btn btn-warning w-100 fw-bold shadow" onclick="openPaymentModal()" style="border-radius:16px;padding:15px;font-size:1.05rem;">💳 Record Payment</button>
 
         </div>
 
-        <div id="adminMemberSearch" class="p-3 my-3" style="background:var(--card-bg);border-radius:20px;border:1px solid var(--border);">
+        <div id="adminMemberSearch" class="my-3" style="background:var(--card-bg);border-radius:18px;border:1px solid var(--border);padding:14px;">
             <div style="display:flex;gap:8px;align-items:flex-start;">
                 <div style="position:relative;flex:1;">
                     <input type="text" id="summarySearch" class="form-input" style="margin-bottom:0;" placeholder="🔍 Search Member for Summary / PDF..." oninput="filterSearch('summarySearch','summaryList','summaryView')">
@@ -222,9 +266,9 @@
             <div id="memberLedgerData"></div>
         </div>
 
-        <div id="adminQuickBtns" class="d-flex gap-2">
-            <button class="btn btn-outline-warning w-100 py-3 fw-bold" onclick="openAddMember()">👤 Create Member</button>
-            <button class="btn btn-outline-success w-100 py-3 fw-bold" onclick="openAddGroup()">🏦 New Group</button>
+        <div id="adminQuickBtns" class="d-flex gap-2" style="margin-top:10px;">
+            <button class="btn btn-outline-warning w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddMember()">👤 Create Member</button>
+            <button class="btn btn-outline-success w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddGroup()">🏦 New Group</button>
         </div>
     </div>
 
@@ -234,7 +278,62 @@
     <!-- BACKUP TAB -->
     <div id="backupTab" class="tab-content">
         <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
+
+        <!-- ── Daily Backup Status Card ── -->
+        <div id="backupStatusCard" style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-size:1rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.6px;">📅 Daily Auto-Backup Status</div>
+                <div id="backupStatusBadge" style="font-size:1.05rem;font-weight:700;padding:3px 10px;border-radius:6px;background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);">Not done today</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                <div style="background:var(--input-bg);border-radius:10px;padding:10px;text-align:center;">
+                    <div id="lastBackupDate" style="font-size:0.98rem;font-weight:800;color:#f39c12;">—</div>
+                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Last Backup</div>
+                </div>
+                <div style="background:var(--input-bg);border-radius:10px;padding:10px;text-align:center;">
+                    <div id="totalBackupCount" style="font-size:0.98rem;font-weight:800;color:#a5b4fc;">0</div>
+                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Backups Sent</div>
+                </div>
+            </div>
+            <button onclick="sendEmailBackup(true)" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:12px;font-size:0.98rem;font-weight:800;cursor:pointer;">
+                📧 Send Backup Email Now
+            </button>
+        </div>
+
+        <!-- ── Email Configuration ── -->
+        <div class="email-config-box">
+            <div class="email-config-title">⚙️ Email Configuration (EmailJS)</div>
+            <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:0.92rem;color:#fbbf24;line-height:1.6;">
+                <strong>Setup (one-time, 2 min):</strong><br>
+                1. Go to <strong>emailjs.com</strong> → Sign up free<br>
+                2. Add Email Service → connect Gmail → copy <strong>Service ID</strong><br>
+                3. Create Template with variables: <code>{{backup_date}}</code>, <code>{{member_count}}</code>, <code>{{group_count}}</code>, <code>{{payment_count}}</code>, <code>{{backup_data}}</code> → copy <strong>Template ID</strong><br>
+                4. Go to Account → copy <strong>Public Key</strong><br>
+                5. Fill fields below and tap Save
+            </div>
+            <label class="form-label-small">EmailJS Public Key</label>
+            <input type="text" id="ejs_pubkey" class="form-input" placeholder="e.g. user_xxxxxxxxxxxxxxxxx">
+            <label class="form-label-small">Service ID</label>
+            <input type="text" id="ejs_service" class="form-input" placeholder="e.g. service_xxxxxxx">
+            <label class="form-label-small">Template ID</label>
+            <input type="text" id="ejs_template" class="form-input" placeholder="e.g. template_xxxxxxx">
+            <label class="form-label-small">Send Backup To (Gmail)</label>
+            <input type="email" id="ejs_to_email" class="form-input" placeholder="e.g. yourname@gmail.com">
+            <button onclick="saveEmailConfig()" style="width:100%;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:12px;border-radius:12px;font-size:0.98rem;font-weight:800;cursor:pointer;margin-bottom:4px;">
+                ✅ Save Email Config
+            </button>
+            <div id="emailConfigStatus" style="font-size:1rem;text-align:center;color:var(--text-dim);margin-top:6px;min-height:16px;"></div>
+        </div>
+
+        <!-- ── Backup History ── -->
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px;">
+            <div style="font-size:1rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">📋 Backup History (last 7)</div>
+            <div id="backupHistoryList"><div style="text-align:center;color:var(--text-dim);font-size:0.98rem;padding:12px;">No backups sent yet</div></div>
+        </div>
+
+        <!-- ── Manual Backup / Restore ── -->
         <div class="stat-card p-4">
+            <div style="font-size:1rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;">🛠 Manual Backup & Restore</div>
             <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
             <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
             <hr style="border-color:var(--border);">
@@ -257,9 +356,9 @@
         <input type="text" id="mName" class="form-input" placeholder="e.g. Rama Krishna">
         <label class="form-label-small">Phone Number</label>
         <input type="text" id="mPhone" class="form-input" placeholder="e.g. 9876543210">
-        <label class="form-label-small">Group Enrollments <span style="color:var(--text-dim);font-size:0.65rem;">(same group multiple times allowed)</span></label>
+        <label class="form-label-small">Group Enrollments <span style="color:var(--text-dim);font-size:1.05rem;">(same group multiple times allowed)</span></label>
         <div id="enrollmentList" style="margin-bottom:8px;display:flex;flex-direction:column;gap:6px;"></div>
-        <button type="button" onclick="addEnrollmentRow()" style="background:rgba(243,156,18,.12);border:1px dashed rgba(243,156,18,.4);color:#f39c12;border-radius:10px;padding:8px;width:100%;font-size:0.8rem;font-weight:700;cursor:pointer;margin-bottom:12px;">+ Add Group Enrollment</button>
+        <button type="button" onclick="addEnrollmentRow()" style="background:rgba(243,156,18,.12);border:1px dashed rgba(243,156,18,.4);color:#f39c12;border-radius:10px;padding:8px;width:100%;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:12px;">+ Add Group Enrollment</button>
         <button class="btn-save" onclick="saveMember()">✓ Save Member</button>
         <div id="deleteMemberArea" style="display:none;">
             <button class="btn-danger-full" onclick="deleteMemberFromModal()">🗑 Delete Member</button>
@@ -294,7 +393,7 @@
     <div class="modal-content-custom">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <div class="modal-title" style="margin-bottom:0;">💳 Record Payment</div>
-            <button onclick="resetPaymentForm()" title="Clear all fields" style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>
+            <button onclick="resetPaymentForm()" title="Clear all fields" style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:6px 12px;font-size:1.05rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>
         </div>
         <label class="form-label-small">Payment Date</label>
         <input type="date" id="pDate" class="form-input">
@@ -317,14 +416,14 @@
 
         <div id="multiMonthPreview" class="multi-month-preview">
             <div class="multi-month-preview-title">📅 Select Months to Pay</div>
-            <div style="font-size:0.62rem;color:var(--text-dim);margin-bottom:8px;">✅ Green = already paid &nbsp;|&nbsp; Tick the months being paid now</div>
+            <div style="font-size:0.92rem;color:var(--text-dim);margin-bottom:8px;">✅ Green = already paid &nbsp;|&nbsp; Tick the months being paid now</div>
             <div id="monthSelectorGrid" class="month-selector-grid"></div>
             <div id="selectedSummary" class="selected-summary" style="display:none;"></div>
             <!-- Per-month custom amounts -->
             <div id="perMonthAmtWrap" style="display:none;margin-top:10px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    <label style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;flex:1;">💰 Amount per Month (if different)</label>
-                    <label style="font-size:0.65rem;color:#a5b4fc;display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <label style="font-size:0.92rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;flex:1;">💰 Amount per Month (if different)</label>
+                    <label style="font-size:1.05rem;color:#a5b4fc;display:flex;align-items:center;gap:5px;cursor:pointer;">
                         <input type="checkbox" id="perMonthCustomToggle" onchange="togglePerMonthCustom()"> Different amounts
                     </label>
                 </div>
@@ -334,7 +433,7 @@
 
         <div class="row g-2">
             <div class="col-6">
-                <label class="form-label-small">Chit Amount <span id="perMonthLabel" style="color:#a5b4fc;font-size:0.65rem;"></span></label>
+                <label class="form-label-small">Chit Amount <span id="perMonthLabel" style="color:#a5b4fc;font-size:1.05rem;"></span></label>
                 <input type="number" id="pChit" class="form-input" placeholder="₹ per month" oninput="onChitAmtChange()">
             </div>
             <div class="col-6">
@@ -342,7 +441,7 @@
                 <input type="number" id="pPaid" class="form-input" placeholder="₹ total" oninput="calcBalance()">
             </div>
         </div>
-        <div id="totalChitRef" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:0.75rem;">
+        <div id="totalChitRef" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:1.05rem;">
             <span style="color:var(--text-dim);">Total Chit:</span>
             <span id="totalChitVal" style="color:#a5b4fc;font-weight:700;margin-left:6px;"></span>
             <span style="color:var(--text-dim);margin-left:12px;">Balance:</span>
@@ -377,9 +476,9 @@
         </div>
         <input type="hidden" id="epId">
         <div id="epMultiMonthInfo" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:10px 14px;margin-bottom:12px;">
-            <div style="font-size:0.68rem;color:#a5b4fc;font-weight:700;margin-bottom:4px;">📅 MULTI-MONTH PAYMENT</div>
-            <div id="epMultiMonthDetail" style="font-size:0.75rem;color:#c7d2fe;"></div>
-            <div style="font-size:0.62rem;color:var(--text-dim);margin-top:4px;">This is part of a grouped payment. Editing updates this month's record only.</div>
+            <div style="font-size:0.98rem;color:#a5b4fc;font-weight:700;margin-bottom:4px;">📅 MULTI-MONTH PAYMENT</div>
+            <div id="epMultiMonthDetail" style="font-size:1.05rem;color:#c7d2fe;"></div>
+            <div style="font-size:0.92rem;color:var(--text-dim);margin-top:4px;">This is part of a grouped payment. Editing updates this month's record only.</div>
         </div>
         <label class="form-label-small">Payment Date</label>
         <input type="date" id="epDate" class="form-input">
@@ -415,7 +514,7 @@
     <div class="modal-content-custom" style="max-width:360px;">
         <div style="font-size:2rem;text-align:center;margin-bottom:10px;" id="confirmIcon">⚠️</div>
         <div class="modal-title text-center" id="confirmTitle">Are you sure?</div>
-        <p style="font-size:0.85rem;color:var(--text-dim);text-align:center;margin-bottom:20px;" id="confirmMsg"></p>
+        <p style="font-size:1.05rem;color:var(--text-dim);text-align:center;margin-bottom:20px;" id="confirmMsg"></p>
         <button class="btn-danger-full" id="confirmOkBtn">Confirm</button>
         <button class="btn-cancel" onclick="closeModal('confirmModal')">Cancel</button>
     </div>
@@ -469,8 +568,8 @@
             <div class="pending-box">
                 <div style="font-size:2rem;margin-bottom:10px;">⏳</div>
                 <div style="font-weight:800;font-size:1rem;margin-bottom:6px;">Access Requested</div>
-                <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;">Your request has been sent to the admin. Please wait for approval.</div>
-                <div id="pendingPhone" style="font-size:0.85rem;color:#f39c12;font-weight:700;margin-bottom:16px;"></div>
+                <div style="font-size:1rem;color:var(--text-dim);margin-bottom:16px;">Your request has been sent to the admin. Please wait for approval.</div>
+                <div id="pendingPhone" style="font-size:1.05rem;color:#f39c12;font-weight:700;margin-bottom:16px;"></div>
                 <button class="btn-cancel" onclick="checkAccessStatus()" style="margin-bottom:8px;">🔄 Check Status</button>
                 <button class="btn-cancel" onclick="goBackToLogin()">← Back</button>
             </div>
@@ -479,7 +578,7 @@
             <div class="denied-box">
                 <div style="font-size:2rem;margin-bottom:10px;">🚫</div>
                 <div style="font-weight:800;color:#f87171;margin-bottom:6px;">Access Denied</div>
-                <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:16px;">Your access request was denied. Contact the admin for assistance.</div>
+                <div style="font-size:1rem;color:var(--text-dim);margin-bottom:16px;">Your access request was denied. Contact the admin for assistance.</div>
                 <button class="btn-cancel" onclick="goBackToLogin()">← Try Another Number</button>
             </div>
         </div>
@@ -494,9 +593,9 @@
             <button onclick="closeModal('accessModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
-            <button onclick="filterRequests('pending')" id="reqTabPending" class="btn-save" style="flex:1;padding:8px;font-size:0.75rem;margin-bottom:0;">⏳ Pending</button>
-            <button onclick="filterRequests('approved')" id="reqTabApproved" class="btn-cancel" style="flex:1;padding:8px;font-size:0.75rem;">✅ Approved</button>
-            <button onclick="filterRequests('all')" id="reqTabAll" class="btn-cancel" style="flex:1;padding:8px;font-size:0.75rem;">📋 All</button>
+            <button onclick="filterRequests('pending')" id="reqTabPending" class="btn-save" style="flex:1;padding:8px;font-size:1.05rem;margin-bottom:0;">⏳ Pending</button>
+            <button onclick="filterRequests('approved')" id="reqTabApproved" class="btn-cancel" style="flex:1;padding:8px;font-size:1.05rem;">✅ Approved</button>
+            <button onclick="filterRequests('all')" id="reqTabAll" class="btn-cancel" style="flex:1;padding:8px;font-size:1.05rem;">📋 All</button>
         </div>
         <div id="accessRequestsList" style="max-height:400px;overflow-y:auto;"></div>
         <button class="btn-cancel" onclick="closeModal('accessModal')" style="margin-top:10px;">Close</button>
@@ -644,7 +743,7 @@ async function buildMonthSelectorGrid(){
     const gid=document.getElementById('pGroup').value;
     const grid=document.getElementById('monthSelectorGrid');
     const summary=document.getElementById('selectedSummary');
-    grid.innerHTML='<div style="color:var(--text-dim);font-size:0.72rem;padding:8px;">Select member & group first…</div>';
+    grid.innerHTML='<div style="color:var(--text-dim);font-size:0.92rem;padding:8px;">Select member & group first…</div>';
     summary.style.display='none';
     document.getElementById('perMonthAmtWrap').style.display='none';
     document.getElementById('perMonthCustomToggle').checked=false;
@@ -652,9 +751,9 @@ async function buildMonthSelectorGrid(){
     const gs=await getCollection('groups');
     window._gs_cache=gs;
     const grp=gs.find(g=>g.id===gid);
-    if(!grp){grid.innerHTML='<div style="color:#f87171;font-size:0.72rem;">Group not found</div>';return;}
+    if(!grp){grid.innerHTML='<div style="color:#f87171;font-size:0.92rem;">Group not found</div>';return;}
     const {paidSlots,allDueDates}=await getPaidSlots(mid,gid,grp);
-    if(!allDueDates.length){grid.innerHTML='<div style="color:#f87171;font-size:0.72rem;">No due dates configured for this group</div>';return;}
+    if(!allDueDates.length){grid.innerHTML='<div style="color:#f87171;font-size:0.92rem;">No due dates configured for this group</div>';return;}
     const today=new Date().toISOString().split('T')[0];
     grid.innerHTML=allDueDates.map((dd,i)=>{
         const paid=paidSlots.has(i);
@@ -662,8 +761,8 @@ async function buildMonthSelectorGrid(){
         return`<label class="month-cb-item ${paid?'already-paid':''}">
             <input type="checkbox" value="${i}" ${paid?'disabled checked':''} onchange="updateSelectedSummary();calcBalance();">
             <div>
-                <div style="font-size:0.65rem;font-weight:700;">${fmtDate(dd)}</div>
-                <div style="font-size:0.55rem;color:${paid?'#34d399':(isPast?'#f87171':'var(--text-dim)')}">${paid?'✅ Paid':(isPast?'⚠ Overdue':'Upcoming')}</div>
+                <div style="font-size:1.05rem;font-weight:700;">${fmtDate(dd)}</div>
+                <div style="font-size:0.98rem;color:${paid?'#34d399':(isPast?'#f87171':'var(--text-dim)')}">${paid?'✅ Paid':(isPast?'⚠ Overdue':'Upcoming')}</div>
             </div>
         </label>`;
     }).join('');
@@ -701,8 +800,8 @@ function buildPerMonthAmtGrid(selectedSlots){
         const label=allDueDates[slot]?fmtDate(allDueDates[slot]):`Month ${slot+1}`;
         const val=existing[slot]!==undefined?existing[slot]:(chit||'');
         return `<div class="pma-row" data-slot="${slot}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
-            <span style="flex:1;font-size:0.72rem;color:#a5b4fc;font-weight:700;">${label}</span>
-            <input type="number" placeholder="₹ amount" value="${val}" style="width:110px;background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 9px;border-radius:7px;font-size:0.8rem;" oninput="calcBalance()">
+            <span style="flex:1;font-size:0.92rem;color:#a5b4fc;font-weight:700;">${label}</span>
+            <input type="number" placeholder="₹ amount" value="${val}" style="width:110px;background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 9px;border-radius:7px;font-size:1rem;" oninput="calcBalance()">
         </div>`;
     }).join('');
 }
@@ -856,9 +955,9 @@ async function loadMemberLedger(){
         const showSlotCol = qty > 1;
 
         const labelBadge = enr.label
-            ? `<span style="font-size:0.65rem;background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 6px;color:#f39c12;margin-left:4px;">${enr.label}</span>` : '';
+            ? `<span style="font-size:1.05rem;background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 6px;color:#f39c12;margin-left:4px;">${enr.label}</span>` : '';
         const qtyBadge = qty>1
-            ? `<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 8px;font-size:0.6rem;font-weight:800;margin-left:5px;">×${qty} chits</span>` : '';
+            ? `<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 8px;font-size:0.92rem;font-weight:800;margin-left:5px;">×${qty} chits</span>` : '';
 
         const rows = allPays.map((p,idx)=>{
             const cp=p.chitPicked==='Yes';
@@ -875,20 +974,20 @@ async function loadMemberLedger(){
             }
             const slotNum = p.slotNum||1;
             const slotCell = showSlotCol
-                ? `<td style="text-align:center;"><span style="background:rgba(245,158,11,0.18);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:2px 7px;font-size:0.65rem;font-weight:800;">Chit ${slotNum}</span></td>`
+                ? `<td style="text-align:center;"><span style="background:rgba(245,158,11,0.18);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:2px 7px;font-size:1.05rem;font-weight:800;">Chit ${slotNum}</span></td>`
                 : '';
             const rowClass=cp?'chit-picked':(isMulti?'multi-month-row':'');
             return `<tr class="${rowClass}">
                 <td style="color:var(--text-dim);font-weight:700;">${idx+1}</td>
                 ${slotCell}
-                <td style="color:#a5b4fc;font-weight:700;white-space:normal;min-width:90px;font-size:0.62rem;">${monthLabel}${isMulti?`<br><span class="multi-month-badge">📅 ${p.numMonths} months</span>`:''}</td>
+                <td style="color:#a5b4fc;font-weight:700;white-space:normal;min-width:90px;font-size:0.92rem;">${monthLabel}${isMulti?`<br><span class="multi-month-badge">📅 ${p.numMonths} months</span>`:''}</td>
                 <td>${fmtDate(p.date)}</td>
-                <td style="color:#c4b5fd;">${fmtAmt(p.chit)}${isMulti?`<span style="font-size:0.55rem;color:var(--text-dim);display:block;">/mo × ${p.numMonths}</span>`:''}</td>
+                <td style="color:#c4b5fd;">${fmtAmt(p.chit)}${isMulti?`<span style="font-size:0.98rem;color:var(--text-dim);display:block;">/mo × ${p.numMonths}</span>`:''}</td>
                 <td style="color:#34d399;font-weight:700;">${fmtAmt(p.paid)}</td>
                 <td style="color:#f59e0b;">${fmtAmt(p.balance)}</td>
-                <td style="color:var(--text-dim);font-size:0.6rem;">${p.paidBy||'—'}</td>
-                <td>${cp?`<div><span class="chit-yes-badge">✅ Picked</span>${p.chitPickedBy?`<div style="font-size:0.58rem;color:var(--text-dim);margin-top:3px;">by ${p.chitPickedBy}</div>`:''}</div>`:'<span class="chit-no">—</span>'}</td>
-                <td><button class="btn-edit-sm" onclick="openEditPayment('${p.id}')" style="font-size:0.6rem;padding:3px 7px;">✏️</button></td>
+                <td style="color:var(--text-dim);font-size:0.92rem;">${p.paidBy||'—'}</td>
+                <td>${cp?`<div><span class="chit-yes-badge">✅ Picked</span>${p.chitPickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);margin-top:3px;">by ${p.chitPickedBy}</div>`:''}</div>`:'<span class="chit-no">—</span>'}</td>
+                <td><button class="btn-edit-sm" onclick="openEditPayment('${p.id}')" style="font-size:0.92rem;padding:3px 7px;">✏️</button></td>
             </tr>`;
         }).join('');
 
@@ -898,29 +997,29 @@ async function loadMemberLedger(){
         return `<div style="margin-bottom:12px;">
             <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:10px 14px;border:1px solid var(--border);border-bottom:none;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
                 <div>
-                    <div style="font-size:0.8rem;font-weight:800;color:#f39c12;margin-bottom:4px;">📂 ${grp.name}${labelBadge}${qtyBadge}</div>
+                    <div style="font-size:1rem;font-weight:800;color:#f39c12;margin-bottom:4px;">📂 ${grp.name}${labelBadge}${qtyBadge}</div>
                     <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                        <span style="font-size:0.58rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:5px;padding:1px 6px;color:#a5b4fc;">🗓 Started: ${gStartDisplay}</span>
-                        ${grp.dueDay?`<span style="font-size:0.58rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:5px;padding:1px 6px;color:#f39c12;">📅 Due: ${gDueDayOrd}</span>`:''}
-                        ${multiMonthCount>0?`<span style="font-size:0.58rem;background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.35);border-radius:5px;padding:1px 6px;color:#a5b4fc;">📦 ${multiMonthCount} bulk payment${multiMonthCount>1?'s':''}</span>`:''}
+                        <span style="font-size:0.98rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:5px;padding:1px 6px;color:#a5b4fc;">🗓 Started: ${gStartDisplay}</span>
+                        ${grp.dueDay?`<span style="font-size:0.98rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:5px;padding:1px 6px;color:#f39c12;">📅 Due: ${gDueDayOrd}</span>`:''}
+                        ${multiMonthCount>0?`<span style="font-size:0.98rem;background:rgba(99,102,241,.18);border:1px solid rgba(99,102,241,.35);border-radius:5px;padding:1px 6px;color:#a5b4fc;">📦 ${multiMonthCount} bulk payment${multiMonthCount>1?'s':''}</span>`:''}
                     </div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-size:1rem;font-weight:800;color:#a5b4fc;">${left}<span style="font-size:0.62rem;color:var(--text-dim);">/${totalMonths}</span></div>
-                    <div style="font-size:0.55rem;color:var(--text-dim);text-transform:uppercase;">months pending</div>
+                    <div style="font-size:1rem;font-weight:800;color:#a5b4fc;">${left}<span style="font-size:0.92rem;color:var(--text-dim);">/${totalMonths}</span></div>
+                    <div style="font-size:0.98rem;color:var(--text-dim);text-transform:uppercase;">months pending</div>
                 </div>
             </div>
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;">
                 <div onclick="toggleLedgerTable('${tableId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
-                    <span style="font-size:0.65rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;">Payment History (${allPays.length} entries)</span>
+                    <span style="font-size:1.05rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;">Payment History (${allPays.length} entries)</span>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:0.65rem;color:#34d399;">${fmtAmt(tPaid)} paid</span>
-                        ${tBal>0?`<span style="font-size:0.65rem;color:#f59e0b;">${fmtAmt(tBal)} bal</span>`:''}
-                        <span style="font-size:0.8rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">▶</span>
+                        <span style="font-size:1.05rem;color:#34d399;">${fmtAmt(tPaid)} paid</span>
+                        ${tBal>0?`<span style="font-size:1.05rem;color:#f59e0b;">${fmtAmt(tBal)} bal</span>`:''}
+                        <span style="font-size:1rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">▶</span>
                     </div>
                 </div>
                 <div id="${tableId}" style="display:none;">
-                    <div style="overflow-x:auto;"><table class="table-custom">
+                    <div class="table-wrap"><table class="table-custom">
                         <thead><tr><th>#</th>${theadSlotCol}<th>Month(s) Covered</th><th>Pay Date</th><th>Chit/Mo</th><th>Total Paid</th><th>Balance</th><th>Mode</th><th>Chit Picked</th><th></th></tr></thead>
                         <tbody>${rows||`<tr><td colspan="${colSpanTotal+5}" style="text-align:center;color:var(--text-dim);padding:16px;">No payments yet</td></tr>`}
                         ${allPays.length?`<tr style="font-weight:800;background:rgba(255,255,255,.04);">
@@ -931,7 +1030,7 @@ async function loadMemberLedger(){
                         </tr>`:''}
                         </tbody>
                     </table></div>
-                    ${multiMonthCount>0?`<div style="padding:8px 14px 10px;font-size:0.62rem;color:#a5b4fc;border-top:1px solid var(--border);">
+                    ${multiMonthCount>0?`<div style="padding:8px 14px 10px;font-size:0.92rem;color:#a5b4fc;border-top:1px solid var(--border);">
                         <span style="margin-right:6px;">📅</span> Purple rows = multi-month bulk payments
                     </div>`:''}
                 </div>
@@ -945,12 +1044,12 @@ async function loadMemberLedger(){
             <div style="width:44px;height:44px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;">${ini(m.name)}</div>
             <div style="flex:1;">
                 <div style="font-size:1rem;font-weight:800;">${m.name}</div>
-                <div style="font-size:0.68rem;color:var(--text-dim);">${mPays.length} payments · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
+                <div style="font-size:0.98rem;color:var(--text-dim);">${mPays.length} payments · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
             </div>
             ${!isMember?`<div style="display:flex;gap:6px;">
                 <button class="btn-edit-sm" onclick="openEditMember('${mid}')">✏️</button>
-                <button class="btn-pdf" onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:7px 14px;font-size:0.75rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;">🖨️ Print</button>
-            </div>`:`<button onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:8px 16px;font-size:0.8rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;">🖨️ Print Statement</button>`}
+                <button class="btn-pdf" onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:7px 14px;font-size:1.05rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;">🖨️ Print</button>
+            </div>`:`<button onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:8px 16px;font-size:1rem;font-weight:800;border:none;border-radius:8px;cursor:pointer;">🖨️ Print Statement</button>`}
         </div>
         ${payTablesHtml||'<div style="text-align:center;color:var(--text-dim);padding:20px;">No payments yet</div>'}
     `;
@@ -1012,20 +1111,20 @@ function addEnrollmentRow(groupId='', label='', enrollmentId='', qty=1){
     const row = document.createElement('div');
     row.className = 'enrollment-row';
     row.dataset.enrollmentId = id;
-    row.style.cssText='display:flex;gap:6px;align-items:center;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:8px 10px;';
+    row.style.cssText='display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:8px 10px;';
     row.innerHTML=`
-        <select class="enr-group form-input" style="flex:3;margin-bottom:0;padding:8px 10px;font-size:0.82rem;">
+        <select class="enr-group form-input" style="flex:3;margin-bottom:0;padding:8px 10px;font-size:0.92rem;">
             <option value="">-- Select Group --</option>${opts}
         </select>
         <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;">
             <span style="font-size:0.5rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;white-space:nowrap;">Chits</span>
             <input type="number" class="enr-qty form-input" min="1" max="20" value="${qty||1}"
-                style="width:54px;margin-bottom:0;padding:8px 6px;font-size:0.85rem;text-align:center;font-weight:800;" title="Number of chits this member takes in this group">
+                style="width:54px;margin-bottom:0;padding:8px 6px;font-size:1.05rem;text-align:center;font-weight:800;" title="Number of chits this member takes in this group">
         </div>
         <input type="text" class="enr-label form-input" placeholder="Label (e.g. Chit 1)" value="${label}"
-            style="flex:2;margin-bottom:0;padding:8px 10px;font-size:0.82rem;" title="Label to distinguish multiple chits in same group">
+            style="flex:2;margin-bottom:0;padding:8px 10px;font-size:0.92rem;" title="Label to distinguish multiple chits in same group">
         <button type="button" onclick="this.closest('.enrollment-row').remove()"
-            style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 10px;font-size:0.85rem;cursor:pointer;flex-shrink:0;">✕</button>`;
+            style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 10px;font-size:1.05rem;cursor:pointer;flex-shrink:0;">✕</button>`;
     document.getElementById('enrollmentList').appendChild(row);
 }
 
@@ -1411,17 +1510,17 @@ async function renderGroupsTab(){
             const pickedAmt=pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
             const pickedBy=pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
             const monthsCovered=mp.reduce((s,p)=>s+(p.numMonths||1),0);
-            const multiChitBadge=totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.55rem;font-weight:800;margin-left:4px;">×${totalSlots} chits</span>`:'';
-            const slotLabel=totalSlots>1?`<span style="font-size:0.58rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
+            const multiChitBadge=totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">×${totalSlots} chits</span>`:'';
+            const slotLabel=totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
             return [
                 `<tr${pickedPay?' class="chit-picked"':''}>`,
                 `<td>${i+1}</td>`,
-                `<td><strong>${m.name}</strong>${multiChitBadge}${slotLabel}<br><span style="font-size:0.6rem;color:var(--text-dim);">${m.phone||''}</span></td>`,
+                `<td><strong>${m.name}</strong>${multiChitBadge}${slotLabel}<br><span style="font-size:0.92rem;color:var(--text-dim);">${m.phone||''}</span></td>`,
                 `<td style="color:#34d399;">${fmtAmt(paid)}</td>`,
                 `<td style="color:#f59e0b;">${fmtAmt(bal)}</td>`,
-                `<td style="color:#a5b4fc;font-size:0.65rem;">${monthsCovered}/${totalMonths}</td>`,
+                `<td style="color:#a5b4fc;font-size:1.05rem;">${monthsCovered}/${totalMonths}</td>`,
                 `<td>${pickedPay
-                    ?`<div><span class="chit-yes-badge">✅ Picked</span><div style="color:#34d399;font-weight:800;font-size:0.72rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.58rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
+                    ?`<div><span class="chit-yes-badge">✅ Picked</span><div style="color:#34d399;font-weight:800;font-size:0.92rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
                     :'<span class="chit-no">—</span>'}</td>`,
                 `<td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button></td>`,
                 `</tr>`
@@ -1436,20 +1535,20 @@ async function renderGroupsTab(){
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                     <div>
                         <div style="font-size:1rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
-                        <div style="font-size:0.68rem;color:var(--text-dim);">${(()=>{const slots=gMs.reduce((s,m)=>{const e=(m.enrollments||[]).find(x=>x.groupId===g.id);return s+(e?parseInt(e.qty||1):1);},0);const uniq=gMs.length;return slots===uniq?slots+' members':slots+' chit slots ('+uniq+' members)';})()}  · ${gPays.length} payment entries</div>
+                        <div style="font-size:0.98rem;color:var(--text-dim);">${(()=>{const slots=gMs.reduce((s,m)=>{const e=(m.enrollments||[]).find(x=>x.groupId===g.id);return s+(e?parseInt(e.qty||1):1);},0);const uniq=gMs.length;return slots===uniq?slots+' members':slots+' chit slots ('+uniq+' members)';})()}  · ${gPays.length} payment entries</div>
                         <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
-                            <span style="font-size:0.62rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:2px 7px;color:#a5b4fc;">🗓 Started: ${gStartDisp}</span>
-                            ${g.dueDay?`<span style="font-size:0.62rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:2px 7px;color:#f39c12;">📅 Due: ${gDueDayDisp}</span>`:''}
+                            <span style="font-size:0.92rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:2px 7px;color:#a5b4fc;">🗓 Started: ${gStartDisp}</span>
+                            ${g.dueDay?`<span style="font-size:0.92rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:2px 7px;color:#f39c12;">📅 Due: ${gDueDayDisp}</span>`:''}
                         </div>
                     </div>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        <button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:5px 10px;font-size:0.7rem;">📄 PDF</button>
+                        <button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:5px 10px;font-size:1rem;">📄 PDF</button>
                         <button onclick="openEditGroup('${g.id}');event.stopPropagation();" class="btn-edit-sm">✏️ Edit</button>
                         <span class="chevron-icon closed">▼</span>
                     </div>
                 </div>
                 <div class="row g-2 mt-2">
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Collected</div><div class="mini-stat-val" style="color:#34d399;">${fmtAmt(tPaid)}</div></div></div>
+                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Collected</div><div class="mini-stat-val" style="color:#34d399;font-size:clamp(0.7rem,2.2vw,0.9rem);">${fmtAmt(tPaid)}</div></div></div>
                     <div class="col-3"><div class="mini-stat" style="border-top:2px solid #f59e0b;"><div class="mini-stat-lbl">Balance</div><div class="mini-stat-val" style="color:#f59e0b;">${fmtAmt(tBal)}</div></div></div>
                     <div class="col-3"><div class="mini-stat" style="border-top:2px solid #a5b4fc;"><div class="mini-stat-lbl">Pending</div><div class="mini-stat-val" style="color:#a5b4fc;">${left}/${totalMonths}</div></div></div>
                     <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Picked</div><div class="mini-stat-val" style="color:#34d399;">${picked}</div></div></div>
@@ -1458,10 +1557,10 @@ async function renderGroupsTab(){
                 <div class="prog-label" style="margin-top:3px;"><span>Month ${elapsed}/${totalMonths}</span><span>${left}/${totalMonths} months pending</span></div>
             </div>
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
-                ${gMs.length?`<div style="overflow-x:auto;"><table class="table-custom">
+                ${gMs.length?`<div class="table-wrap"><table class="table-custom">
                     <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Chit Picked Amt</th><th></th></tr></thead>
                     <tbody>${memberRows}</tbody>
-                </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:0.8rem;padding:10px;">No members yet</div>'}
+                </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:1rem;padding:10px;">No members yet</div>'}
             </div>
         </div>`;
     }).join('');
@@ -2129,6 +2228,7 @@ function applyUserSession(user){
         document.getElementById('adminQuickBtns').style.display='flex';
         updateUI();
         pollPendingRequests();
+        setTimeout(checkAndShowBackupReminder, 1200);
     } else {
         document.getElementById('adminHeader').style.display='none';
         document.getElementById('memberHeader').style.display='block';
@@ -2201,7 +2301,7 @@ async function renderAccessRequests(){
     const all = snap.docs.map(d=>({id:d.id,...d.data()}));
     const filtered = _reqFilter==='all' ? all : all.filter(r=>r.status===_reqFilter);
     if(!filtered.length){
-        list.innerHTML=`<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:0.85rem;">No ${_reqFilter==='all'?'':_reqFilter} requests</div>`;
+        list.innerHTML=`<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:1.05rem;">No ${_reqFilter==='all'?'':_reqFilter} requests</div>`;
         return;
     }
     list.innerHTML = filtered.map(r=>`
@@ -2215,8 +2315,8 @@ async function renderAccessRequests(){
                     ? `<button class="btn-approve" onclick="handleApprove('${r.id}','${r.phone}')">✅ Approve</button>
                        <button class="btn-deny" onclick="handleDeny('${r.id}')">✕ Deny</button>`
                     : r.status==='approved'
-                        ? `<span class="badge-approved">✅ Approved</span><button class="btn-deny" style="font-size:0.62rem;padding:4px 8px;" onclick="handleDeny('${r.id}')">Revoke</button>`
-                        : `<span class="badge-denied">🚫 Denied</span><button class="btn-approve" style="font-size:0.62rem;padding:4px 8px;" onclick="handleApprove('${r.id}','${r.phone}')">Re-approve</button>`
+                        ? `<span class="badge-approved">✅ Approved</span><button class="btn-deny" style="font-size:0.92rem;padding:4px 8px;" onclick="handleDeny('${r.id}')">Revoke</button>`
+                        : `<span class="badge-denied">🚫 Denied</span><button class="btn-approve" style="font-size:0.92rem;padding:4px 8px;" onclick="handleApprove('${r.id}','${r.phone}')">Re-approve</button>`
                 }
             </div>
         </div>`).join('');
@@ -2268,7 +2368,7 @@ function renderMembersQuick(ms, gs, ps, filter=''){
     const list = document.getElementById('membersQuickList');
     const filtered = filter ? ms.filter(m => m.name.toLowerCase().includes(filter.toLowerCase()) || (m.phone||'').includes(filter)) : ms;
     if(!filtered.length){
-        list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:0.85rem;">No members found</div>';
+        list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:1.05rem;">No members found</div>';
         return;
     }
     list.innerHTML = filtered.map((m,i) => {
@@ -2278,18 +2378,18 @@ function renderMembersQuick(ms, gs, ps, filter=''){
         const mGroups = (m.groupIds||[]).map(gid => { const g=gs.find(x=>x.id===gid); return g?g.name:'?'; }).join(', ');
         const initials = ini(m.name);
         return `<div style="display:flex;align-items:center;gap:12px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
-            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:900;flex-shrink:0;">${initials}</div>
+            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:900;flex-shrink:0;">${initials}</div>
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
-                <div style="font-size:0.65rem;color:var(--text-dim);margin-top:1px;">📱 ${m.phone||'—'} &nbsp;·&nbsp; ${mGroups||'No groups'}</div>
+                <div style="font-weight:800;font-size:0.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+                <div style="font-size:1.05rem;color:var(--text-dim);margin-top:1px;">📱 ${m.phone||'—'} &nbsp;·&nbsp; ${mGroups||'No groups'}</div>
                 <div style="display:flex;gap:8px;margin-top:4px;">
-                    <span style="font-size:0.65rem;color:#34d399;font-weight:700;">₹${totalPaid.toLocaleString('en-IN')} paid</span>
-                    ${totalBal>0?`<span style="font-size:0.65rem;color:#f59e0b;font-weight:700;">₹${totalBal.toLocaleString('en-IN')} bal</span>`:''}
+                    <span style="font-size:1.05rem;color:#34d399;font-weight:700;">₹${totalPaid.toLocaleString('en-IN')} paid</span>
+                    ${totalBal>0?`<span style="font-size:1.05rem;color:#f59e0b;font-weight:700;">₹${totalBal.toLocaleString('en-IN')} bal</span>`:''}
                 </div>
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0;">
-                <button class="btn-edit-sm" onclick="closeModal('membersQuickModal');document.getElementById('summarySearch').value='${m.name.replace(/'/g,"\'")}';;document.getElementById('summaryView').value='${m.id}';loadMemberLedger();" style="font-size:0.65rem;padding:4px 9px;">📋 View</button>
-                ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditMember('${m.id}')" style="font-size:0.65rem;padding:4px 9px;">✏️</button>`:''}
+                <button class="btn-edit-sm" onclick="closeModal('membersQuickModal');document.getElementById('summarySearch').value='${m.name.replace(/'/g,"\'")}';;document.getElementById('summaryView').value='${m.id}';loadMemberLedger();" style="font-size:1.05rem;padding:4px 9px;">📋 View</button>
+                ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditMember('${m.id}')" style="font-size:1.05rem;padding:4px 9px;">✏️</button>`:''}
             </div>
         </div>`;
     }).join('');
@@ -2314,7 +2414,7 @@ async function openGroupsQuickView(){
 function renderGroupsQuick(gs, ms, ps){
     const list = document.getElementById('groupsQuickList');
     if(!gs.length){
-        list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:0.85rem;">No groups yet</div>';
+        list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:1.05rem;">No groups yet</div>';
         return;
     }
     list.innerHTML = gs.map(g => {
@@ -2341,55 +2441,232 @@ function renderGroupsQuick(gs, ms, ps){
             const bal = mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
             const pickedM = mp.find(p=>p.chitPicked==='Yes');
             return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.04);">
-                <div style="width:26px;height:26px;border-radius:7px;background:rgba(243,156,18,.15);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;flex-shrink:0;">${ini(m.name)}</div>
-                <span style="flex:1;font-size:0.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</span>
-                <span style="font-size:0.65rem;color:#34d399;">₹${paid.toLocaleString('en-IN')}</span>
-                ${bal>0?`<span style="font-size:0.65rem;color:#f59e0b;">bal ₹${bal.toLocaleString('en-IN')}</span>`:''}
-                ${pickedM?`<span style="font-size:0.55rem;background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(16,185,129,.4);border-radius:4px;padding:1px 5px;flex-shrink:0;">✅ Picked</span>`:''}
+                <div style="width:26px;height:26px;border-radius:7px;background:rgba(243,156,18,.15);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:0.92rem;font-weight:800;flex-shrink:0;">${ini(m.name)}</div>
+                <span style="flex:1;font-size:0.98rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</span>
+                <span style="font-size:1.05rem;color:#34d399;">₹${paid.toLocaleString('en-IN')}</span>
+                ${bal>0?`<span style="font-size:1.05rem;color:#f59e0b;">bal ₹${bal.toLocaleString('en-IN')}</span>`:''}
+                ${pickedM?`<span style="font-size:0.98rem;background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(16,185,129,.4);border-radius:4px;padding:1px 5px;flex-shrink:0;">✅ Picked</span>`:''}
             </div>`;
         }).join('');
-        const moreCount = gMs.length > 5 ? `<div style="padding:4px 8px;font-size:0.65rem;color:var(--text-dim);text-align:center;">+${gMs.length-5} more members</div>` : '';
+        const moreCount = gMs.length > 5 ? `<div style="padding:4px 8px;font-size:1.05rem;color:var(--text-dim);text-align:center;">+${gMs.length-5} more members</div>` : '';
 
         return `<div style="background:var(--input-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
             <div style="padding:12px 14px;border-bottom:1px solid var(--border);">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                     <div>
-                        <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
-                        <div style="font-size:0.62rem;color:var(--text-dim);margin-top:2px;">${totalSlots===gMs.length?totalSlots+' members':totalSlots+' chit slots'} &nbsp;·&nbsp; 🗓 ${gStartDisp}</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
+                        <div style="font-size:0.92rem;color:var(--text-dim);margin-top:2px;">${totalSlots===gMs.length?totalSlots+' members':totalSlots+' chit slots'} &nbsp;·&nbsp; 🗓 ${gStartDisp}</div>
                     </div>
                     <div style="display:flex;gap:5px;">
-                        <button onclick="closeModal('groupsQuickModal');generateGroupPDF('${g.id}')" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;border:none;border-radius:7px;padding:4px 9px;font-size:0.65rem;font-weight:700;cursor:pointer;">📄 PDF</button>
-                        ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditGroup('${g.id}')" style="font-size:0.65rem;padding:4px 9px;">✏️</button>`:''}
+                        <button onclick="closeModal('groupsQuickModal');generateGroupPDF('${g.id}')" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;border:none;border-radius:7px;padding:4px 9px;font-size:1.05rem;font-weight:700;cursor:pointer;">📄 PDF</button>
+                        ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditGroup('${g.id}')" style="font-size:1.05rem;padding:4px 9px;">✏️</button>`:''}
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px;">
                     <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:6px;text-align:center;">
-                        <div style="font-size:0.75rem;font-weight:800;color:#34d399;">₹${tPaid.toLocaleString('en-IN')}</div>
-                        <div style="font-size:0.52rem;color:var(--text-dim);text-transform:uppercase;">Collected</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#34d399;">₹${tPaid.toLocaleString('en-IN')}</div>
+                        <div style="font-size:0.68rem;color:var(--text-dim);text-transform:uppercase;">Collected</div>
                     </div>
                     <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:6px;text-align:center;">
-                        <div style="font-size:0.75rem;font-weight:800;color:#f59e0b;">₹${tBal.toLocaleString('en-IN')}</div>
-                        <div style="font-size:0.52rem;color:var(--text-dim);text-transform:uppercase;">Balance</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#f59e0b;">₹${tBal.toLocaleString('en-IN')}</div>
+                        <div style="font-size:0.68rem;color:var(--text-dim);text-transform:uppercase;">Balance</div>
                     </div>
                     <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:6px;text-align:center;">
-                        <div style="font-size:0.75rem;font-weight:800;color:#a5b4fc;">${left}/${totalMonths}</div>
-                        <div style="font-size:0.52rem;color:var(--text-dim);text-transform:uppercase;">Pending</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#a5b4fc;">${left}/${totalMonths}</div>
+                        <div style="font-size:0.68rem;color:var(--text-dim);text-transform:uppercase;">Pending</div>
                     </div>
                     <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:6px;text-align:center;">
-                        <div style="font-size:0.75rem;font-weight:800;color:#34d399;">${picked}</div>
-                        <div style="font-size:0.52rem;color:var(--text-dim);text-transform:uppercase;">Picked</div>
+                        <div style="font-size:1.05rem;font-weight:800;color:#34d399;">${picked}</div>
+                        <div style="font-size:0.68rem;color:var(--text-dim);text-transform:uppercase;">Picked</div>
                     </div>
                 </div>
                 <div style="background:#252f48;border-radius:4px;height:5px;overflow:hidden;">
                     <div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%"></div>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.58rem;color:var(--text-dim);margin-top:3px;">
+                <div style="display:flex;justify-content:space-between;font-size:0.98rem;color:var(--text-dim);margin-top:3px;">
                     <span>Month ${elapsed}/${totalMonths}</span><span>${pct}% complete</span>
                 </div>
             </div>
-            ${gMs.length?`<div>${memberList}${moreCount}</div>`:'<div style="padding:8px 14px;font-size:0.75rem;color:var(--text-dim);text-align:center;">No members yet</div>'}
+            ${gMs.length?`<div>${memberList}${moreCount}</div>`:'<div style="padding:8px 14px;font-size:1.05rem;color:var(--text-dim);text-align:center;">No members yet</div>'}
         </div>`;
     }).join('');
+}
+
+// ══════════════════════════════════════════
+// AUTO BACKUP — EMAIL (EmailJS)
+// ══════════════════════════════════════════
+const BACKUP_HISTORY_KEY = 'akdf_backup_history';
+const BACKUP_LAST_DATE_KEY = 'akdf_last_backup_date';
+const EMAIL_CONFIG_KEY = 'akdf_email_config';
+
+function getEmailConfig(){
+    try{ return JSON.parse(localStorage.getItem(EMAIL_CONFIG_KEY))||{}; }catch(e){ return {}; }
+}
+
+function saveEmailConfig(){
+    const cfg = {
+        publicKey: document.getElementById('ejs_pubkey').value.trim(),
+        serviceId: document.getElementById('ejs_service').value.trim(),
+        templateId: document.getElementById('ejs_template').value.trim(),
+        toEmail: document.getElementById('ejs_to_email').value.trim()
+    };
+    if(!cfg.publicKey||!cfg.serviceId||!cfg.templateId||!cfg.toEmail){
+        showToast('❌ Fill all 4 fields', false); return;
+    }
+    localStorage.setItem(EMAIL_CONFIG_KEY, JSON.stringify(cfg));
+    document.getElementById('emailConfigStatus').textContent = '✅ Config saved! EmailJS ready.';
+    document.getElementById('emailConfigStatus').style.color = '#34d399';
+    showToast('✅ Email config saved!');
+    // Init EmailJS with new key
+    emailjs.init(cfg.publicKey);
+}
+
+function loadEmailConfigToForm(){
+    const cfg = getEmailConfig();
+    if(cfg.publicKey) document.getElementById('ejs_pubkey').value = cfg.publicKey;
+    if(cfg.serviceId) document.getElementById('ejs_service').value = cfg.serviceId;
+    if(cfg.templateId) document.getElementById('ejs_template').value = cfg.templateId;
+    if(cfg.toEmail) document.getElementById('ejs_to_email').value = cfg.toEmail;
+    if(cfg.publicKey){
+        document.getElementById('emailConfigStatus').textContent = '✅ Config loaded';
+        document.getElementById('emailConfigStatus').style.color = '#34d399';
+    }
+}
+
+function getBackupHistory(){
+    try{ return JSON.parse(localStorage.getItem(BACKUP_HISTORY_KEY))||[]; }catch(e){ return []; }
+}
+
+function saveBackupHistory(history){
+    localStorage.setItem(BACKUP_HISTORY_KEY, JSON.stringify(history.slice(0,7)));
+}
+
+function renderBackupHistory(){
+    const history = getBackupHistory();
+    const el = document.getElementById('backupHistoryList');
+    if(!el) return;
+    if(!history.length){
+        el.innerHTML = '<div style="text-align:center;color:var(--text-dim);font-size:0.98rem;padding:12px;">No backups sent yet</div>';
+        return;
+    }
+    el.innerHTML = history.map(h => `
+        <div class="backup-history-item">
+            <div>
+                <div style="font-size:1rem;font-weight:700;">${h.date}</div>
+                <div style="font-size:0.92rem;color:var(--text-dim);margin-top:2px;">${h.members} members · ${h.groups} groups · ${h.payments} payments</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-size:1.05rem;font-weight:700;color:${h.status==='sent'?'#34d399':'#f87171'};">${h.status==='sent'?'✅ Sent':'❌ Failed'}</div>
+                <div style="font-size:0.98rem;color:var(--text-dim);">${h.time}</div>
+            </div>
+        </div>`).join('');
+}
+
+function updateBackupStatusUI(){
+    const lastDate = localStorage.getItem(BACKUP_LAST_DATE_KEY)||'';
+    const today = new Date().toISOString().split('T')[0];
+    const history = getBackupHistory();
+    const badge = document.getElementById('backupStatusBadge');
+    const reminderBtn = document.getElementById('backupReminderBtn');
+    const lastEl = document.getElementById('lastBackupDate');
+    const countEl = document.getElementById('totalBackupCount');
+
+    const sentHistory = history.filter(h=>h.status==='sent');
+    if(lastEl) lastEl.textContent = sentHistory.length ? sentHistory[0].date : '—';
+    if(countEl) countEl.textContent = sentHistory.length;
+
+    if(lastDate === today){
+        if(badge){ badge.textContent='✅ Done today'; badge.style.background='rgba(16,185,129,.15)'; badge.style.color='#34d399'; badge.style.borderColor='rgba(16,185,129,.35)'; }
+        if(reminderBtn){ reminderBtn.style.display='none'; }
+    } else {
+        if(badge){ badge.textContent='⚠️ Not done today'; badge.style.background='rgba(239,68,68,.15)'; badge.style.color='#f87171'; badge.style.borderColor='rgba(239,68,68,.3)'; }
+        // Only show reminder badge if email is configured
+        const cfg = getEmailConfig();
+        if(reminderBtn && cfg.publicKey){ reminderBtn.style.display='inline-flex'; reminderBtn.classList.remove('done'); }
+    }
+    renderBackupHistory();
+}
+
+async function sendEmailBackup(manual=false){
+    const cfg = getEmailConfig();
+    if(!cfg.publicKey || !cfg.serviceId || !cfg.templateId || !cfg.toEmail){
+        if(manual){
+            showToast('❌ Configure email settings first', false);
+            if(document.getElementById('backupTab')) switchTab('backup');
+        }
+        return;
+    }
+
+    showToast('⏳ Preparing backup email…', true);
+    try{
+        const members = await getCollection('members');
+        const groups = await getCollection('groups');
+        const payments = await getCollection('payments');
+
+        const backupData = JSON.stringify({m:members, g:groups, p:payments}, null, 2);
+        const today = new Date().toISOString().split('T')[0];
+        const timeStr = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        const dateDisp = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+
+        // EmailJS has a ~50KB limit per template variable.
+        // We send a summary + note to download from app if data is large.
+        const isLarge = backupData.length > 40000;
+        const dataToSend = isLarge
+            ? `[DATA TOO LARGE FOR EMAIL — ${Math.round(backupData.length/1024)}KB]
+
+Summary:
+Members: ${members.length}
+Groups: ${groups.length}
+Payments: ${payments.length}
+
+Please use the app's "Download JSON Backup" button to get the full file.`
+            : backupData;
+
+        emailjs.init(cfg.publicKey);
+        await emailjs.send(cfg.serviceId, cfg.templateId, {
+            backup_date: dateDisp,
+            member_count: members.length,
+            group_count: groups.length,
+            payment_count: payments.length,
+            backup_data: dataToSend,
+            to_email: cfg.toEmail,
+            app_name: 'AK Chit Funds'
+        });
+
+        // Mark done
+        localStorage.setItem(BACKUP_LAST_DATE_KEY, today);
+        const history = getBackupHistory();
+        history.unshift({ date: dateDisp, time: timeStr, members: members.length, groups: groups.length, payments: payments.length, status: 'sent' });
+        saveBackupHistory(history);
+        updateBackupStatusUI();
+
+        // Update reminder badge
+        const reminderBtn = document.getElementById('backupReminderBtn');
+        if(reminderBtn){ reminderBtn.style.display='none'; }
+
+        showToast('✅ Backup email sent to ' + cfg.toEmail);
+    } catch(err){
+        console.error('EmailJS error:', err);
+        // Log failure in history
+        const today = new Date().toISOString().split('T')[0];
+        const history = getBackupHistory();
+        history.unshift({ date: new Date().toLocaleDateString('en-IN'), time: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), members:'?', groups:'?', payments:'?', status:'failed' });
+        saveBackupHistory(history);
+        renderBackupHistory();
+        showToast('❌ Email failed — check config & EmailJS key', false);
+    }
+}
+
+function checkAndShowBackupReminder(){
+    if(!CURRENT_USER || CURRENT_USER.role !== 'admin') return;
+    const cfg = getEmailConfig();
+    if(!cfg.publicKey) return; // Don't show badge if not configured
+    const lastDate = localStorage.getItem(BACKUP_LAST_DATE_KEY)||'';
+    const today = new Date().toISOString().split('T')[0];
+    const reminderBtn = document.getElementById('backupReminderBtn');
+    if(lastDate !== today && reminderBtn){
+        reminderBtn.style.display = 'inline-flex';
+    }
 }
 
 // ══════════════════════════════════════════
@@ -2400,6 +2677,13 @@ document.addEventListener('DOMContentLoaded', function(){
     setTimeout(migrateData,800);
     initAuth();
     setInterval(()=>{ if(CURRENT_USER&&CURRENT_USER.role==='admin') pollPendingRequests(); }, 60000);
+    // Reload backup UI when backup tab is opened
+    const origSwitchTab = switchTab;
+    window.switchTabOrig = origSwitchTab;
+    window.switchTab = function(t){
+        origSwitchTab(t);
+        if(t==='backup'){ loadEmailConfigToForm(); updateBackupStatusUI(); }
+    };
 });
 </script>
 </body>
