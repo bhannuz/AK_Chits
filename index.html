@@ -2519,6 +2519,7 @@ function applyUserSession(user){
 function handleLogout(){
     sessionStorage.removeItem('akdf_session');
     CURRENT_USER = null;
+    location.reload();
     document.body.classList.remove('member-mode');
     document.getElementById('adminHeader').style.display='flex';
     document.getElementById('memberHeader').style.display='none';
@@ -2811,13 +2812,23 @@ function ncpSave(){ ncpAutoSave(); }
 // ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function(){
-    document.getElementById('pDate').value=new Date().toISOString().split('T')[0];
-    setTimeout(migrateData,800);
-    initAuth();
-    setTimeout(ncpRestoreSession, 300);
-    setInterval(()=>{ if(CURRENT_USER&&CURRENT_USER.role==='admin') pollPendingRequests(); }, 60000);
-});
+async function initAuth(){
+    const saved = sessionStorage.getItem('akdf_session');
+    if(saved){
+        try {
+            const u = JSON.parse(saved);
+            CURRENT_USER = u; // Restores the user object to memory
+            applyUserSession(u); // Forces the dashboard to show and login screen to hide
+            console.log("Session restored for:", u.name);
+            return;
+        } catch(e) {
+            console.error("Session restore failed", e);
+            sessionStorage.removeItem('akdf_session');
+        }
+    }
+    // No valid session? Show the login screen
+    document.getElementById('loginScreen').style.display = 'flex';
+}
 </script>
 </body>
 </html>
