@@ -22,36 +22,30 @@ async function loadMemberLedger(){
     const memberGroups=gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id));
     const isMember = CURRENT_USER && CURRENT_USER.role==='member';
 
-    const groupSections = enrollments.map((enr,gi)=>{
-        const grp=gs.find(g=>g.id===enr.groupId); if(!grp) return '';
-        const qty=parseInt(enr.qty||1);
-        const allPays=mPays.filter(p=>{
-            if(enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId;
-            return p.groupId===enr.groupId;
-        }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-
-        const allDueDates=getGroupDueDates(grp);
+    // ── Build one section per chit slot ─────────────────────────────────────
+    // For qty=1: one section per enrollment
+    // For qty=2+: one section PER SLOT (Chit 1, Chit 2, ...) each with own progress
+    function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths=parseInt(grp.duration||grp.gDuration)||21;
-        let elapsed=0;
-        if(grp.startDate||grp.gStart){
-            const _s=new Date(grp.startDate||grp.gStart),_n=new Date();
-            elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));
-        }
-        const monthsDone=allPays.reduce((s,p)=>s+(p.numMonths||1),0);
+        const monthsDone=slotPays.reduce((s,p)=>s+(p.numMonths||1),0);
         const left=Math.max(0,totalMonths-monthsDone);
         const pct=Math.min(100,Math.round(monthsDone/totalMonths*100));
-        const tPaid=allPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal =allPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const multiMonthCount=allPays.filter(p=>p.numMonths&&p.numMonths>1).length;
-        const chitPickedPay=allPays.find(p=>p.chitPicked==='Yes');
-        const tableId=`ledgerTable_${gi}`;
-        const showSlotCol=qty>1;
-        const labelBadge=enr.label?`<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>`:'';
-        const qtyBadge=qty>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 7px;font-size:0.72rem;font-weight:800;margin-left:4px;">x${qty} chits</span>`:'';
+        const tPaid=slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+        const tBal =slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+        const multiMonthCount=slotPays.filter(p=>p.numMonths&&p.numMonths>1).length;
+        const chitPickedPay=slotPays.find(p=>p.chitPicked==='Yes');
         const gStartDisplay=fmtDate(grp.startDate||grp.gStart||'');
         const gDueDayOrd=grp.dueDay?`${grp.dueDay}${['st','nd','rd'][((grp.dueDay%100-11)%10)-1]||'th'}`:'--';
 
-        const tableRows = allPays.map((p,idx)=>{
+        // Title: show chit slot badge when qty > 1
+        const chitSlotBadge = totalSlots>1
+            ? `<span style="background:rgba(245,158,11,0.25);border:1px solid rgba(245,158,11,0.5);color:#fbbf24;border-radius:5px;padding:2px 9px;font-size:0.75rem;font-weight:800;margin-left:6px;">Chit ${slotNum}</span>`
+            : '';
+        const labelBadge = enr.label
+            ? `<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>` : '';
+
+        // Payment rows for this slot
+        const tableRows = slotPays.map((p,idx)=>{
             const cp=p.chitPicked==='Yes';
             const isMulti=p.numMonths&&p.numMonths>1;
             const months=p.monthSlots||[];
@@ -64,13 +58,11 @@ async function loadMemberLedger(){
                 const si=p.monthSlot!==undefined?p.monthSlot:getMonthSlot(allDueDates,p.date);
                 monthLabel=si>=0&&allDueDates[si]?fmtDate(allDueDates[si]):'--';
             }
-            const slotCell=showSlotCol?`<td style="text-align:center;"><span style="background:rgba(245,158,11,0.18);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:2px 6px;font-size:0.68rem;font-weight:800;">Chit ${p.slotNum||1}</span></td>`:'';
             const rowBg=cp?'rgba(16,185,129,0.08)':isMulti?'rgba(99,102,241,0.07)':'';
             const rowBL=cp?'border-left:3px solid #10b981;':isMulti?'border-left:3px solid #818cf8;':'';
             return `<tr style="background:${rowBg};${rowBL}">
                 <td style="color:var(--text-dim);font-weight:700;text-align:center;">${idx+1}</td>
-                ${slotCell}
-                <td style="color:#a5b4fc;font-weight:700;">${monthLabel}${isMulti?`<br><span style="display:inline-flex;align-items:center;gap:3px;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.6rem;font-weight:800;">@${p.numMonths} months</span>`:''}</td>
+                <td style="color:#a5b4fc;font-weight:700;">${monthLabel}${isMulti?`<br><span style="display:inline-flex;align-items:center;gap:3px;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.6rem;font-weight:800;">x${p.numMonths} months</span>`:''}</td>
                 <td>${fmtDate(p.date)}</td>
                 <td style="color:#c4b5fd;">${fmtAmt(p.chit)}${isMulti?`<span style="font-size:0.6rem;color:var(--text-dim);display:block;">/mo x ${p.numMonths}</span>`:''}</td>
                 <td style="color:#34d399;font-weight:700;">${fmtAmt(p.paid)}</td>
@@ -81,19 +73,18 @@ async function loadMemberLedger(){
             </tr>`;
         }).join('');
 
-        const colSpan=showSlotCol?5:4;
-        const theadSlot=showSlotCol?`<th style="text-align:center;">Chit</th>`:'';
-
         return `<div style="margin-bottom:16px;">
             <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
                     <div>
-                        <div style="font-size:1rem;font-weight:900;color:#f39c12;margin-bottom:6px;">Group: ${grp.name}${labelBadge}${qtyBadge}</div>
+                        <div style="font-size:1rem;font-weight:900;color:#f39c12;margin-bottom:6px;">
+                            Group: ${grp.name}${labelBadge}${chitSlotBadge}
+                        </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">Started: ${gStartDisplay}</span>
                             ${grp.dueDay?`<span style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f39c12;">Due: ${gDueDayOrd}</span>`:''}
                             ${chitPickedPay?`<span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#34d399;">Chit Picked</span>`:''}
-                            ${multiMonthCount>0?`<span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">${multiMonthCount} bulk payments</span>`:''}
+                            ${multiMonthCount>0?`<span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">${multiMonthCount} bulk</span>`:''}
                         </div>
                     </div>
                     <div style="text-align:right;flex-shrink:0;">
@@ -111,21 +102,20 @@ async function loadMemberLedger(){
                 </div>
             </div>
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;">
-                <div onclick="toggleLedgerTable('${tableId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
-                    <span style="font-size:0.78rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;">Payment History (${allPays.length} entries)</span>
+                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
+                    <span style="font-size:0.78rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;">Payment History (${slotPays.length} entries)</span>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)} paid</span>
                         ${tBal>0?`<span style="font-size:0.78rem;color:#f59e0b;font-weight:700;">${fmtAmt(tBal)} bal</span>`:''}
                         <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
                     </div>
                 </div>
-                <div id="${tableId}" style="display:none;">
+                <div id="${sectionId}" style="display:none;">
                     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
                         <table class="table-custom">
                             <thead><tr>
                                 <th style="text-align:center;">#</th>
-                                ${theadSlot}
-                                <th>Month(s) Covered</th>
+                                <th>Month Covered</th>
                                 <th>Pay Date</th>
                                 <th>Chit/Mo</th>
                                 <th>Total Paid</th>
@@ -135,9 +125,9 @@ async function loadMemberLedger(){
                                 <th></th>
                             </tr></thead>
                             <tbody>
-                                ${tableRows||`<tr><td colspan="${colSpan+6}" style="text-align:center;color:var(--text-dim);padding:20px;">No payments yet</td></tr>`}
-                                ${allPays.length?`<tr style="font-weight:800;background:rgba(255,255,255,.04);">
-                                    <td colspan="${colSpan}" style="color:var(--text-dim);">Total</td>
+                                ${tableRows||`<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:20px;">No payments yet</td></tr>`}
+                                ${slotPays.length?`<tr style="font-weight:800;background:rgba(255,255,255,.04);">
+                                    <td colspan="4" style="color:var(--text-dim);">Total</td>
                                     <td style="color:#34d399;">${fmtAmt(tPaid)}</td>
                                     <td style="color:#f59e0b;">${fmtAmt(tBal)}</td>
                                     <td colspan="3"></td>
@@ -149,6 +139,40 @@ async function loadMemberLedger(){
                 </div>
             </div>
         </div>`;
+    }
+
+    // ── Generate sections — one per chit slot ────────────────────────────────
+    let sectionIdx = 0;
+    const groupSections = enrollments.map((enr)=>{
+        const grp=gs.find(g=>g.id===enr.groupId); if(!grp) return '';
+        const qty=parseInt(enr.qty||1);
+        const allDueDates=getGroupDueDates(grp);
+
+        // Get all payments for this enrollment
+        const enrPays=mPays.filter(p=>{
+            if(enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId;
+            return p.groupId===enr.groupId;
+        }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+        if(qty<=1){
+            // Single chit — one section, no slot filtering needed
+            const id=`ledger_${sectionIdx++}`;
+            return buildSection(grp, enr, enrPays, 1, 1, allDueDates, id);
+        } else {
+            // Multiple chits — render ONE section per slot
+            return Array.from({length:qty},(_,i)=>{
+                const slotNum=i+1;
+                // Filter payments belonging to this specific slot
+                const slotPays=enrPays.filter(p=>{
+                    // If payment has slotNum recorded, use it
+                    if(p.slotNum!=null) return p.slotNum===slotNum;
+                    // Legacy: no slotNum — assign to slot 1
+                    return slotNum===1;
+                });
+                const id=`ledger_${sectionIdx++}`;
+                return buildSection(grp, enr, slotPays, slotNum, qty, allDueDates, id);
+            }).join('');
+        }
     }).join('');
 
     const ledgerHtml = `
