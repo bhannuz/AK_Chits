@@ -378,7 +378,7 @@ function ncpPrint(){
     var printHTML = '<div id="ncpPrintDoc"><style>'+
         '#ncpPrintDoc{font-family:Arial,sans-serif;color:#111;max-width:820px;margin:0 auto;padding:16px;}'+
         '#ncpPrintDoc .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #f39c12;padding-bottom:10px;margin-bottom:14px;}'+
-        '#ncpPrintDoc .brand{font-size:20px;font-weight:900;color:#f39c12;}'+
+        '#ncpPrintDoc .brand{font-size:16px;font-weight:900;color:#f39c12;}'+
         '#ncpPrintDoc .info-box{background:#fffbf0;border:2px solid #f39c12;border-radius:8px;padding:14px 18px;margin-bottom:14px;}'+
         '#ncpPrintDoc .chips{display:flex;gap:0;border:1px solid #e5c76b;border-radius:8px;overflow:hidden;margin-top:10px;}'+
         '#ncpPrintDoc .chip{flex:1;padding:8px;text-align:center;border-right:1px solid #e5c76b;}'+
@@ -401,7 +401,7 @@ function ncpPrint(){
         '<button class="cbtn" onclick="closePrintStatement()">✕ Close</button>'+
         '</div>'+
         '<div class="hdr">'+
-        '<div><div class="brand">🏆 AK CHIT FUNDS</div><div style="font-size:9px;color:#888;">Chit Fund Management · Group Schedule</div>'+
+        '<div style="display:flex;align-items:center;gap:10px;"><img src="logo.png" style="width:48px;height:48px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><span style="display:none;font-size:22px;">🏆</span><div><div class="brand">AK CHIT FUNDS</div><div style="font-size:9px;color:#888;">Chit Fund Management · Group Schedule</div></div></div>'+
         (memberName?'<div style="margin-top:6px;font-size:12px;font-weight:800;">For: '+memberName+'</div>':'')+'</div>'+
         '<div style="text-align:right;"><div style="font-size:13px;font-weight:800;">CHIT SCHEDULE</div><div style="font-size:9px;color:#888;">'+today+'</div></div>'+
         '</div>'+
