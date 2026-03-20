@@ -1,17 +1,14 @@
 // ═══════════════════════════════════════════════════════════
 // AK Chit Funds — AUTH & ACCESS CONTROL
-// Edit only this file when changing login, logout, session, access request approval
 // ═══════════════════════════════════════════════════════════
 
-// AUTH SYSTEM
-// ══════════════════════════════════════════
 const ADMIN_PHONE = '9876543210';
-// NOTE: CURRENT_USER is declared in firebase.js (shared globals)
 
 function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
 function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
 function clearSession(){ sessionStorage.removeItem('akdf_session'); }
 
+// ── Init ─────────────────────────────────────────────────────────────────────
 async function initAuth(){
     const saved = sessionStorage.getItem('akdf_session');
     if(saved){
@@ -22,71 +19,83 @@ async function initAuth(){
             return;
         }catch(e){}
     }
-    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('loginScreen').style.display = 'flex';
 }
 
+// ── Login ─────────────────────────────────────────────────────────────────────
 async function handleLoginSubmit(){
     const phone = document.getElementById('loginPhone').value.trim();
-    if(phone.length !== 10){ showToast('❌ Enter valid 10-digit mobile number', false); return; }
+    if(phone.length !== 10){ showToast('❌ Enter valid 10-digit number', false); return; }
     showToast('⏳ Checking access…', true);
+
+    // Admin shortcut
     if(phone === ADMIN_PHONE){
-        const user = {phone, role:'admin', name:'Admin'};
+        const user = {phone: phone, role: 'admin', name: 'Admin'};
         CURRENT_USER = user;
         sessionStorage.setItem('akdf_session', JSON.stringify(user));
         applyUserSession(user);
         return;
     }
+
+    // Check if member exists
     const members = await getCollection('members');
-    const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
-    if(matched){
-        const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
-        if(!reqs.empty){
-            const req = reqs.docs[0].data();
-            if(req.status === 'approved'){
-                const user = {phone, role:'member', memberId: matched.id, name: matched.name};
-                CURRENT_USER = user;
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
-                applyUserSession(user);
-                return;
-            } else if(req.status === 'denied'){
-                showLoginStep('loginStep3');
-                return;
-            } else {
-                document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
-                showLoginStep('loginStep2');
-                return;
-            }
+    const matched = members.find(function(m){
+        return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
+    });
+
+    if(!matched){
+        showToast('❌ Number not registered. Contact admin.', false);
+        return;
+    }
+
+    // Check access request status
+    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {empty:true, docs:[]}; });
+
+    if(!reqs.empty && reqs.docs.length > 0){
+        const req = reqs.docs[0].data();
+        if(req.status === 'approved'){
+            const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
+            CURRENT_USER = user;
+            sessionStorage.setItem('akdf_session', JSON.stringify(user));
+            applyUserSession(user);
+        } else if(req.status === 'denied'){
+            showLoginStep('loginStep3');
         } else {
-            await db.collection('accessRequests').add({
-                phone, name: matched.name, memberId: matched.id,
-                status: 'pending', requestedAt: new Date().toISOString()
-            });
-            document.getElementById('pendingPhone').textContent = `+91 ${phone}`;
+            document.getElementById('pendingPhone').textContent = '+91 ' + phone;
             showLoginStep('loginStep2');
-            showToast('📨 Access request sent to admin', true);
-            return;
         }
     } else {
-        showToast('❌ Mobile number not registered. Contact admin.', false);
-        return;
+        // Create new access request
+        await db.collection('accessRequests').add({
+            phone: phone,
+            name: matched.name,
+            memberId: matched.id,
+            status: 'pending',
+            requestedAt: new Date().toISOString()
+        });
+        document.getElementById('pendingPhone').textContent = '+91 ' + phone;
+        showLoginStep('loginStep2');
+        showToast('📨 Access request sent to admin', true);
     }
 }
 
 async function checkAccessStatus(){
     const phone = document.getElementById('loginPhone').value.trim() ||
-                  (CURRENT_USER && CURRENT_USER.phone) || '';
+                  (CURRENT_USER ? CURRENT_USER.phone : '');
     if(!phone){ goBackToLogin(); return; }
-    const reqs = await db.collection('accessRequests').where('phone','==',phone).get();
-    if(!reqs.empty){
+    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {empty:true, docs:[]}; });
+    if(!reqs.empty && reqs.docs.length > 0){
         const req = reqs.docs[0].data();
         if(req.status === 'approved'){
             const members = await getCollection('members');
-            const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
+            const matched = members.find(function(m){
+                return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
+            });
             if(matched){
-                const user = {phone, role:'member', memberId: matched.id, name: matched.name};
+                const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
                 sessionStorage.setItem('akdf_session', JSON.stringify(user));
                 showToast('✅ Access approved! Loading…', true);
-                setTimeout(()=>location.reload(), 800);
+                setTimeout(function(){ location.reload(); }, 800);
                 return;
             }
         } else if(req.status === 'denied'){
@@ -97,10 +106,11 @@ async function checkAccessStatus(){
     showToast('⏳ Still pending approval', true);
 }
 
-let _pendingPollTimer = null;
+// ── Login step switcher ───────────────────────────────────────────────────────
+var _pendingPollTimer = null;
 
 function showLoginStep(stepId){
-    ['loginStep1','loginStep2','loginStep3'].forEach(id=>{
+    ['loginStep1','loginStep2','loginStep3'].forEach(function(id){
         document.getElementById(id).classList.remove('active');
     });
     document.getElementById(stepId).classList.add('active');
@@ -108,108 +118,110 @@ function showLoginStep(stepId){
         if(_pendingPollTimer) clearInterval(_pendingPollTimer);
         _pendingPollTimer = setInterval(silentCheckStatus, 5000);
     } else {
-        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer=null; }
+        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer = null; }
     }
 }
 
 async function silentCheckStatus(){
     const phone = document.getElementById('loginPhone').value.trim();
     if(!phone) return;
-    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(()=>({docs:[]}));
-    if(!reqs.docs || reqs.docs.length===0) return;
+    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {docs:[]}; });
+    if(!reqs.docs || reqs.docs.length === 0) return;
     const req = reqs.docs[0].data();
     if(req.status === 'approved'){
-        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer=null; }
+        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer = null; }
         const members = await getCollection('members');
-        const matched = members.find(m => (m.phone||'').replace(/\D/g,'').slice(-10) === phone);
+        const matched = members.find(function(m){
+            return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
+        });
         if(matched){
-            const user = {phone, role:'member', memberId: matched.id, name: matched.name};
+            const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
             sessionStorage.setItem('akdf_session', JSON.stringify(user));
             showToast('✅ Access approved! Loading…', true);
-            setTimeout(()=>location.reload(), 1000);
+            setTimeout(function(){ location.reload(); }, 1000);
         }
     } else if(req.status === 'denied'){
-        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer=null; }
+        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer = null; }
         showLoginStep('loginStep3');
     }
 }
 
 function goBackToLogin(){
-    document.getElementById('loginPhone').value='';
+    document.getElementById('loginPhone').value = '';
     showLoginStep('loginStep1');
 }
 
+// ── Apply session UI ──────────────────────────────────────────────────────────
 function applyUserSession(user){
-    document.getElementById('loginScreen').style.display='none';
-    document.getElementById('logoutBtn').style.display='block';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'block';
+
     if(user.role === 'admin'){
-        document.getElementById('adminHeader').style.display='flex';
-        document.getElementById('memberHeader').style.display='none';
-        document.getElementById('headerRoleBadge').textContent='ADMIN';
-        document.getElementById('headerRoleBadge').style.display='inline';
-        document.getElementById('accessReqBtn').style.display='inline-flex';
-        document.getElementById('logoutBtn').style.display='block';
-        document.getElementById('adminStatCards').style.display='';
-        document.getElementById('adminActionBtns').style.display='flex';
-        document.getElementById('adminMemberSearch').style.display='';
-        document.getElementById('memberLedgerArea').style.display='none';
-        document.getElementById('adminQuickBtns').style.display='flex';
+        document.getElementById('adminHeader').style.display = 'flex';
+        document.getElementById('memberHeader').style.display = 'none';
+        document.getElementById('headerRoleBadge').textContent = 'ADMIN';
+        document.getElementById('headerRoleBadge').style.display = 'inline';
+        document.getElementById('accessReqBtn').style.display = 'inline-flex';
+        document.getElementById('adminStatCards').style.display = '';
+        document.getElementById('adminActionBtns').style.display = 'flex';
+        document.getElementById('adminMemberSearch').style.display = '';
+        document.getElementById('memberLedgerArea').style.display = 'none';
+        document.getElementById('adminQuickBtns').style.display = 'flex';
         updateUI();
         pollPendingRequests();
         setTimeout(checkAndShowBackupReminder, 1200);
     } else {
-        document.getElementById('adminHeader').style.display='none';
-        document.getElementById('memberHeader').style.display='block';
-        document.getElementById('logoutBtn').style.display='none';
+        document.getElementById('adminHeader').style.display = 'none';
+        document.getElementById('memberHeader').style.display = 'block';
+        document.getElementById('logoutBtn').style.display = 'none';
         document.getElementById('memberHeaderAvatar').textContent = ini(user.name);
         document.getElementById('memberHeaderName').textContent = user.name;
-        document.getElementById('memberHeaderPhone').textContent = `📱 +91 ${user.phone}`;
-        document.getElementById('adminStatCards').style.display='none';
-        document.getElementById('adminActionBtns').style.display='none';
-        document.getElementById('adminMemberSearch').style.display='none';
-        document.getElementById('adminQuickBtns').style.display='none';
-        document.getElementById('navGroups').style.display='none';
-        document.getElementById('navBackup').style.display='none';
-        document.getElementById('navPlanner').style.display='none';
-        document.getElementById('navBackup').style.display='none';
-        document.querySelector('.nav-bar').style.display='none';
-        document.getElementById('memberLedgerArea').style.display='block';
+        document.getElementById('memberHeaderPhone').textContent = '📱 +91 ' + user.phone;
+        document.getElementById('adminStatCards').style.display = 'none';
+        document.getElementById('adminActionBtns').style.display = 'none';
+        document.getElementById('adminMemberSearch').style.display = 'none';
+        document.getElementById('adminQuickBtns').style.display = 'none';
+        document.getElementById('navGroups').style.display = 'none';
+        document.getElementById('navBackup').style.display = 'none';
+        document.getElementById('navPlanner').style.display = 'none';
+        document.querySelector('.nav-bar').style.display = 'none';
+        document.getElementById('memberLedgerArea').style.display = 'block';
         document.getElementById('summaryView').value = user.memberId;
         loadMemberLedger();
     }
 }
 
+// ── Logout ────────────────────────────────────────────────────────────────────
 function handleLogout(){
     sessionStorage.removeItem('akdf_session');
     CURRENT_USER = null;
-    document.body.classList.remove('member-mode');
-    document.getElementById('adminHeader').style.display='flex';
-    document.getElementById('memberHeader').style.display='none';
-    document.getElementById('navGroups').style.display='';
-    document.getElementById('navBackup').style.display='';
-    document.getElementById('navPlanner').style.display='';
-    document.getElementById('navBackup').style.display='';
-    document.querySelector('.nav-bar').style.display='';
-    document.getElementById('adminStatCards').style.display='';
-    document.getElementById('adminActionBtns').style.display='flex';
-    document.getElementById('adminMemberSearch').style.display='';
-    document.getElementById('memberLedgerArea').style.display='none';
-    document.getElementById('adminQuickBtns').style.display='flex';
-    document.getElementById('logoutBtn').style.display='none';
-    document.getElementById('accessReqBtn').style.display='none';
-    document.getElementById('headerRoleBadge').textContent='ADMIN';
-    document.getElementById('headerRoleBadge').className='badge text-warning border border-warning px-2';
-    document.getElementById('ledgerData').innerHTML='';
-    document.getElementById('memberLedgerData').innerHTML='';
-    document.getElementById('summarySearch').value='';
-    document.getElementById('summaryView').value='';
+    document.getElementById('adminHeader').style.display = 'flex';
+    document.getElementById('memberHeader').style.display = 'none';
+    document.getElementById('navGroups').style.display = '';
+    document.getElementById('navBackup').style.display = '';
+    document.getElementById('navPlanner').style.display = '';
+    document.querySelector('.nav-bar').style.display = '';
+    document.getElementById('adminStatCards').style.display = '';
+    document.getElementById('adminActionBtns').style.display = 'flex';
+    document.getElementById('adminMemberSearch').style.display = '';
+    document.getElementById('memberLedgerArea').style.display = 'none';
+    document.getElementById('adminQuickBtns').style.display = 'flex';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('accessReqBtn').style.display = 'none';
+    document.getElementById('headerRoleBadge').textContent = 'ADMIN';
+    document.getElementById('headerRoleBadge').className = 'badge text-warning border border-warning px-2';
+    document.getElementById('ledgerData').innerHTML = '';
+    document.getElementById('memberLedgerData').innerHTML = '';
+    document.getElementById('summarySearch').value = '';
+    document.getElementById('summaryView').value = '';
     showLoginStep('loginStep1');
-    document.getElementById('loginPhone').value='';
-    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('loginPhone').value = '';
+    document.getElementById('loginScreen').style.display = 'flex';
 }
 
-// ACCESS REQUESTS PANEL
-let _reqFilter = 'pending';
+// ── Access Requests Panel ─────────────────────────────────────────────────────
+var _reqFilter = 'pending';
+
 async function openAccessRequests(){
     _reqFilter = 'pending';
     await renderAccessRequests();
@@ -218,40 +230,47 @@ async function openAccessRequests(){
 
 async function filterRequests(type){
     _reqFilter = type;
-    ['pending','approved','all'].forEach(t=>{
-        const btn = document.getElementById(`reqTab${t.charAt(0).toUpperCase()+t.slice(1)}`);
-        if(btn) btn.className = t===type ? 'btn-save' : 'btn-cancel';
+    ['pending','approved','all'].forEach(function(t){
+        var btn = document.getElementById('reqTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if(btn) btn.className = t === type ? 'btn-save' : 'btn-cancel';
     });
     await renderAccessRequests();
 }
 
 async function renderAccessRequests(){
-    const list = document.getElementById('accessRequestsList');
+    var list = document.getElementById('accessRequestsList');
     list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:16px;">Loading…</div>';
-    let q = db.collection('accessRequests');
-    const snap = await q.orderBy('requestedAt','desc').get().catch(()=> db.collection('accessRequests').get());
-    const all = snap.docs.map(d=>({id:d.id,...d.data()}));
-    const filtered = _reqFilter==='all' ? all : all.filter(r=>r.status===_reqFilter);
+    var snap = await db.collection('accessRequests').orderBy('requestedAt','desc').get()
+        .catch(function(){ return db.collection('accessRequests').get(); });
+    var all      = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+    var filtered = _reqFilter === 'all' ? all : all.filter(function(r){ return r.status === _reqFilter; });
+
     if(!filtered.length){
-        list.innerHTML=`<div style="text-align:center;color:var(--text-dim);padding:24px;font-size:1.05rem;">No ${_reqFilter==='all'?'':_reqFilter} requests</div>`;
+        list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;">No ' + (_reqFilter==='all'?'':_reqFilter) + ' requests</div>';
         return;
     }
-    list.innerHTML = filtered.map(r=>`
-        <div class="req-card">
-            <div style="flex:1;min-width:0;">
-                <div class="req-name">${r.name||'Unknown'}</div>
-                <div class="req-phone">📱 +91 ${r.phone} &nbsp;·&nbsp; ${r.requestedAt?new Date(r.requestedAt).toLocaleDateString('en-IN'):'—'}</div>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-                ${r.status==='pending'
-                    ? `<button class="btn-approve" onclick="handleApprove('${r.id}','${r.phone}')">✅ Approve</button>
-                       <button class="btn-deny" onclick="handleDeny('${r.id}')">✕ Deny</button>`
-                    : r.status==='approved'
-                        ? `<span class="badge-approved">✅ Approved</span><button class="btn-deny" style="font-size:0.92rem;padding:4px 8px;" onclick="handleDeny('${r.id}')">Revoke</button>`
-                        : `<span class="badge-denied">🚫 Denied</span><button class="btn-approve" style="font-size:0.92rem;padding:4px 8px;" onclick="handleApprove('${r.id}','${r.phone}')">Re-approve</button>`
-                }
-            </div>
-        </div>`).join('');
+
+    list.innerHTML = filtered.map(function(r){
+        var dateStr = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('en-IN') : '—';
+        var actions = '';
+        if(r.status === 'pending'){
+            actions = '<button class="btn-approve" onclick="handleApprove(\'' + r.id + '\',\'' + r.phone + '\')">✅ Approve</button>' +
+                      '<button class="btn-deny" onclick="handleDeny(\'' + r.id + '\')">✕ Deny</button>';
+        } else if(r.status === 'approved'){
+            actions = '<span class="badge-approved">✅ Approved</span>' +
+                      '<button class="btn-deny" style="font-size:0.92rem;padding:4px 8px;" onclick="handleDeny(\'' + r.id + '\')">Revoke</button>';
+        } else {
+            actions = '<span class="badge-denied">🚫 Denied</span>' +
+                      '<button class="btn-approve" style="font-size:0.92rem;padding:4px 8px;" onclick="handleApprove(\'' + r.id + '\',\'' + r.phone + '\')">Re-approve</button>';
+        }
+        return '<div class="req-card">' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div class="req-name">' + (r.name||'Unknown') + '</div>' +
+            '<div class="req-phone">📱 +91 ' + r.phone + ' &nbsp;·&nbsp; ' + dateStr + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' + actions + '</div>' +
+            '</div>';
+    }).join('');
 }
 
 async function handleApprove(reqId, phone){
@@ -268,53 +287,55 @@ async function handleDeny(reqId){
     await pollPendingRequests();
 }
 
-// Track known pending request IDs to detect NEW ones
-let _knownPendingIds = new Set();
-let _firstPoll = true;
+// ── Poll pending requests (admin) ─────────────────────────────────────────────
+var _knownPendingIds = {};
+var _firstPoll = true;
 
 async function pollPendingRequests(){
-    if(!CURRENT_USER || CURRENT_USER.role!=='admin') return;
-    const snap = await db.collection('accessRequests').where('status','==','pending').get().catch(()=>({docs:[]}));
-    const count = snap.docs.length;
-    const badge = document.getElementById('pendingCount');
+    if(!CURRENT_USER || CURRENT_USER.role !== 'admin') return;
+    var snap = await db.collection('accessRequests').where('status','==','pending').get().catch(function(){ return {docs:[]}; });
+    var count = snap.docs.length;
 
-    // Find brand new requests (not seen before)
-    const newRequests = [];
-    snap.docs.forEach(d=>{
-        if(!_knownPendingIds.has(d.id)){
-            if(!_firstPoll) newRequests.push({id:d.id, ...d.data()});
-            _knownPendingIds.add(d.id);
+    // Detect new requests
+    var newRequests = [];
+    snap.docs.forEach(function(d){
+        if(!_knownPendingIds[d.id]){
+            if(!_firstPoll) newRequests.push(Object.assign({id:d.id}, d.data()));
+            _knownPendingIds[d.id] = true;
         }
     });
-    // Remove IDs no longer pending
-    _knownPendingIds.forEach(id=>{
-        if(!snap.docs.find(d=>d.id===id)) _knownPendingIds.delete(id);
+    // Clean up resolved ones
+    Object.keys(_knownPendingIds).forEach(function(id){
+        if(!snap.docs.find(function(d){ return d.id === id; })){
+            delete _knownPendingIds[id];
+        }
     });
     _firstPoll = false;
 
     // Update badge
+    var badge = document.getElementById('pendingCount');
     if(count > 0){
-        badge.style.display='flex';
-        badge.textContent=count;
+        badge.style.display = 'flex';
+        badge.textContent   = count;
     } else {
-        badge.style.display='none';
+        badge.style.display = 'none';
     }
 
-    // Alert admin for each new request
-    newRequests.forEach(req=>{
-        playAccessRequestSound();
-        showAccessRequestAlert(req);
+    // Alert for each new request
+    newRequests.forEach(function(req){
+        playRequestSound();
+        showRequestBanner(req);
     });
 }
 
-// Play a pleasant notification sound using Web Audio API
-function playAccessRequestSound(){
+// ── Notification sound ────────────────────────────────────────────────────────
+function playRequestSound(){
     try{
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        // Play 3 ascending tones — ding ding ding
-        [[0, 880], [0.18, 1100], [0.36, 1320]].forEach(([delay, freq])=>{
-            const osc  = ctx.createOscillator();
-            const gain = ctx.createGain();
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [[0, 880],[0.18, 1100],[0.36, 1320]].forEach(function(pair){
+            var delay = pair[0], freq = pair[1];
+            var osc  = ctx.createOscillator();
+            var gain = ctx.createGain();
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.type = 'sine';
@@ -323,82 +344,69 @@ function playAccessRequestSound(){
             gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.5);
             osc.start(ctx.currentTime + delay);
-            osc.stop(ctx.currentTime + delay + 0.5);
+            osc.stop(ctx.currentTime + delay + 0.6);
         });
-    } catch(e){ console.log('Audio not available'); }
+    } catch(e){}
 }
 
-// Show a floating alert banner for new access request
-function showAccessRequestAlert(req){
-    const name  = req.name  || 'Unknown';
-    const phone = req.phone || '—';
-    const reqId = req.id;
+// ── Floating request banner ───────────────────────────────────────────────────
+function showRequestBanner(req){
+    var name  = req.name  || 'Unknown';
+    var phone = req.phone || '';
+    var reqId = req.id;
 
-    // Inject keyframes once
-    if(!document.getElementById('slideDownStyle')){
-        const s = document.createElement('style');
-        s.id = 'slideDownStyle';
-        s.textContent = '@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}';
+    // Keyframes (inject once)
+    if(!document.getElementById('akBannerStyle')){
+        var s = document.createElement('style');
+        s.id = 'akBannerStyle';
+        s.textContent = '@keyframes akSlideDown{from{opacity:0;transform:translateX(-50%) translateY(-16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
         document.head.appendChild(s);
     }
 
-    // Build banner using DOM — no innerHTML quote issues
-    const banner = document.createElement('div');
-    banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1c253b,#141b2d);border:1px solid rgba(243,156,18,.5);border-radius:16px;padding:14px 18px;z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:280px;max-width:340px;animation:slideDown .3s ease;';
+    var banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);' +
+        'background:linear-gradient(135deg,#1c253b,#141b2d);' +
+        'border:1px solid rgba(243,156,18,0.5);border-radius:16px;padding:14px 16px;' +
+        'z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,0.6);' +
+        'min-width:280px;max-width:320px;animation:akSlideDown 0.3s ease;';
 
-    // Bell icon
-    const bell = document.createElement('div');
-    bell.style.cssText = 'display:flex;align-items:center;gap:12px;';
+    // Row
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;';
 
-    const icon = document.createElement('div');
-    icon.style.cssText = 'font-size:1.6rem;flex-shrink:0;';
-    icon.textContent = '🔔';
+    // Bell
+    var bell = document.createElement('div');
+    bell.style.cssText = 'font-size:1.5rem;flex-shrink:0;';
+    bell.textContent = '🔔';
 
-    // Info section
-    const info = document.createElement('div');
-    info.style.cssText = 'flex:1;min-width:0;';
-
-    const title = document.createElement('div');
-    title.style.cssText = 'font-size:0.82rem;font-weight:800;color:#f39c12;margin-bottom:2px;';
-    title.textContent = 'New Access Request';
-
-    const nameEl = document.createElement('div');
-    nameEl.style.cssText = 'font-size:0.88rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-    nameEl.textContent = name;
-
-    const phoneEl = document.createElement('div');
-    phoneEl.style.cssText = 'font-size:0.72rem;color:#8e9aaf;';
-    phoneEl.textContent = '📱 +91 ' + phone;
-
-    info.appendChild(title);
-    info.appendChild(nameEl);
-    info.appendChild(phoneEl);
+    // Text
+    var txt = document.createElement('div');
+    txt.style.cssText = 'flex:1;min-width:0;';
+    txt.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:#f39c12;margin-bottom:2px;">New Access Request</div>' +
+        '<div style="font-size:0.85rem;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</div>' +
+        '<div style="font-size:0.7rem;color:#8e9aaf;">📱 +91 ' + phone + '</div>';
 
     // Buttons
-    const btns = document.createElement('div');
+    var btns = document.createElement('div');
     btns.style.cssText = 'display:flex;flex-direction:column;gap:5px;flex-shrink:0;';
 
-    const approveBtn = document.createElement('button');
-    approveBtn.style.cssText = 'background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;';
-    approveBtn.textContent = '✅ Approve';
-    approveBtn.onclick = function(){ handleApprove(reqId, phone); banner.remove(); };
+    var btnApprove = document.createElement('button');
+    btnApprove.style.cssText = 'background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;padding:6px 10px;font-size:0.72rem;font-weight:800;cursor:pointer;';
+    btnApprove.textContent = '✅ Approve';
+    btnApprove.onclick = function(){ handleApprove(reqId, phone); banner.remove(); };
 
-    const denyBtn = document.createElement('button');
-    denyBtn.style.cssText = 'background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;';
-    denyBtn.textContent = '✕ Deny';
-    denyBtn.onclick = function(){ handleDeny(reqId); banner.remove(); };
+    var btnDeny = document.createElement('button');
+    btnDeny.style.cssText = 'background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;padding:6px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;';
+    btnDeny.textContent = '✕ Deny';
+    btnDeny.onclick = function(){ handleDeny(reqId); banner.remove(); };
 
-    btns.appendChild(approveBtn);
-    btns.appendChild(denyBtn);
-
-    bell.appendChild(icon);
-    bell.appendChild(info);
-    bell.appendChild(btns);
-    banner.appendChild(bell);
+    btns.appendChild(btnApprove);
+    btns.appendChild(btnDeny);
+    row.appendChild(bell);
+    row.appendChild(txt);
+    row.appendChild(btns);
+    banner.appendChild(row);
     document.body.appendChild(banner);
 
-    // Auto-dismiss after 12 seconds
     setTimeout(function(){ if(banner.parentNode) banner.remove(); }, 12000);
 }
-
-// ══════════════════════════════════════════
