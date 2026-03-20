@@ -268,17 +268,105 @@ async function handleDeny(reqId){
     await pollPendingRequests();
 }
 
+// Track known pending request IDs to detect NEW ones
+let _knownPendingIds = new Set();
+let _firstPoll = true;
+
 async function pollPendingRequests(){
     if(!CURRENT_USER || CURRENT_USER.role!=='admin') return;
     const snap = await db.collection('accessRequests').where('status','==','pending').get().catch(()=>({docs:[]}));
     const count = snap.docs.length;
     const badge = document.getElementById('pendingCount');
+
+    // Find brand new requests (not seen before)
+    const newRequests = [];
+    snap.docs.forEach(d=>{
+        if(!_knownPendingIds.has(d.id)){
+            if(!_firstPoll) newRequests.push({id:d.id, ...d.data()});
+            _knownPendingIds.add(d.id);
+        }
+    });
+    // Remove IDs no longer pending
+    _knownPendingIds.forEach(id=>{
+        if(!snap.docs.find(d=>d.id===id)) _knownPendingIds.delete(id);
+    });
+    _firstPoll = false;
+
+    // Update badge
     if(count > 0){
         badge.style.display='flex';
         badge.textContent=count;
     } else {
         badge.style.display='none';
     }
+
+    // Alert admin for each new request
+    newRequests.forEach(req=>{
+        playAccessRequestSound();
+        showAccessRequestAlert(req);
+    });
+}
+
+// Play a pleasant notification sound using Web Audio API
+function playAccessRequestSound(){
+    try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // Play 3 ascending tones — ding ding ding
+        [[0, 880], [0.18, 1100], [0.36, 1320]].forEach(([delay, freq])=>{
+            const osc  = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+            gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+            gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.5);
+            osc.start(ctx.currentTime + delay);
+            osc.stop(ctx.currentTime + delay + 0.5);
+        });
+    } catch(e){ console.log('Audio not available'); }
+}
+
+// Show a floating alert banner for new access request
+function showAccessRequestAlert(req){
+    const name  = req.name || 'Unknown';
+    const phone = req.phone || '—';
+
+    // Toast-style banner
+    const banner = document.createElement('div');
+    banner.style.cssText = [
+        'position:fixed;top:16px;left:50%;transform:translateX(-50%);',
+        'background:linear-gradient(135deg,#1c253b,#141b2d);',
+        'border:1px solid rgba(243,156,18,.5);',
+        'border-radius:16px;padding:14px 18px;',
+        'z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,.6);',
+        'min-width:280px;max-width:340px;',
+        'animation:slideDown .3s ease;'
+    ].join('');
+
+    banner.innerHTML = [
+        '<style>@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}</style>',
+        '<div style="display:flex;align-items:center;gap:12px;">',
+        '  <div style="font-size:1.6rem;flex-shrink:0;">🔔</div>',
+        '  <div style="flex:1;min-width:0;">',
+        '    <div style="font-size:0.82rem;font-weight:800;color:#f39c12;margin-bottom:2px;">New Access Request</div>',
+        '    <div style="font-size:0.88rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+name+'</div>',
+        '    <div style="font-size:0.72rem;color:var(--text-dim);">📱 +91 '+phone+'</div>',
+        '  </div>',
+        '  <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">',
+        '    <button onclick="handleApprove(''+req.id+'',''+phone+'');this.closest('div[style*=fixed]').remove();" ',
+        '      style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">✅ Approve</button>',
+        '    <button onclick="handleDeny(''+req.id+'');this.closest('div[style*=fixed]').remove();" ',
+        '      style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">✕ Deny</button>',
+        '  </div>',
+        '</div>',
+    ].join('');
+
+    document.body.appendChild(banner);
+
+    // Auto-dismiss after 12 seconds
+    setTimeout(()=>{ if(banner.parentNode) banner.remove(); }, 12000);
 }
 
 // ══════════════════════════════════════════
