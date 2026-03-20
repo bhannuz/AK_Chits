@@ -21,7 +21,6 @@
             if(typeof ncpRestoreSession === 'function') ncpRestoreSession();
         }
     };
-
     // Start the app
     if(typeof migrateData === 'function') setTimeout(migrateData, 800);
     if(typeof initAuth === 'function') initAuth();
