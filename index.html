@@ -105,6 +105,111 @@
     <!-- GROUPS TAB -->
     <div id="groupsTab" class="tab-content"><div id="groupListArea" class="mt-2"></div></div>
 
+    <!-- PLANNER TAB -->
+    <div id="plannerTab" class="tab-content">
+        <div style="padding-top:12px;">
+
+            <!-- Saved Versions bar -->
+            <div id="ncpSavedBar" style="margin-bottom:12px;"></div>
+
+            <!-- Main Planner Card -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin-bottom:16px;">
+
+                <!-- Header -->
+                <div style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                    <div style="font-size:0.78rem;font-weight:800;color:#f39c12;text-transform:uppercase;letter-spacing:.6px;">📋 Chit Planner</div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <input id="ncp_version_label" type="text" placeholder="Version name (e.g. Gold v1)" style="background:var(--input-bg);border:1px solid var(--border);color:white;padding:7px 10px;border-radius:9px;font-size:0.78rem;width:160px;">
+                        <button onclick="ncpSaveVersion()" style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:7px 14px;border-radius:9px;font-size:0.78rem;font-weight:800;cursor:pointer;white-space:nowrap;">💾 Save</button>
+                        <button onclick="ncpNewPlanner()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:7px 12px;border-radius:9px;font-size:0.78rem;font-weight:800;cursor:pointer;white-space:nowrap;">＋ New</button>
+                    </div>
+                </div>
+
+                <!-- Parameters -->
+                <div style="padding:16px;border-bottom:1px solid var(--border);">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🏷️ Group Name</div>
+                            <input id="ncp_name" type="text" class="form-input" placeholder="e.g. Gold Chit" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">💰 Chit Amount (₹)</div>
+                            <input id="ncp_amount" type="number" class="form-input" placeholder="e.g. 500000" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">👥 No. of Members</div>
+                            <input id="ncp_members" type="number" class="form-input" placeholder="e.g. 20" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📆 Duration (months)</div>
+                            <input id="ncp_duration" type="number" class="form-input" placeholder="e.g. 20" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🗓️ Start Date</div>
+                            <input id="ncp_start" type="date" class="form-input" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">📅 Due Day of Month</div>
+                            <input id="ncp_dueday" type="number" min="1" max="31" class="form-input" placeholder="e.g. 5" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                    </div>
+                    <!-- Commission / Foreman cut -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🏦 Foreman Commission (%)</div>
+                            <input id="ncp_commission" type="number" min="0" max="10" step="0.5" class="form-input" placeholder="e.g. 5" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">👤 Member Name</div>
+                            <input id="ncp_member" type="text" class="form-input" placeholder="Planned for (optional)" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                        </div>
+                    </div>
+                    <button onclick="ncpGenerate()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;">⚡ Generate Schedule</button>
+                </div>
+
+                <!-- AI Suggestion box -->
+                <div id="ncpSuggestionBox" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border);background:rgba(99,102,241,0.06);">
+                    <div style="font-size:0.68rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">💡 Planner Insights</div>
+                    <div id="ncpSuggestionText" style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;"></div>
+                </div>
+
+                <!-- Generated Schedule -->
+                <div id="ncp_tableWrap" style="display:none;">
+                    <!-- Summary chips -->
+                    <div id="ncp_chips" style="display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid var(--border);"></div>
+
+                    <!-- Schedule rows header -->
+                    <div style="padding:12px 16px 6px;">
+                        <div style="font-size:0.65rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">✏️ Edit Schedule</div>
+                        <div style="display:flex;gap:4px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;padding:0 2px;margin-bottom:4px;">
+                            <span style="width:26px;text-align:center;">#</span>
+                            <span style="flex:1.4;">Due Date</span>
+                            <span style="flex:1.2;">Monthly Pay (₹)</span>
+                            <span style="flex:1.2;">Chit Payout (₹)</span>
+                            <span style="width:52px;text-align:center;">% Return</span>
+                        </div>
+                        <div id="ncp_rows" style="display:flex;flex-direction:column;gap:4px;max-height:340px;overflow-y:auto;"></div>
+                    </div>
+
+                    <!-- Totals -->
+                    <div id="ncp_total" style="display:flex;align-items:center;gap:4px;padding:8px 16px;background:rgba(243,156,18,0.07);border-top:1px solid var(--border);font-size:0.85rem;font-weight:800;">
+                        <span style="width:26px;"></span>
+                        <span style="flex:1.4;color:#f39c12;">TOTAL</span>
+                        <span id="ncp_totalPay" style="flex:1.2;color:#34d399;"></span>
+                        <span id="ncp_totalPayout" style="flex:1.2;color:#f59e0b;"></span>
+                        <span style="width:52px;"></span>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div style="padding:12px 16px;display:flex;gap:8px;">
+                        <button onclick="ncpSaveVersion()" style="flex:1;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">💾 Save Version</button>
+                        <button onclick="ncpPrint()" style="flex:2;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">🖨️ Print Schedule</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- BACKUP TAB -->
     <div id="backupTab" class="tab-content">
         <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
@@ -384,8 +489,9 @@
 <!-- BOTTOM NAV -->
 <div class="nav-bar">
     <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
-    <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
+    <div class="nav-item" id="navPlanner" onclick="switchTab('planner')">📋<br>Planner</div>
     <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
+    <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
 </div>
 
 
