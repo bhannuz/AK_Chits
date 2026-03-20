@@ -401,9 +401,15 @@ function ncpPrint(){
         '<button class="cbtn" onclick="closePrintStatement()">✕ Close</button>'+
         '</div>'+
         '<div class="hdr">'+
-        '<div style="display:flex;align-items:center;gap:10px;"><img src="logo.png" style="width:48px;height:48px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><span style="display:none;font-size:22px;">🏆</span><div><div class="brand">AK CHIT FUNDS</div><div style="font-size:9px;color:#888;">Chit Fund Management · Group Schedule</div></div></div>'+
-        (memberName?'<div style="margin-top:6px;font-size:12px;font-weight:800;">For: '+memberName+'</div>':'')+'</div>'+
-        '<div style="text-align:right;"><div style="font-size:13px;font-weight:800;">CHIT SCHEDULE</div><div style="font-size:9px;color:#888;">'+today+'</div></div>'+
+        '<div>'+
+        '<div style="display:flex;align-items:center;gap:10px;">'+
+        '<img src="logo.png" style="width:48px;height:48px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'inline\'" />'+
+        '<span style="display:none;font-size:22px;">🏆</span>'+
+        '<div><div class="brand">AK CHIT FUNDS</div><div style="font-size:9px;color:#888;">Chit Fund Management &middot; Group Schedule</div></div>'+
+        '</div>'+
+        (memberName ? '<div style="margin-top:6px;font-size:12px;font-weight:800;">For: ' + memberName + '</div>' : '')+
+        '</div>'+
+        '<div style="text-align:right;"><div style="font-size:13px;font-weight:800;">CHIT SCHEDULE</div><div style="font-size:9px;color:#888;">' + today + '</div></div>'+
         '</div>'+
         '<div class="info-box">'+
         '<div style="font-size:16px;font-weight:900;margin-bottom:8px;">📂 '+name+'</div>'+
