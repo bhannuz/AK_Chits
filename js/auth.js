@@ -43,33 +43,33 @@ async function handleLoginSubmit(){
         return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
     });
 
-    if(!matched){
-        showToast('❌ Number not registered. Contact admin.', false);
-        return;
-    }
-
-    // Check access request status
+    // Check existing access request regardless of member match
     const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {empty:true, docs:[]}; });
 
     if(!reqs.empty && reqs.docs.length > 0){
         const req = reqs.docs[0].data();
         if(req.status === 'approved'){
-            const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
-            CURRENT_USER = user;
-            sessionStorage.setItem('akdf_session', JSON.stringify(user));
-            applyUserSession(user);
+            if(matched){
+                const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
+                CURRENT_USER = user;
+                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                applyUserSession(user);
+            } else {
+                showToast('✅ Approved but no member profile yet. Contact admin.', false);
+            }
         } else if(req.status === 'denied'){
             showLoginStep('loginStep3');
         } else {
+            // Already pending
             document.getElementById('pendingPhone').textContent = '+91 ' + phone;
             showLoginStep('loginStep2');
         }
     } else {
-        // Create new access request
+        // New request — send to admin (works for both members and unknown numbers)
         await db.collection('accessRequests').add({
             phone: phone,
-            name: matched.name,
-            memberId: matched.id,
+            name: matched ? matched.name : 'Unknown (' + phone + ')',
+            memberId: matched ? matched.id : '',
             status: 'pending',
             requestedAt: new Date().toISOString()
         });
