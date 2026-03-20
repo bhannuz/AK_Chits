@@ -50,8 +50,8 @@
         .modal-title { font-size:var(--fs-lg); font-weight:800; margin-bottom:16px; }
 
         /* ── NAV BAR ── */
-        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:space-around; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); z-index:1000; }
-        .nav-item { cursor:pointer; text-align:center; font-size:0.72rem; color:var(--text-dim); padding:4px 16px; min-width:60px; }
+        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:stretch; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); z-index:1000; overflow:hidden; }
+        .nav-item { cursor:pointer; text-align:center; font-size:0.68rem; color:var(--text-dim); padding:4px 2px; flex:1; min-width:0; }
         .nav-item.active { color:#f39c12; }
         .tab-content { display:none; }
         .tab-content.active { display:block; }
