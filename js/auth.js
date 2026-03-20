@@ -6,7 +6,7 @@
 // AUTH SYSTEM
 // ══════════════════════════════════════════
 const ADMIN_PHONE = '9876543210';
-let CURRENT_USER = null;
+// NOTE: CURRENT_USER is declared in firebase.js (shared globals)
 
 function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
 function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
@@ -170,6 +170,8 @@ function applyUserSession(user){
         document.getElementById('adminQuickBtns').style.display='none';
         document.getElementById('navGroups').style.display='none';
         document.getElementById('navBackup').style.display='none';
+        document.getElementById('navPlanner').style.display='none';
+        document.getElementById('navBackup').style.display='none';
         document.querySelector('.nav-bar').style.display='none';
         document.getElementById('memberLedgerArea').style.display='block';
         document.getElementById('summaryView').value = user.memberId;
@@ -184,6 +186,8 @@ function handleLogout(){
     document.getElementById('adminHeader').style.display='flex';
     document.getElementById('memberHeader').style.display='none';
     document.getElementById('navGroups').style.display='';
+    document.getElementById('navBackup').style.display='';
+    document.getElementById('navPlanner').style.display='';
     document.getElementById('navBackup').style.display='';
     document.querySelector('.nav-bar').style.display='';
     document.getElementById('adminStatCards').style.display='';
