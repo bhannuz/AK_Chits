@@ -330,43 +330,75 @@ function playAccessRequestSound(){
 
 // Show a floating alert banner for new access request
 function showAccessRequestAlert(req){
-    const name  = req.name || 'Unknown';
+    const name  = req.name  || 'Unknown';
     const phone = req.phone || '—';
+    const reqId = req.id;
 
-    // Toast-style banner
+    // Inject keyframes once
+    if(!document.getElementById('slideDownStyle')){
+        const s = document.createElement('style');
+        s.id = 'slideDownStyle';
+        s.textContent = '@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}';
+        document.head.appendChild(s);
+    }
+
+    // Build banner using DOM — no innerHTML quote issues
     const banner = document.createElement('div');
-    banner.style.cssText = [
-        'position:fixed;top:16px;left:50%;transform:translateX(-50%);',
-        'background:linear-gradient(135deg,#1c253b,#141b2d);',
-        'border:1px solid rgba(243,156,18,.5);',
-        'border-radius:16px;padding:14px 18px;',
-        'z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,.6);',
-        'min-width:280px;max-width:340px;',
-        'animation:slideDown .3s ease;'
-    ].join('');
+    banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#1c253b,#141b2d);border:1px solid rgba(243,156,18,.5);border-radius:16px;padding:14px 18px;z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,.6);min-width:280px;max-width:340px;animation:slideDown .3s ease;';
 
-    banner.innerHTML = [
-        '<style>@keyframes slideDown{from{transform:translateX(-50%) translateY(-20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}</style>',
-        '<div style="display:flex;align-items:center;gap:12px;">',
-        '  <div style="font-size:1.6rem;flex-shrink:0;">🔔</div>',
-        '  <div style="flex:1;min-width:0;">',
-        '    <div style="font-size:0.82rem;font-weight:800;color:#f39c12;margin-bottom:2px;">New Access Request</div>',
-        '    <div style="font-size:0.88rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+name+'</div>',
-        '    <div style="font-size:0.72rem;color:var(--text-dim);">📱 +91 '+phone+'</div>',
-        '  </div>',
-        '  <div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0;">',
-        '    <button onclick="handleApprove(''+req.id+'',''+phone+'');this.closest('div[style*=fixed]').remove();" ',
-        '      style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">✅ Approve</button>',
-        '    <button onclick="handleDeny(''+req.id+'');this.closest('div[style*=fixed]').remove();" ',
-        '      style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">✕ Deny</button>',
-        '  </div>',
-        '</div>',
-    ].join('');
+    // Bell icon
+    const bell = document.createElement('div');
+    bell.style.cssText = 'display:flex;align-items:center;gap:12px;';
 
+    const icon = document.createElement('div');
+    icon.style.cssText = 'font-size:1.6rem;flex-shrink:0;';
+    icon.textContent = '🔔';
+
+    // Info section
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0;';
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:0.82rem;font-weight:800;color:#f39c12;margin-bottom:2px;';
+    title.textContent = 'New Access Request';
+
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = 'font-size:0.88rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    nameEl.textContent = name;
+
+    const phoneEl = document.createElement('div');
+    phoneEl.style.cssText = 'font-size:0.72rem;color:#8e9aaf;';
+    phoneEl.textContent = '📱 +91 ' + phone;
+
+    info.appendChild(title);
+    info.appendChild(nameEl);
+    info.appendChild(phoneEl);
+
+    // Buttons
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-direction:column;gap:5px;flex-shrink:0;';
+
+    const approveBtn = document.createElement('button');
+    approveBtn.style.cssText = 'background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;';
+    approveBtn.textContent = '✅ Approve';
+    approveBtn.onclick = function(){ handleApprove(reqId, phone); banner.remove(); };
+
+    const denyBtn = document.createElement('button');
+    denyBtn.style.cssText = 'background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:8px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;';
+    denyBtn.textContent = '✕ Deny';
+    denyBtn.onclick = function(){ handleDeny(reqId); banner.remove(); };
+
+    btns.appendChild(approveBtn);
+    btns.appendChild(denyBtn);
+
+    bell.appendChild(icon);
+    bell.appendChild(info);
+    bell.appendChild(btns);
+    banner.appendChild(bell);
     document.body.appendChild(banner);
 
     // Auto-dismiss after 12 seconds
-    setTimeout(()=>{ if(banner.parentNode) banner.remove(); }, 12000);
+    setTimeout(function(){ if(banner.parentNode) banner.remove(); }, 12000);
 }
 
 // ══════════════════════════════════════════
