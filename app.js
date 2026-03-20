@@ -20,6 +20,7 @@
         'js/groups.js',
         'js/payments.js',
         'js/backup.js',
+        'js/planner.js',
         'js/print.js',
         'js/auth.js',
         'js/quickview.js',
