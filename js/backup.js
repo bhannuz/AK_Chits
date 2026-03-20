@@ -238,45 +238,93 @@ async function generateWhatsAppReminders(){
     countEl.textContent = `${entries.length} member${entries.length!==1?'s':''} have pending dues`;
     countEl.style.color = '#f59e0b';
 
-    listEl.innerHTML = entries.map((entry, i) => {
-        const msg    = buildWhatsAppMessage(entry.name, entry.items, contact);
-        const waUrl  = `https://wa.me/91${entry.phone}?text=${encodeURIComponent(msg)}`;
-        const totalPending = entry.items.reduce((s,it)=>s+it.monthsPending,0);
-        const totalBal     = entry.items.reduce((s,it)=>s+it.totalBal,0);
-        const groups = entry.items.map(it=>it.groupName).join(' · ');
+    // Build cards using DOM API — safe against special chars in names/messages
+    entries.forEach(function(entry, i){
+        var msg          = buildWhatsAppMessage(entry.name, entry.items, contact);
+        var waUrl        = 'https://wa.me/91' + entry.phone + '?text=' + encodeURIComponent(msg);
+        var totalPending = entry.items.reduce(function(s,it){return s+it.monthsPending;},0);
+        var totalBal     = entry.items.reduce(function(s,it){return s+it.totalBal;},0);
+        var groups       = entry.items.map(function(it){return it.groupName;}).join(' · ');
+        var initials     = (entry.name||'?').split(' ').map(function(x){return x[0]||'';}).join('').toUpperCase().slice(0,2)||'??';
 
-        return `<div style="background:var(--input-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
-            <!-- Member info row -->
-            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);">
-                <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;display:flex;align-items:center;justify-content:center;font-size:0.88rem;font-weight:900;flex-shrink:0;">${ini(entry.name)}</div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-weight:800;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${entry.name}</div>
-                    <div style="font-size:0.7rem;color:var(--text-dim);margin-top:1px;">📱 +91 ${entry.phone}</div>
-                    <div style="font-size:0.68rem;color:#a5b4fc;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${groups}</div>
-                </div>
-                <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-size:0.82rem;font-weight:800;color:#f59e0b;">${totalPending} month${totalPending!==1?'s':''}</div>
-                    ${totalBal>0?`<div style="font-size:0.7rem;color:#f87171;font-weight:700;">₹${totalBal.toLocaleString('en-IN')} bal</div>`:''}
-                </div>
-            </div>
-            <!-- Action row -->
-            <div style="display:flex;gap:0;">
-                <button onclick="toggleWaPreview('waprev_${i}')" style="flex:1;background:transparent;border:none;border-right:1px solid var(--border);color:var(--text-dim);padding:10px;font-size:0.72rem;font-weight:700;cursor:pointer;">
-                    👁 Preview
-                </button>
-                <a href="${waUrl}" target="_blank" style="flex:2;background:linear-gradient(135deg,#25D366,#128C7E);color:white;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;font-size:0.82rem;font-weight:800;">
-                    💬 Open in WhatsApp
-                </a>
-            </div>
-            <!-- Message preview (hidden by default) -->
-            <div id="waprev_${i}" style="display:none;background:rgba(37,211,102,0.05);border-top:1px solid var(--border);padding:12px 14px;">
-                <div style="font-size:0.68rem;font-weight:800;color:#34d399;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Message Preview</div>
-                <pre style="font-size:0.72rem;color:var(--text-dim);white-space:pre-wrap;margin:0;font-family:inherit;line-height:1.6;">${msg.replace(/</g,'&lt;').replace(/\*/g,'')}</pre>
-            </div>
-        </div>`;
-    }).join('');
+        // Outer card
+        var card = document.createElement('div');
+        card.style.cssText = 'background:var(--input-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;';
 
-    showToast(`✅ ${entries.length} reminders ready — tap WhatsApp to send`);
+        // ── Info row ──
+        var infoRow = document.createElement('div');
+        infoRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border);';
+
+        var avatar = document.createElement('div');
+        avatar.style.cssText = 'width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;display:flex;align-items:center;justify-content:center;font-size:0.88rem;font-weight:900;flex-shrink:0;';
+        avatar.textContent = initials;
+
+        var info = document.createElement('div');
+        info.style.cssText = 'flex:1;min-width:0;';
+        info.innerHTML =
+            '<div style="font-weight:800;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>' +
+            '<div style="font-size:0.7rem;color:var(--text-dim);margin-top:1px;"></div>' +
+            '<div style="font-size:0.68rem;color:#a5b4fc;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>';
+        info.children[0].textContent = entry.name;
+        info.children[1].textContent = '📱 +91 ' + entry.phone;
+        info.children[2].textContent = groups;
+
+        var meta = document.createElement('div');
+        meta.style.cssText = 'text-align:right;flex-shrink:0;';
+        var pendingDiv = document.createElement('div');
+        pendingDiv.style.cssText = 'font-size:0.82rem;font-weight:800;color:#f59e0b;';
+        pendingDiv.textContent = totalPending + ' month' + (totalPending!==1?'s':'');
+        meta.appendChild(pendingDiv);
+        if(totalBal > 0){
+            var balDiv = document.createElement('div');
+            balDiv.style.cssText = 'font-size:0.7rem;color:#f87171;font-weight:700;';
+            balDiv.textContent = '₹' + totalBal.toLocaleString('en-IN') + ' bal';
+            meta.appendChild(balDiv);
+        }
+
+        infoRow.appendChild(avatar);
+        infoRow.appendChild(info);
+        infoRow.appendChild(meta);
+
+        // ── Action row ──
+        var actionRow = document.createElement('div');
+        actionRow.style.cssText = 'display:flex;';
+
+        var previewBtn = document.createElement('button');
+        previewBtn.style.cssText = 'flex:1;background:transparent;border:none;border-right:1px solid var(--border);color:var(--text-dim);padding:12px 10px;font-size:0.78rem;font-weight:700;cursor:pointer;';
+        previewBtn.textContent = '👁 Preview';
+        var prevId = 'waprev_' + i;
+        previewBtn.onclick = function(){ toggleWaPreview(prevId); };
+
+        var waLink = document.createElement('a');
+        waLink.href = waUrl;
+        waLink.target = '_blank';
+        waLink.style.cssText = 'flex:2;background:linear-gradient(135deg,#25D366,#128C7E);color:white;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px;padding:12px 10px;font-size:0.88rem;font-weight:800;';
+        waLink.textContent = '💬 Open in WhatsApp';
+
+        actionRow.appendChild(previewBtn);
+        actionRow.appendChild(waLink);
+
+        // ── Preview pane (hidden) ──
+        var previewPane = document.createElement('div');
+        previewPane.id = prevId;
+        previewPane.style.cssText = 'display:none;background:rgba(37,211,102,0.05);border-top:1px solid var(--border);padding:12px 14px;';
+        var previewLabel = document.createElement('div');
+        previewLabel.style.cssText = 'font-size:0.68rem;font-weight:800;color:#34d399;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;';
+        previewLabel.textContent = 'Message Preview';
+        var previewText = document.createElement('pre');
+        previewText.style.cssText = 'font-size:0.72rem;color:var(--text-dim);white-space:pre-wrap;margin:0;font-family:inherit;line-height:1.6;';
+        previewText.textContent = msg; // textContent is XSS-safe
+        previewPane.appendChild(previewLabel);
+        previewPane.appendChild(previewText);
+
+        card.appendChild(infoRow);
+        card.appendChild(actionRow);
+        card.appendChild(previewPane);
+        listEl.appendChild(card);
+    });
+
+    showToast('✅ ' + entries.length + ' reminders ready — tap WhatsApp to send');
 }
 
 function toggleWaPreview(id){
