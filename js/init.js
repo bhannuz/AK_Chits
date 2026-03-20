@@ -28,5 +28,5 @@
     setInterval(function(){
         if(CURRENT_USER && CURRENT_USER.role==='admin' && typeof pollPendingRequests==='function')
             pollPendingRequests();
-    }, 60000);
+    }, 15000); // poll every 15s for fast new-request alerts
 })();
