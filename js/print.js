@@ -114,7 +114,7 @@ async function printMemberStatement(mid){
         <style>
             #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; }
             #printStatement .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; }
-            #printStatement .brand { font-size:20px; font-weight:900; color:#f39c12; }
+            #printStatement .brand { font-size:16px; font-weight:900; color:#f39c12; }
             #printStatement .brand-sub { font-size:9px; color:#888; }
             #printStatement .doc-title { font-size:14px; font-weight:800; text-align:right; }
             #printStatement .doc-sub { font-size:9px; color:#888; text-align:right; }
@@ -153,7 +153,7 @@ async function printMemberStatement(mid){
             <button class="close-btn" onclick="closePrintStatement()">✕ Close</button>
         </div>
         <div class="hdr">
-            <div><div class="brand">&#127942; AK CHIT FUNDS</div><div class="brand-sub">Chit Fund Management &bull; Member Statement</div></div>
+            <div style="display:flex;align-items:center;gap:10px;"><img src="logo.png" style="width:48px;height:48px;border-radius:10px;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="display:none;font-size:22px;">🏆</span><div><div class="brand">AK CHIT FUNDS</div><div class="brand-sub">Chit Fund Management &bull; Member Statement</div></div></div>
             <div><div class="doc-title">MEMBER STATEMENT</div><div class="doc-sub">Generated: ${today}</div></div>
         </div>
         <div class="mbox">
@@ -307,7 +307,7 @@ async function generateGroupPDF(gid){
     <style>
         #groupPrintDoc { font-family:Arial,sans-serif; color:#111; max-width:860px; margin:0 auto; padding:16px; }
         #groupPrintDoc .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; }
-        #groupPrintDoc .brand { font-size:20px; font-weight:900; color:#f39c12; }
+        #groupPrintDoc .brand { font-size:16px; font-weight:900; color:#f39c12; }
         #groupPrintDoc .info-box { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:12px 16px; margin-bottom:14px; }
         #groupPrintDoc .chips { display:flex; gap:0; border:1px solid #e5c76b; border-radius:8px; overflow:hidden; margin-top:10px; }
         #groupPrintDoc .chip { flex:1; padding:8px; text-align:center; border-right:1px solid #e5c76b; }
@@ -343,7 +343,7 @@ async function generateGroupPDF(gid){
     </div>
     <div class="hdr">
         <div>
-            <div class="brand">🏆 AK CHIT FUNDS</div>
+            <div style="display:flex;align-items:center;gap:10px;"><img src="logo.png" style="width:48px;height:48px;border-radius:10px;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span style="display:none;font-size:22px;">🏆</span><div class="brand">AK CHIT FUNDS</div></div>
             <div style="font-size:9px;color:#888;">Chit Fund Management &bull; Group Report</div>
         </div>
         <div style="text-align:right;">
