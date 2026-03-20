@@ -108,6 +108,36 @@
     <!-- BACKUP TAB -->
     <div id="backupTab" class="tab-content">
         <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
+
+        <!-- ── WhatsApp Reminders ── -->
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <div style="width:36px;height:36px;background:#25D366;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">💬</div>
+                <div>
+                    <div style="font-size:0.88rem;font-weight:900;color:white;">WhatsApp Reminders</div>
+                    <div style="font-size:0.68rem;color:var(--text-dim);">No API · No approval · Tap to send instantly</div>
+                </div>
+            </div>
+
+            <div style="background:rgba(37,211,102,0.08);border:1px solid rgba(37,211,102,0.2);border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:0.75rem;color:#34d399;line-height:1.6;">
+                App generates a WhatsApp link for each member with due amount pre-filled. Tap any link → WhatsApp opens with message ready → just hit Send.
+            </div>
+
+            <!-- Contact number -->
+            <label class="form-label-small">Your Contact Number (shown in message)</label>
+            <input type="text" id="wa_contact" class="form-input" placeholder="e.g. 9876543210">
+
+            <!-- Generate button -->
+            <button onclick="generateWhatsAppReminders()" style="width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;padding:13px;border-radius:12px;font-size:0.92rem;font-weight:800;cursor:pointer;margin-bottom:12px;">
+                💬 Generate WhatsApp Reminders
+            </button>
+
+            <!-- Results -->
+            <div id="waReminderCount" style="font-size:0.78rem;text-align:center;color:var(--text-dim);margin-bottom:8px;min-height:18px;"></div>
+            <div id="waReminderList" style="display:flex;flex-direction:column;gap:10px;max-height:500px;overflow-y:auto;"></div>
+        </div>
+
+        <!-- ── Backup / Restore ── -->
         <div class="stat-card p-4">
             <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
             <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
