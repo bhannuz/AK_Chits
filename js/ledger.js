@@ -57,23 +57,44 @@ async function loadMemberLedger(){
             }
         });
 
-        // ── Merged table: all months with payment details inline ─────────────
+        // ── Merged table: rowspan for multi-month payments ───────────────────
+        // Build a map: payId -> first slot index (to know where to render merged cell)
+        const payFirstSlot = {}; // payId -> first slot index
+        const payRowSpan   = {}; // payId -> rowspan count
+        allDueDates.forEach((d, i)=>{
+            const p = slotPays.find(pay=>{
+                if(Array.isArray(pay.monthSlots)) return pay.monthSlots.includes(i);
+                if(pay.monthSlot!=null) return pay.monthSlot===i;
+                return getMonthSlot(allDueDates, pay.date)===i;
+            });
+            if(!p) return;
+            if(p.numMonths && p.numMonths > 1){
+                if(payFirstSlot[p.id] === undefined) payFirstSlot[p.id] = i;
+                payRowSpan[p.id] = (payRowSpan[p.id]||0) + 1;
+            }
+        });
+
         const mergedRows = allDueDates.map((dueDate, i)=>{
             const matchPay = slotPays.find(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
                 if(p.monthSlot!=null) return p.monthSlot===i;
-                return getMonthSlot(allDueDates, p.date) === i;
+                return getMonthSlot(allDueDates, p.date)===i;
             });
 
-            const paidAmt   = matchPay ? (parseFloat(matchPay.paid)||0)    : 0;
-            const chitAmt   = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
-            const balAmt    = matchPay ? (parseFloat(matchPay.balance)||0)  : 0;
-            const isFullPaid    = paidSlotSet.has(i) && chitAmt > 0 && paidAmt >= chitAmt;
-            const isPartialPaid = paidSlotSet.has(i) && chitAmt > 0 && paidAmt > 0 && paidAmt < chitAmt;
+            const paidAmt       = matchPay ? (parseFloat(matchPay.paid)||0)   : 0;
+            const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
+            const balAmt        = matchPay ? (parseFloat(matchPay.balance)||0) : 0;
+            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && paidAmt>=chitAmt;
+            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && paidAmt>0 && paidAmt<chitAmt;
             const isAnyPaid     = paidSlotSet.has(i);
             const isOverdue     = !isAnyPaid && dueDate < today;
-            const cp            = matchPay && matchPay.chitPicked === 'Yes';
-            const isMulti       = matchPay && matchPay.numMonths && matchPay.numMonths > 1;
+            const cp            = matchPay && matchPay.chitPicked==='Yes';
+            const isMulti       = matchPay && matchPay.numMonths && matchPay.numMonths>1;
+
+            // For multi-month: only render payment detail cells on FIRST slot row
+            const isFirstOfMulti = isMulti && matchPay && payFirstSlot[matchPay.id]===i;
+            const isSubOfMulti   = isMulti && matchPay && payFirstSlot[matchPay.id]!==i;
+            const span           = isFirstOfMulti ? payRowSpan[matchPay.id] : 1;
 
             // Row styling
             const rowBg = isFullPaid    ? 'rgba(16,185,129,0.07)'
@@ -87,9 +108,23 @@ async function loadMemberLedger(){
                         : isPartialPaid ? 'border-left:3px solid #f59e0b;'
                         : '';
 
+            const dateColor = isFullPaid ? '#a5b4fc' : isPartialPaid ? '#fbbf24' : isOverdue ? '#f87171' : '#c7d2fe';
+
+            // Due date cell — for sub-rows of multi just show the month date
+            const dueDateCell = `<td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>`;
+
+            // If this is a sub-row of a multi-month payment, skip payment detail cells (already merged above)
+            if(isSubOfMulti){
+                return `<tr style="background:${rowBg};${rowBL}">
+                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
+                    ${dueDateCell}
+                    <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
+                </tr>`;
+            }
+
             // Status badge
             let statusBadge;
-            if(isFullPaid || (isAnyPaid && chitAmt === 0)){
+            if(isFullPaid || (isAnyPaid && chitAmt===0)){
                 statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`;
             } else if(isPartialPaid){
                 statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
@@ -99,54 +134,34 @@ async function loadMemberLedger(){
                 statusBadge = `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
             }
 
-            // Pay date — show actual date if paid
-            const payDateCell = matchPay
-                ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>`
-                : `<span style="color:var(--text-dim);">—</span>`;
-
-            // Paid amount cell
-            const paidCell = isAnyPaid && matchPay
-                ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(paidAmt)}</span>`
-                : `<span style="color:var(--text-dim);">—</span>`;
-
-            // Balance cell — show only if partial or has balance
-            const balCell = matchPay && balAmt > 0
-                ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(balAmt)}</span>`
-                : `<span style="color:var(--text-dim);">—</span>`;
-
-            // Mode
-            const modeCell = matchPay && matchPay.paidBy
-                ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>`
-                : `<span style="color:var(--text-dim);">—</span>`;
-
-            // Chit picked
+            const payDateCell    = matchPay ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+            const paidCell       = isAnyPaid && matchPay ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(paidAmt)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+            const balCell        = matchPay && balAmt>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(balAmt)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+            const modeCell       = matchPay && matchPay.paidBy ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>` : `<span style="color:var(--text-dim);">—</span>`;
             const chitPickedCell = cp
                 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${matchPay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${matchPay.chitPickedBy}</div>`:''}`
                 : `<span style="color:var(--text-dim);">—</span>`;
+            const editCell       = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
 
-            // Edit button — only if payment exists
-            const editCell = !isMember && matchPay
-                ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>`
+            // Multi-month label on first row
+            const multiTag = isFirstOfMulti
+                ? `<span style="display:block;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-top:2px;">×${matchPay.numMonths} months bulk</span>`
                 : '';
 
-            // Multi-month badge on due date
-            const multiTag = isMulti
-                ? `<span style="display:block;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-top:2px;">×${matchPay.numMonths} mo</span>`
-                : '';
-
-            const dateColor = isFullPaid ? '#a5b4fc' : isPartialPaid ? '#fbbf24' : isOverdue ? '#f87171' : '#c7d2fe';
+            // rowspan attr for merged payment detail cells
+            const rs = span > 1 ? ` rowspan="${span}"` : '';
 
             return `<tr style="background:${rowBg};${rowBL}">
                 <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
-                <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}${multiTag}</td>
+                ${dueDateCell}
                 <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                <td>${payDateCell}</td>
-                <td>${paidCell}</td>
-                <td>${balCell}</td>
-                <td>${statusBadge}</td>
-                <td>${modeCell}</td>
-                <td>${chitPickedCell}</td>
-                <td>${editCell}</td>
+                <td${rs} style="vertical-align:middle;">${payDateCell}${multiTag}</td>
+                <td${rs} style="vertical-align:middle;">${paidCell}</td>
+                <td${rs} style="vertical-align:middle;">${balCell}</td>
+                <td${rs} style="vertical-align:middle;">${statusBadge}</td>
+                <td${rs} style="vertical-align:middle;">${modeCell}</td>
+                <td${rs} style="vertical-align:middle;">${chitPickedCell}</td>
+                <td${rs} style="vertical-align:middle;">${editCell}</td>
             </tr>`;
         }).join('');
 
