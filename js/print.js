@@ -20,59 +20,127 @@ async function printMemberStatement(mid){
     const memberGroups=gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id));
     const today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
 
-    function buildPrintRows(pays, allDueDates){
-        return pays.map((p,idx)=>{
-            const cp=p.chitPicked==='Yes';
-            const isMulti=p.numMonths&&p.numMonths>1;
-            let monthLabel='—';
-            if(isMulti&&p.monthSlots&&p.monthSlots.length>0){
-                const f=allDueDates[p.monthSlots[0]]?fmtDate(allDueDates[p.monthSlots[0]]):'—';
-                const l=allDueDates[p.monthSlots[p.monthSlots.length-1]]?fmtDate(allDueDates[p.monthSlots[p.monthSlots.length-1]]):'—';
-                monthLabel=`${f} to ${l}`;
-            } else {
-                const si=p.monthSlot!==undefined?p.monthSlot:getMonthSlot(allDueDates,p.date);
-                monthLabel=si>=0&&allDueDates[si]?fmtDate(allDueDates[si]):'—';
-            }
-            const chitDisp=isMulti?`Rs.${(parseFloat(p.chit)||0).toLocaleString('en-IN')}/mo x${p.numMonths}`:`Rs.${(parseFloat(p.chit)||0).toLocaleString('en-IN')}`;
-            const bg=cp?'#f0fff8':(isMulti?'#eef2ff':'#fff');
-            const bl=cp?'border-left:3px solid #10b981;':(isMulti?'border-left:3px solid #818cf8;':'');
-            return `<tr style="background:${bg};${bl}">
-                <td style="text-align:center;">${idx+1}</td>
-                <td>${monthLabel}${isMulti?` <small style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:9px;">${p.numMonths}mo</small>`:''}</td>
-                <td>${fmtDate(p.date)}</td>
-                <td>${chitDisp}</td>
-                <td style="color:#065f46;font-weight:700;">Rs.${(parseFloat(p.paid)||0).toLocaleString('en-IN')}</td>
-                <td style="color:${(parseFloat(p.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;">Rs.${(parseFloat(p.balance)||0).toLocaleString('en-IN')}</td>
-                <td>${p.paidBy||'—'}</td>
-                <td style="text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
-            </tr>`;
-        }).join('');
-    }
-
+    // Build merged schedule+history rows with rowspan for multi-month payments
     function buildPrintSlot(g, enr, slotPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, slotNum, totalSlots){
-        const gPaid=slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const gBal=slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const totalMonthsCovered=slotPays.reduce((s,p)=>s+(p.numMonths||1),0);
-        const rows=buildPrintRows(slotPays, allDueDates);
-        const slotBadge = totalSlots>1 ? `<span style="background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;margin-left:4px;">Chit ${slotNum} of ${totalSlots}</span>` : '';
+        const gPaid   = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+        const gBal    = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+        const monthsCovered = slotPays.reduce((s,p)=>s+(p.numMonths||1),0);
+        const slotBadge  = totalSlots>1 ? `<span style="background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;margin-left:4px;">Chit ${slotNum} of ${totalSlots}</span>` : '';
         const labelBadge = enr.label ? `<span style="background:#fff3cd;color:#92400e;border-radius:3px;padding:1px 5px;font-size:9px;margin-left:4px;">${enr.label}</span>` : '';
         const indentStyle = totalSlots>1 ? 'margin-left:12px;border-left:3px solid #f5c842;padding-left:8px;' : '';
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        // Get fixed chit amount from last payment
+        const lastPay   = slotPays.length ? slotPays[slotPays.length-1] : null;
+        const chitAmount= lastPay ? (parseFloat(lastPay.chit)||0) : 0;
+
+        // Build paidSlotSet
+        const paidSlotSet = new Set();
+        slotPays.forEach(p=>{
+            if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s=>paidSlotSet.add(s));
+            else if(p.monthSlot!=null) paidSlotSet.add(p.monthSlot);
+            else { const si=getMonthSlot(allDueDates,p.date); if(si>=0) paidSlotSet.add(si); }
+        });
+
+        // Build rowspan map for multi-month payments
+        const payFirstSlot = {};
+        const payRowSpan   = {};
+        allDueDates.forEach((d,i)=>{
+            const p = slotPays.find(pay=>{
+                if(Array.isArray(pay.monthSlots)) return pay.monthSlots.includes(i);
+                if(pay.monthSlot!=null) return pay.monthSlot===i;
+                return getMonthSlot(allDueDates,pay.date)===i;
+            });
+            if(!p || !(p.numMonths>1)) return;
+            if(payFirstSlot[p.id]===undefined) payFirstSlot[p.id]=i;
+            payRowSpan[p.id]=(payRowSpan[p.id]||0)+1;
+        });
+
+        // Build merged rows
+        const rows = allDueDates.map((dueDate,i)=>{
+            const matchPay = slotPays.find(p=>{
+                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
+                if(p.monthSlot!=null) return p.monthSlot===i;
+                return getMonthSlot(allDueDates,p.date)===i;
+            });
+            const paidAmt       = matchPay ? (parseFloat(matchPay.paid)||0)    : 0;
+            const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
+            const balAmt        = matchPay ? (parseFloat(matchPay.balance)||0)  : 0;
+            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && paidAmt>=chitAmt;
+            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && paidAmt>0 && paidAmt<chitAmt;
+            const isAnyPaid     = paidSlotSet.has(i);
+            const isOverdue     = !isAnyPaid && dueDate<todayStr;
+            const cp            = matchPay && matchPay.chitPicked==='Yes';
+            const isMulti       = matchPay && matchPay.numMonths>1;
+            const isFirstOfMulti= isMulti && matchPay && payFirstSlot[matchPay.id]===i;
+            const isSubOfMulti  = isMulti && matchPay && payFirstSlot[matchPay.id]!==i;
+            const span          = isFirstOfMulti ? payRowSpan[matchPay.id] : 1;
+            const rs            = span>1 ? ` rowspan="${span}"` : '';
+
+            // Status
+            let status;
+            if(isFullPaid||(isAnyPaid&&chitAmt===0)) status='✅ Paid';
+            else if(isPartialPaid) status='⚡ Partial';
+            else if(isOverdue)     status='🔴 Overdue';
+            else                   status='⏳ Pending';
+
+            // Row styling
+            const bg = isFullPaid    ? '#f0fff8'
+                     : isPartialPaid ? '#fffbeb'
+                     : cp            ? '#f0fff8'
+                     : isMulti       ? '#eef2ff'
+                     : isOverdue     ? '#fff5f5'
+                     : (i%2===0?'#fff':'#fafafa');
+            const bl = cp            ? 'border-left:3px solid #10b981;'
+                     : isMulti       ? 'border-left:3px solid #818cf8;'
+                     : isPartialPaid ? 'border-left:3px solid #f59e0b;'
+                     : '';
+
+            // Sub-rows of multi: only show # and due date
+            if(isSubOfMulti){
+                return `<tr style="background:${bg};${bl}">
+                    <td style="text-align:center;color:#888;">${i+1}</td>
+                    <td style="color:#3730a3;">${fmtDate(dueDate)}</td>
+                    <td style="color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
+                </tr>`;
+            }
+
+            // Multi tag
+            const multiTag = isFirstOfMulti
+                ? ` <small style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">×${matchPay.numMonths} months bulk</small>`
+                : '';
+
+            const statusColor = isFullPaid?'#065f46':isPartialPaid?'#92400e':isOverdue?'#b91c1c':'#888';
+
+            return `<tr style="background:${bg};${bl}">
+                <td style="text-align:center;color:#888;">${i+1}</td>
+                <td>${fmtDate(dueDate)}${multiTag}</td>
+                <td style="color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
+                <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;color:${balAmt>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+balAmt.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;font-weight:700;color:${statusColor};">${status}</td>
+                <td${rs} style="vertical-align:middle;color:#555;">${matchPay&&matchPay.paidBy?matchPay.paidBy:'—'}</td>
+                <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
+            </tr>`;
+        }).join('');
+
         return `<div class="grp-block" style="${indentStyle}">
             <div class="grp-title">&#128194; ${g.name}${labelBadge}${slotBadge}</div>
-            <div class="grp-meta">Start: <b>${gStartDisp}</b> &nbsp;|&nbsp; Due: <b>${gDueDayDisp}</b> &nbsp;|&nbsp; Month <b>${elapsed}/${totalMonths}</b> &nbsp;|&nbsp; Covered: <b>${totalMonthsCovered}/${totalMonths}</b> &nbsp;|&nbsp; <b>${left} pending</b></div>
+            <div class="grp-meta">Start: <b>${gStartDisp}</b> &nbsp;|&nbsp; Due: <b>${gDueDayDisp}</b> &nbsp;|&nbsp; Month <b>${elapsed}/${totalMonths}</b> &nbsp;|&nbsp; Covered: <b>${monthsCovered}/${totalMonths}</b> &nbsp;|&nbsp; <b>${left} pending</b></div>
             <div class="prog-outer"><div class="prog-inner" style="width:${pct}%"></div></div>
             <div class="grp-totals">Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> &nbsp;&nbsp; Balance: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b></div>
-            ${slotPays.length?`<table>
-                <colgroup><col style="width:4%"><col style="width:24%"><col style="width:12%"><col style="width:16%"><col style="width:13%"><col style="width:13%"><col style="width:10%"><col style="width:8%"></colgroup>
-                <thead><tr><th>#</th><th>Month(s) Covered</th><th>Pay Date</th><th>Chit Amt</th><th>Paid</th><th>Balance</th><th>Mode</th><th>Chit?</th></tr></thead>
+            <table>
+                <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
+                <thead><tr><th>#</th><th>Due Date</th><th>Chit/Mo</th><th>Pay Date</th><th>Paid</th><th>Balance</th><th>Status</th><th>Mode</th><th>Chit?</th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;">
-                    <td colspan="4">Total</td>
+                    <td colspan="4" style="text-align:right;padding-right:8px;">Total</td>
                     <td style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</td>
                     <td style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</td>
-                    <td colspan="2"></td>
+                    <td colspan="3"></td>
                 </tr></tbody>
-            </table>`:'<p style="color:#888;padding:6px 0;font-size:10px;">No payments recorded for this slot.</p>'}
+            </table>
         </div>`;
     }
 
