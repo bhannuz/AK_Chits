@@ -1,67 +1,30 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — QR PAYMENT GENERATOR
+// AK Chit Funds — QR PAYMENT GENERATOR (Standalone)
+// Independent tool in Home tab — no dependency on ledger
 // ═══════════════════════════════════════════════════════════
 
-var _qrState = {};
+var _standaloneQrState = {};
 
-// ── Month dropdown change — update amount, show/hide custom note ──────────────
-function onQrMonthChange(secId){
-    var sel     = document.getElementById('qrMonth_' + secId);
-    var amtEl   = document.getElementById('qrAmt_'   + secId);
-    var noteWrap= document.getElementById('qrCustomNote_' + secId);
-    var dispEl  = document.getElementById('qrDisplay_'    + secId);
-    if(!sel) return;
-
-    var idx = sel.value;
-    if(idx === 'custom'){
-        if(noteWrap) noteWrap.style.display = 'block';
-        if(amtEl) amtEl.value = '';
-    } else {
-        if(noteWrap) noteWrap.style.display = 'none';
-        var opts = (window._qrOptionsMap||{})[secId]||[];
-        var opt  = opts[parseInt(idx)||0];
-        if(opt && amtEl) amtEl.value = opt.amount;
-    }
-    // Reset QR on change
-    if(dispEl) dispEl.style.display = 'none';
+// ── Toggle QR section open/close ─────────────────────────────────────────────
+function toggleQrSection(){
+    var body    = document.getElementById('qrSectionBody');
+    var chevron = document.getElementById('qrSectionChevron');
+    if(!body) return;
+    var open = body.style.display !== 'none';
+    body.style.display    = open ? 'none'       : 'block';
+    chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 
 // ── Generate QR ───────────────────────────────────────────────────────────────
-function generateQrForMember(secId, encodedName){
-    var memberName = decodeURIComponent(encodedName);
-    var upiEl   = document.getElementById('qrUpiId_'  + secId);
-    var amtEl   = document.getElementById('qrAmt_'    + secId);
-    var selEl   = document.getElementById('qrMonth_'  + secId);
-    var noteEl  = document.getElementById('qrNote_'   + secId);
-    var imgEl   = document.getElementById('qrImg_'    + secId);
-    var infoEl  = document.getElementById('qrInfo_'   + secId);
-    var dispEl  = document.getElementById('qrDisplay_'+ secId);
+function generateStandaloneQr(){
+    var upiId  = (document.getElementById('qr_upi').value   ||'').trim();
+    var amount = parseFloat(document.getElementById('qr_amt').value)  ||0;
+    var name   = (document.getElementById('qr_name').value  ||'').trim();
+    var note   = (document.getElementById('qr_note').value  ||'').trim() || 'ChitPayment';
 
-    var upiId  = upiEl  ? upiEl.value.trim()     : '';
-    var amount = amtEl  ? parseFloat(amtEl.value)||0 : 0;
-    var selVal = selEl  ? selEl.value            : '0';
-
-    // Validation
-    if(!upiId){
-        showToast('❌ Enter UPI ID (e.g. 9876543210@ybl)', false); return;
-    }
-    if(!upiId.includes('@')){
-        showToast('❌ UPI ID must contain @ symbol', false); return;
-    }
-    if(!amount || amount <= 0){
-        showToast('❌ Enter a valid amount', false); return;
-    }
-
-    // Determine note
-    var note, dueDate = '';
-    if(selVal === 'custom'){
-        note = noteEl ? (noteEl.value.trim()||'ChitPayment') : 'ChitPayment';
-    } else {
-        var opts = (window._qrOptionsMap||{})[secId]||[];
-        var opt  = opts[parseInt(selVal)||0]||{};
-        note     = opt.note    || 'ChitPayment';
-        dueDate  = opt.dueDate || '';
-    }
+    if(!upiId){   showToast('❌ Enter UPI ID', false); return; }
+    if(!upiId.includes('@')){ showToast('❌ UPI ID must contain @ (e.g. 9876543210@ybl)', false); return; }
+    if(!amount){  showToast('❌ Enter amount', false); return; }
 
     // Build UPI deep link
     var upiUrl = 'upi://pay'
@@ -71,83 +34,86 @@ function generateQrForMember(secId, encodedName){
         + '&tn='  + encodeURIComponent(note)
         + '&cu=INR';
 
-    // Save state
-    _qrState[secId] = { upiUrl, upiId, memberName, amount, dueDate, note };
-
-    // QR image from free API
+    // QR image from free API — no auth needed
     var qrSrc = 'https://api.qrserver.com/v1/create-qr-code/'
         + '?size=240x240'
-        + '&data=' + encodeURIComponent(upiUrl)
+        + '&data='    + encodeURIComponent(upiUrl)
         + '&bgcolor=ffffff&color=1a1a2e&margin=12&format=png';
 
-    _qrState[secId].imgSrc = qrSrc;
+    _standaloneQrState = { upiUrl, upiId, amount, name, note, imgSrc: qrSrc };
 
     // Show info summary
+    var infoEl = document.getElementById('qr_info');
     if(infoEl){
         infoEl.innerHTML =
-            '<div style="font-weight:800;color:white;margin-bottom:4px;">' + memberName + '</div>' +
-            (dueDate ? '<div>Due: ' + dueDate + '</div>' : '') +
-            '<div style="font-size:0.88rem;font-weight:800;color:#f39c12;margin-top:4px;">₹' + amount.toLocaleString('en-IN') + ' → ' + upiId + '</div>';
+            (name ? '<div style="font-weight:800;color:white;margin-bottom:4px;">' + name + '</div>' : '') +
+            '<div style="color:var(--text-dim);">' + note + '</div>' +
+            '<div style="font-size:0.95rem;font-weight:800;color:#f39c12;margin-top:6px;">₹' +
+            amount.toLocaleString('en-IN') + ' → ' + upiId + '</div>';
     }
 
-    // Load QR image
+    var imgEl  = document.getElementById('qr_img');
+    var dispEl = document.getElementById('qr_display');
     imgEl.innerHTML = '<div style="color:var(--text-dim);padding:20px;font-size:0.82rem;">⏳ Generating QR...</div>';
     dispEl.style.display = 'block';
 
     var img = new Image();
     img.style.cssText = 'width:240px;height:240px;border-radius:12px;border:3px solid #f39c12;display:block;';
-    img.alt = 'UPI QR';
+    img.alt   = 'UPI QR';
     img.onload = function(){
         imgEl.innerHTML = '';
         imgEl.appendChild(img);
-        showToast('✅ QR ready — ₹' + amount.toLocaleString('en-IN') + ' to ' + upiId, true);
+        showToast('✅ QR ready — ₹' + amount.toLocaleString('en-IN'), true);
     };
     img.onerror = function(){
-        imgEl.innerHTML = '<div style="color:#f87171;padding:16px;font-size:0.82rem;">❌ Failed — check internet connection</div>';
+        imgEl.innerHTML = '<div style="color:#f87171;padding:16px;font-size:0.82rem;">❌ Failed to generate — check internet connection</div>';
     };
     img.src = qrSrc;
 }
 
 // ── Download QR ───────────────────────────────────────────────────────────────
-function downloadQrForMember(secId){
-    var s = _qrState[secId];
-    if(!s || !s.imgSrc){ showToast('❌ Generate QR first', false); return; }
+function downloadStandaloneQr(){
+    var s = _standaloneQrState;
+    if(!s.imgSrc){ showToast('❌ Generate QR first', false); return; }
     var a = document.createElement('a');
     a.href     = s.imgSrc;
-    a.download = 'QR_' + (s.memberName||'member').replace(/\s+/g,'_') + '_Rs' + s.amount + '.png';
+    a.download = 'QR_' + (s.name||'payment').replace(/\s+/g,'_') + '_Rs' + s.amount + '.png';
     a.target   = '_blank';
     a.click();
     showToast('⬇ Downloading QR...');
 }
 
 // ── Share QR ──────────────────────────────────────────────────────────────────
-async function shareQrForMember(secId){
-    var s = _qrState[secId];
-    if(!s || !s.upiUrl){ showToast('❌ Generate QR first', false); return; }
+async function shareStandaloneQr(){
+    var s = _standaloneQrState;
+    if(!s.upiUrl){ showToast('❌ Generate QR first', false); return; }
 
     var text = 'AK Chit Funds — Payment Request\n\n'
-        + 'Member  : ' + s.memberName + '\n'
-        + (s.dueDate ? 'Due Date: ' + s.dueDate + '\n' : '')
-        + 'Amount  : ₹' + s.amount.toLocaleString('en-IN') + '\n'
-        + 'Note    : ' + s.note + '\n\n'
-        + 'Pay via UPI : ' + s.upiId + '\n'
+        + (s.name   ? 'Member  : ' + s.name   + '\n' : '')
+        + 'Note    : ' + s.note   + '\n'
+        + 'Amount  : ₹' + s.amount.toLocaleString('en-IN') + '\n\n'
+        + 'Pay via UPI : ' + s.upiId   + '\n'
         + 'UPI Link    : ' + s.upiUrl;
 
     if(navigator.share){
         try{ await navigator.share({ title: 'Chit Payment Request', text: text }); return; }
-        catch(e){ /* fall through */ }
+        catch(e){}
     }
     if(navigator.clipboard){
         navigator.clipboard.writeText(text)
-            .then(()=>showToast('📋 Payment details copied!'))
-            .catch(()=>showToast('❌ Could not copy', false));
+            .then(function(){ showToast('📋 Payment details copied!'); })
+            .catch(function(){ showToast('❌ Could not copy', false); });
     } else {
         showToast('❌ Share not supported on this browser', false);
     }
 }
 
-// Stubs for compatibility
-function showQrModal(){ showToast('ℹ️ Use QR section at the bottom of ledger', true); }
+// Stubs — old function names kept for safety
+function showQrModal(){}
 function generateQrCode(){}
 function downloadQrCode(){}
 function shareQrCode(){}
+function generateQrForMember(){}
+function downloadQrForMember(){}
+function shareQrForMember(){}
+function onQrMonthChange(){}
