@@ -143,14 +143,6 @@ async function loadMemberLedger(){
                 : `<span style="color:var(--text-dim);">—</span>`;
             const editCell = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
 
-            // QR button — show for unpaid/partial/overdue months
-            const amtForQr    = isPartialPaid ? balAmt : chitAmt;
-            const qrMemberName = encodeURIComponent(m.name||'Member');
-            const qrNote       = encodeURIComponent((grp.name||'Chit')+'_'+fmtDate(dueDate));
-            const qrCell = (!isFullPaid && !(isAnyPaid && chitAmt===0) && amtForQr>0)
-                ? `<button onclick="showQrModal('${qrMemberName}','${amtForQr}','${qrNote}','${fmtDate(dueDate)}')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:7px;padding:3px 7px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;">📱 QR</button>`
-                : '';
-
             // Multi-month label on first row
             const multiTag = isFirstOfMulti
                 ? `<span style="display:block;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-top:2px;">×${matchPay.numMonths} months bulk</span>`
@@ -169,7 +161,7 @@ async function loadMemberLedger(){
                 <td${rs} style="vertical-align:middle;">${statusBadge}</td>
                 <td${rs} style="vertical-align:middle;">${modeCell}</td>
                 <td${rs} style="vertical-align:middle;">${chitPickedCell}</td>
-                <td${rs} style="vertical-align:middle;white-space:nowrap;">${editCell}${qrCell}</td>
+                <td${rs} style="vertical-align:middle;">${editCell}</td>
             </tr>`;
         }).join('');
 
@@ -248,7 +240,7 @@ async function loadMemberLedger(){
                                 <th>Status</th>
                                 <th>Mode</th>
                                 <th>Chit Picked</th>
-                                <th>Action</th>
+                                <th></th>
                             </tr></thead>
                             <tbody>
                                 ${mergedRows}
@@ -297,6 +289,98 @@ async function loadMemberLedger(){
         }
     }).join('');
 
+    // ── Build QR generator section ───────────────────────────────────────────
+    // Collect all unpaid/partial months across all enrollments for the QR dropdown
+    const qrOptions = [];
+    enrollments.forEach(enr=>{
+        const grp = gs.find(g=>g.id===enr.groupId); if(!grp) return;
+        const qty = parseInt(enr.qty||1);
+        const allDueDates = getGroupDueDates(grp);
+        const totalMonths = parseInt(grp.duration||grp.gDuration)||21;
+        const lastPay = mPays.filter(p=>p.groupId===enr.groupId).sort((a,b)=>(b.date||'').localeCompare(a.date||''))[0];
+        const chitAmt = lastPay ? (parseFloat(lastPay.chit)||0) : 0;
+        for(let slot=1;slot<=qty;slot++){
+            const slotPays = mPays.filter(p=>{
+                if(p.groupId!==enr.groupId) return false;
+                if(qty>1) return p.slotNum!=null ? p.slotNum===slot : slot===1;
+                return true;
+            });
+            const paidSet = new Set();
+            slotPays.forEach(p=>{
+                if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s=>paidSet.add(s));
+                else if(p.monthSlot!=null) paidSet.add(p.monthSlot);
+                else { const si=getMonthSlot(allDueDates,p.date); if(si>=0) paidSet.add(si); }
+            });
+            allDueDates.forEach((d,i)=>{
+                if(paidSet.has(i)) return; // already paid
+                const matchP = slotPays.find(p=>{
+                    if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
+                    if(p.monthSlot!=null) return p.monthSlot===i;
+                    return getMonthSlot(allDueDates,p.date)===i;
+                });
+                const bal = matchP ? (parseFloat(matchP.balance)||0) : 0;
+                const amt = bal>0 ? bal : chitAmt;
+                if(amt<=0) return;
+                const label = grp.name + (qty>1?' Chit '+slot:'') + ' — ' + fmtDate(d) + ' — ' + fmtAmt(amt);
+                qrOptions.push({ label, amount: amt, note: grp.name+'_'+fmtDate(d), dueDate: fmtDate(d) });
+            });
+        }
+    });
+
+    const qrSectionId = 'qrgen_' + mid;
+
+    const qrSection = qrOptions.length ? `
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-top:4px;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
+                <span style="font-size:0.78rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📱 Generate Payment QR</span>
+                <div style="font-size:0.68rem;color:var(--text-dim);margin-top:3px;">Fill UPI ID and amount for each month — both editable every time</div>
+            </div>
+            <div style="padding:14px 16px;">
+                <!-- Row 1: UPI ID + Amount side by side -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                    <div>
+                        <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">UPI ID</div>
+                        <input type="text" id="qrUpiId_${qrSectionId}" class="form-input" style="margin-bottom:0;font-size:0.82rem;" placeholder="9876543210@ybl">
+                    </div>
+                    <div>
+                        <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">Amount (₹)</div>
+                        <input type="number" id="qrAmt_${qrSectionId}" class="form-input" style="margin-bottom:0;font-size:0.82rem;" value="${qrOptions[0]?qrOptions[0].amount:''}" placeholder="Amount">
+                    </div>
+                </div>
+                <!-- Row 2: Month selector -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">Month / Purpose</div>
+                    <select id="qrMonth_${qrSectionId}" class="form-input" style="margin-bottom:0;" onchange="onQrMonthChange('${qrSectionId}')">
+                        ${qrOptions.map((o,idx)=>`<option value="${idx}">${o.label}</option>`).join('')}
+                        <option value="custom">Custom...</option>
+                    </select>
+                </div>
+                <!-- Custom note (shows when Custom selected) -->
+                <div id="qrCustomNote_${qrSectionId}" style="display:none;margin-bottom:14px;">
+                    <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">Custom Note</div>
+                    <input type="text" id="qrNote_${qrSectionId}" class="form-input" style="margin-bottom:0;" placeholder="e.g. Chit Group A - March 2026">
+                </div>
+                <!-- Generate button -->
+                <button onclick="generateQrForMember('${qrSectionId}','${encodeURIComponent(m.name)}')" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:12px;">
+                    ⚡ Generate QR Code
+                </button>
+                <!-- QR display -->
+                <div id="qrDisplay_${qrSectionId}" style="display:none;text-align:center;">
+                    <div id="qrInfo_${qrSectionId}" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:10px;margin-bottom:12px;font-size:0.78rem;color:var(--text-dim);"></div>
+                    <div id="qrImg_${qrSectionId}" style="display:flex;justify-content:center;margin-bottom:10px;"></div>
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:12px;">Scan with PhonePe · GPay · Paytm · any UPI app</div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="downloadQrForMember('${qrSectionId}')" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">⬇ Download</button>
+                        <button onclick="shareQrForMember('${qrSectionId}','${encodeURIComponent(m.name)}')" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">↗ Share</button>
+                    </div>
+                </div>
+            </div>
+        </div>` : '';
+
+    // Store qrOptions globally keyed by section id for access in qr.js
+    window._qrOptionsMap = window._qrOptionsMap || {};
+    window._qrOptionsMap[qrSectionId] = qrOptions;
+
     const ledgerHtml = `
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-top:6px;">
             <div style="width:46px;height:46px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;">${ini(m.name)}</div>
@@ -310,6 +394,7 @@ async function loadMemberLedger(){
             </div>
         </div>
         ${groupSections||'<div style="text-align:center;color:var(--text-dim);padding:30px;">No group enrollments found</div>'}
+        ${qrSection}
     `;
 
     if(isMember){
