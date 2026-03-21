@@ -59,40 +59,57 @@ async function loadMemberLedger(){
 
         // ── Full Schedule Table (all months) ─────────────────────────────────
         const scheduleRows = allDueDates.map((dueDate, i)=>{
-            const isPaid    = paidSlotSet.has(i);
-            const isOverdue = !isPaid && dueDate < today;
-            const isCurrent = !isPaid && dueDate >= today;
-
-            // Find the actual payment for this slot
+            // Find payment for this slot
             const matchPay = slotPays.find(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
                 if(p.monthSlot!=null) return p.monthSlot===i;
                 return getMonthSlot(allDueDates, p.date) === i;
             });
 
-            const rowBg = isPaid
-                ? 'rgba(16,185,129,0.06)'
-                : isOverdue
-                    ? 'rgba(239,68,68,0.06)'
-                    : 'transparent';
+            const paidAmt = matchPay ? (parseFloat(matchPay.paid)||0) : 0;
+            const chitAmt = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
 
-            const statusBadge = isPaid
-                ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">✅ Paid</span>`
-                : isOverdue
-                    ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">🔴 Overdue</span>`
-                    : `<span style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.25);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">⏳ Pending</span>`;
+            // Status logic: Paid / Partial / Overdue / Pending
+            const isFullPaid    = paidSlotSet.has(i) && chitAmt > 0 && paidAmt >= chitAmt;
+            const isPartialPaid = paidSlotSet.has(i) && chitAmt > 0 && paidAmt > 0 && paidAmt < chitAmt;
+            const isAnyPaid     = paidSlotSet.has(i);  // legacy — no chit amount recorded
+            const isOverdue     = !isAnyPaid && dueDate < today;
 
-            const paidAmtCell = isPaid && matchPay
-                ? `<span style="color:#34d399;font-weight:700;">${fmtAmt(matchPay.paid)}</span>`
+            // Row background
+            const rowBg = isFullPaid    ? 'rgba(16,185,129,0.06)'
+                        : isPartialPaid ? 'rgba(245,158,11,0.06)'
+                        : isOverdue     ? 'rgba(239,68,68,0.06)'
+                        : 'transparent';
+
+            // Status badge
+            let statusBadge;
+            if(isFullPaid){
+                statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">✅ Paid</span>`;
+            } else if(isPartialPaid){
+                const bal = chitAmt - paidAmt;
+                statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">⚡ Partial</span><div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;">Bal: ${fmtAmt(bal)}</div>`;
+            } else if(isAnyPaid){
+                // paid but no chit amount to compare — treat as paid
+                statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">✅ Paid</span>`;
+            } else if(isOverdue){
+                statusBadge = `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">🔴 Overdue</span>`;
+            } else {
+                statusBadge = `<span style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.25);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">⏳ Pending</span>`;
+            }
+
+            const paidAmtCell = (isFullPaid || isPartialPaid || isAnyPaid) && matchPay
+                ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(paidAmt)}</span>`
                 : `<span style="color:var(--text-dim);">—</span>`;
 
-            const chitCell = chitAmount > 0
-                ? fmtAmt(chitAmount)
+            const chitCell = chitAmt > 0
+                ? fmtAmt(chitAmt)
                 : `<span style="color:var(--text-dim);">—</span>`;
+
+            const dateColor = isFullPaid ? '#a5b4fc' : isPartialPaid ? '#fbbf24' : isOverdue ? '#f87171' : '#c7d2fe';
 
             return `<tr style="background:${rowBg};">
                 <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.72rem;">${i+1}</td>
-                <td style="color:${isPaid?'#a5b4fc':isOverdue?'#f87171':'#c7d2fe'};font-weight:${isOverdue||(!isPaid&&i===monthsDone)?'800':'600'};">${fmtDate(dueDate)}</td>
+                <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
                 <td style="color:#c4b5fd;">${chitCell}</td>
                 <td>${paidAmtCell}</td>
                 <td>${statusBadge}</td>
@@ -203,7 +220,7 @@ async function loadMemberLedger(){
                         </table>
                     </div>
                     <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);">
-                        ✅ Paid &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Upcoming
+                        ✅ Paid &nbsp;|&nbsp; ⚡ Partial &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Pending
                     </div>
                 </div>
 
