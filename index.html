@@ -107,13 +107,22 @@
             <button class="btn btn-outline-success w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddGroup()">🏦 New Group</button>
         </div>
 
-        <!-- ── QR Payment Generator ── -->
+        <!-- ── QR Payment Generator (Admin only) ── -->
         <div id="qrGeneratorSection" style="margin-top:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
             <div onclick="toggleQrSection()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
                 <span style="font-size:0.82rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📱 QR Payment Generator</span>
                 <span id="qrSectionChevron" style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;">&#9654;</span>
             </div>
             <div id="qrSectionBody" style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
+                <!-- Member selector -->
+                <div style="margin-bottom:10px;">
+                    <label class="form-label-small">Select Member</label>
+                    <div style="position:relative;">
+                        <input type="text" id="qr_member_search" class="form-input" style="margin-bottom:0;" placeholder="🔍 Search member..." oninput="filterSearch('qr_member_search','qr_member_list','qr_member_id')">
+                        <input type="hidden" id="qr_member_id">
+                        <div id="qr_member_list" class="suggestions-list"></div>
+                    </div>
+                </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
                     <div>
                         <label class="form-label-small">UPI ID</label>
@@ -124,28 +133,34 @@
                         <input type="number" id="qr_amt" class="form-input" style="margin-bottom:0;" placeholder="e.g. 23077">
                     </div>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                     <div>
-                        <label class="form-label-small">Member Name</label>
-                        <input type="text" id="qr_name" class="form-input" style="margin-bottom:0;" placeholder="e.g. Ramesh Kumar">
+                        <label class="form-label-small">Group / Month</label>
+                        <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. 3 Lakhs – Apr 2026">
                     </div>
                     <div>
-                        <label class="form-label-small">Note / Month</label>
-                        <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. Group A Apr 2026">
+                        <label class="form-label-small">Due Date</label>
+                        <input type="date" id="qr_due" class="form-input" style="margin-bottom:0;">
                     </div>
                 </div>
-                <button onclick="generateStandaloneQr()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:12px;">⚡ Generate QR Code</button>
-                <div id="qr_display" style="display:none;text-align:center;">
-                    <div id="qr_info" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:10px;margin-bottom:12px;font-size:0.82rem;color:var(--text-dim);"></div>
+                <!-- Generate + Publish -->
+                <button onclick="generateStandaloneQr()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:8px;">⚡ Generate QR Code</button>
+                <div id="qr_display" style="display:none;">
+                    <div id="qr_info" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.82rem;color:var(--text-dim);text-align:center;"></div>
                     <div id="qr_img" style="display:flex;justify-content:center;margin-bottom:10px;"></div>
-                    <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:12px;">Scan with PhonePe · GPay · Paytm · any UPI app</div>
-                    <div style="display:flex;gap:8px;">
+                    <div style="font-size:0.7rem;color:var(--text-dim);text-align:center;margin-bottom:12px;">Scan with PhonePe · GPay · Paytm · any UPI app</div>
+                    <div style="display:flex;gap:8px;margin-bottom:8px;">
                         <button onclick="downloadStandaloneQr()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">⬇ Download</button>
                         <button onclick="shareStandaloneQr()" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">↗ Share</button>
                     </div>
+                    <button onclick="publishQrToMember()" style="width:100%;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:900;cursor:pointer;">📤 Publish QR to Member</button>
+                    <div id="qr_publish_status" style="font-size:0.72rem;text-align:center;color:var(--text-dim);margin-top:6px;min-height:14px;"></div>
                 </div>
             </div>
         </div>
+
+        <!-- ── Member QR View (shown to logged-in member) ── -->
+        <div id="memberQrArea" style="display:none;margin-top:12px;"></div>
     </div>
 
     <!-- GROUPS TAB -->
