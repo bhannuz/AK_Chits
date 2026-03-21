@@ -78,8 +78,13 @@ function qrAddMember(){
     var idEl   = document.getElementById('qr_member_id');
     var name   = nameEl ? nameEl.value.trim() : '';
     var id     = idEl   ? idEl.value.trim()   : '';
-    if(!id || !name){ showToast('❌ Search and select a member first', false); return; }
-    if(_qrSelectedMembers[id]){ showToast('ℹ️ Already added', true); return; }
+    if(!id || !name){ showToast('❌ Type a name and select from the dropdown', false); return; }
+    if(_qrSelectedMembers[id]){
+        // Already added — clear search and move on
+        if(nameEl) nameEl.value = '';
+        if(idEl)   idEl.value   = '';
+        return;
+    }
 
     _qrSelectedMembers[id] = name;
 
