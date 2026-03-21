@@ -166,6 +166,8 @@ function applyUserSession(user){
         document.getElementById('adminActionBtns').style.display = 'flex';
         document.getElementById('adminMemberSearch').style.display = '';
         document.getElementById('memberLedgerArea').style.display = 'none';
+    document.getElementById('qrGeneratorSection').style.display = '';
+    document.getElementById('memberQrArea').style.display = 'none';
         document.getElementById('adminQuickBtns').style.display = 'flex';
         updateUI();
         pollPendingRequests();
@@ -186,8 +188,11 @@ function applyUserSession(user){
         document.getElementById('navPlanner').style.display = 'none';
         document.querySelector('.nav-bar').style.display = 'none';
         document.getElementById('memberLedgerArea').style.display = 'block';
+        document.getElementById('qrGeneratorSection').style.display = 'none';
+        document.getElementById('memberQrArea').style.display = 'block';
         document.getElementById('summaryView').value = user.memberId;
         loadMemberLedger();
+        if(typeof loadMemberQr === 'function') loadMemberQr(user.memberId);
     }
 }
 
@@ -205,6 +210,8 @@ function handleLogout(){
     document.getElementById('adminActionBtns').style.display = 'flex';
     document.getElementById('adminMemberSearch').style.display = '';
     document.getElementById('memberLedgerArea').style.display = 'none';
+    document.getElementById('qrGeneratorSection').style.display = '';
+    document.getElementById('memberQrArea').style.display = 'none';
     document.getElementById('adminQuickBtns').style.display = 'flex';
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('accessReqBtn').style.display = 'none';
