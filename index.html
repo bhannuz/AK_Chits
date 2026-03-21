@@ -106,6 +106,46 @@
             <button class="btn btn-outline-warning w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddMember()">👤 Create Member</button>
             <button class="btn btn-outline-success w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddGroup()">🏦 New Group</button>
         </div>
+
+        <!-- ── QR Payment Generator ── -->
+        <div id="qrGeneratorSection" style="margin-top:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+            <div onclick="toggleQrSection()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
+                <span style="font-size:0.82rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📱 QR Payment Generator</span>
+                <span id="qrSectionChevron" style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;">&#9654;</span>
+            </div>
+            <div id="qrSectionBody" style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <div>
+                        <label class="form-label-small">UPI ID</label>
+                        <input type="text" id="qr_upi" class="form-input" style="margin-bottom:0;" placeholder="e.g. 9876543210@ybl">
+                    </div>
+                    <div>
+                        <label class="form-label-small">Amount (₹)</label>
+                        <input type="number" id="qr_amt" class="form-input" style="margin-bottom:0;" placeholder="e.g. 23077">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                    <div>
+                        <label class="form-label-small">Member Name</label>
+                        <input type="text" id="qr_name" class="form-input" style="margin-bottom:0;" placeholder="e.g. Ramesh Kumar">
+                    </div>
+                    <div>
+                        <label class="form-label-small">Note / Month</label>
+                        <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. Group A Apr 2026">
+                    </div>
+                </div>
+                <button onclick="generateStandaloneQr()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:12px;">⚡ Generate QR Code</button>
+                <div id="qr_display" style="display:none;text-align:center;">
+                    <div id="qr_info" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:10px;margin-bottom:12px;font-size:0.82rem;color:var(--text-dim);"></div>
+                    <div id="qr_img" style="display:flex;justify-content:center;margin-bottom:10px;"></div>
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:12px;">Scan with PhonePe · GPay · Paytm · any UPI app</div>
+                    <div style="display:flex;gap:8px;">
+                        <button onclick="downloadStandaloneQr()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">⬇ Download</button>
+                        <button onclick="shareStandaloneQr()" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">↗ Share</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- GROUPS TAB -->
@@ -491,40 +531,6 @@
         </div>
         <div id="accessRequestsList" style="max-height:400px;overflow-y:auto;"></div>
         <button class="btn-cancel" onclick="closeModal('accessModal')" style="margin-top:10px;">Close</button>
-    </div>
-</div>
-
-<!-- QR PAYMENT MODAL -->
-<div id="qrModal" class="modal-overlay">
-    <div class="modal-content-custom" style="max-width:360px;text-align:center;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div class="modal-title" style="margin-bottom:0;">📱 Payment QR</div>
-            <button onclick="closeModal('qrModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;">✕</button>
-        </div>
-        <div id="qrMemberInfo" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:12px;padding:12px;margin-bottom:16px;">
-            <div id="qrMemberName" style="font-size:1rem;font-weight:800;color:white;margin-bottom:4px;"></div>
-            <div id="qrDueDate" style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px;"></div>
-            <div id="qrAmount" style="font-size:1.4rem;font-weight:900;color:#f39c12;"></div>
-        </div>
-        <!-- UPI ID input -->
-        <div style="margin-bottom:14px;text-align:left;">
-            <label class="form-label-small">Your UPI ID (for QR generation)</label>
-            <div style="display:flex;gap:8px;">
-                <input type="text" id="qrUpiId" class="form-input" style="margin-bottom:0;flex:1;" placeholder="e.g. 9876543210@upi">
-                <button onclick="generateQrCode()" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;white-space:nowrap;">Generate</button>
-            </div>
-            <div style="font-size:0.68rem;color:var(--text-dim);margin-top:4px;">UPI ID saved for future use</div>
-        </div>
-        <!-- QR display area -->
-        <div id="qrDisplayArea" style="display:none;">
-            <div id="qrCanvas" style="display:flex;justify-content:center;margin-bottom:12px;"></div>
-            <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px;">Scan with any UPI app · PhonePe · GPay · Paytm</div>
-            <div style="display:flex;gap:8px;">
-                <button onclick="downloadQrCode()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">⬇ Download</button>
-                <button onclick="shareQrCode()" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">↗ Share</button>
-            </div>
-        </div>
-        <button class="btn-cancel" onclick="closeModal('qrModal')" style="margin-top:10px;">Close</button>
     </div>
 </div>
 
