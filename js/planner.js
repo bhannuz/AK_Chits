@@ -240,7 +240,8 @@ function ncpGenerate(savedRows){
 
     var totalCollection = monthlyPay * members;
     var commAmt         = amount > 0 ? Math.round(amount * commission / 100) : 0;
-    var foremanPerMonth = totalCollection > 0 ? Math.round(totalCollection * commission / 100) : 0;
+    // foremanPerMonth calculated per row after chit payout is set — placeholder only
+    var foremanPerMonth = 0;
 
     // ── Schedule rows ──
     var rowsEl = document.getElementById('ncp_rows');
@@ -271,9 +272,8 @@ function ncpGenerate(savedRows){
             '<input type="number" class="ncp-pay form-input" value="'+(savedPay||'')+'" placeholder="Pay/mo" style="flex:1;margin-bottom:0;padding:5px 6px;font-size:0.78rem;" oninput="ncpUpdateTotals();ncpAutoSave();">'+
             // Net Payout (editable — pre-filled with increasing value)
             '<input type="number" class="ncp-chit form-input" value="'+(savedChit||'')+'" placeholder="Payout" style="flex:1.1;margin-bottom:0;padding:5px 6px;font-size:0.78rem;color:#34d399;" oninput="ncpUpdateTotals();ncpAutoSave();">'+
-            // Foreman profit (auto read-only)
-            '<span class="ncp-profit" style="flex:0.9;font-size:0.72rem;font-weight:700;color:#f59e0b;text-align:center;background:rgba(245,158,11,0.07);border-radius:6px;padding:5px 3px;">'+
-                (foremanPerMonth>0?'₹'+foremanPerMonth.toLocaleString('en-IN'):'—')+'</span>'+
+            // Foreman profit = (monthly × members) - net payout (auto, updates on input)
+            '<span class="ncp-profit" style="flex:0.9;font-size:0.72rem;font-weight:700;color:#f59e0b;text-align:center;background:rgba(245,158,11,0.07);border-radius:6px;padding:5px 3px;">—</span>'+
             // % return (auto)
             '<span class="ncp-pct" style="width:44px;text-align:center;font-size:0.72rem;font-weight:800;color:#a5b4fc;">—</span>';
         rowsEl.appendChild(div);
@@ -306,12 +306,12 @@ function ncpUpdateTotals(){
         var chit = parseFloat(chitInput ? chitInput.value : 0)||0;
         totalPay += pay;
 
-        // Foreman profit = totalCollection × commission%
-        var foremanThisRow = pay > 0 && members > 0
-            ? Math.round(pay * members * commission / 100)
-            : (amount > 0 && members > 0
-                ? Math.round(Math.round(amount/members) * members * commission / 100)
-                : 0);
+        // Foreman profit = (Monthly Pay × Members) − Net Payout
+        var monthlyCollect = pay > 0 && members > 0 ? pay * members
+            : (amount > 0 && members > 0 ? Math.round(amount/members) * members : 0);
+        var foremanThisRow = chit > 0 && monthlyCollect > 0
+            ? Math.max(0, monthlyCollect - chit)
+            : 0;
         totalProfit += foremanThisRow;
 
         // Update foreman profit cell
