@@ -30,9 +30,13 @@ async function printMemberStatement(mid){
         const indentStyle = totalSlots>1 ? 'margin-left:12px;border-left:3px solid #f5c842;padding-left:8px;' : '';
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // Get fixed chit amount from last payment
-        const lastPay   = slotPays.length ? slotPays[slotPays.length-1] : null;
-        const chitAmount= lastPay ? (parseFloat(lastPay.chit)||0) : 0;
+        // Get fixed chit amount — from payments first, fallback to group amount/members
+        const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
+        const membersCount = parseInt(g.members||g.gMembers||0);
+        const groupAmount  = parseFloat(g.amount||g.gAmount||0);
+        const chitAmount   = lastPay && parseFloat(lastPay.chit)>0
+            ? parseFloat(lastPay.chit)
+            : (membersCount>0 && groupAmount>0 ? Math.round(groupAmount/membersCount) : 0);
 
         // Build paidSlotSet
         const paidSlotSet = new Set();
@@ -180,32 +184,33 @@ async function printMemberStatement(mid){
     const printHTML = `
     <div id="printStatement">
         <style>
-            #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; }
-            #printStatement .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; }
-            #printStatement .brand { font-size:16px; font-weight:900; color:#f39c12; }
-            #printStatement .brand-sub { font-size:9px; color:#888; }
-            #printStatement .doc-title { font-size:14px; font-weight:800; text-align:right; }
-            #printStatement .doc-sub { font-size:9px; color:#888; text-align:right; }
-            #printStatement .mbox { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:12px 16px; margin-bottom:14px; }
-            #printStatement .mname { font-size:16px; font-weight:800; margin-bottom:4px; }
-            #printStatement .msub { font-size:10px; color:#555; margin-top:3px; }
-            #printStatement .stats { display:flex; gap:8px; margin-top:10px; }
-            #printStatement .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:6px; text-align:center; }
-            #printStatement .stat-v { font-size:13px; font-weight:800; }
-            #printStatement .stat-l { font-size:8px; color:#888; text-transform:uppercase; }
-            #printStatement .sec-title { font-size:8px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:14px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; }
-            #printStatement .grp-block { margin-bottom:16px; page-break-inside:avoid; }
-            #printStatement .grp-title { font-size:12px; font-weight:800; margin-bottom:3px; }
-            #printStatement .grp-meta { font-size:8.5px; color:#666; margin-bottom:3px; }
-            #printStatement .grp-totals { font-size:9px; text-align:right; margin-bottom:5px; }
-            #printStatement .prog-outer { background:#eee; height:5px; border-radius:3px; margin-bottom:3px; overflow:hidden; }
+            #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; font-size: 13px; }
+            #printStatement .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #f39c12; padding-bottom:12px; margin-bottom:16px; }
+            #printStatement .brand { font-size:20px; font-weight:900; color:#f39c12; }
+            #printStatement .brand-sub { font-size:11px; color:#888; margin-top:2px; }
+            #printStatement .doc-title { font-size:16px; font-weight:800; text-align:right; }
+            #printStatement .doc-sub { font-size:11px; color:#888; text-align:right; margin-top:3px; }
+            #printStatement .mbox { background:#fffbf0; border:2px solid #f39c12; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
+            #printStatement .mname { font-size:18px; font-weight:800; margin-bottom:5px; }
+            #printStatement .msub { font-size:12px; color:#555; margin-top:4px; }
+            #printStatement .stats { display:flex; gap:0; margin-top:14px; border:1px solid #e5c76b; border-radius:8px; overflow:hidden; width:100%; }
+            #printStatement .stat { flex:1; border-right:1px solid #e5c76b; padding:10px 8px; text-align:center; background:#fffdf0; }
+            #printStatement .stat:last-child { border-right:none; }
+            #printStatement .stat-v { font-size:15px; font-weight:800; }
+            #printStatement .stat-l { font-size:10px; color:#888; text-transform:uppercase; margin-top:3px; }
+            #printStatement .sec-title { font-size:11px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; border-bottom:2px solid #eee; padding-bottom:4px; }
+            #printStatement .grp-block { margin-bottom:18px; page-break-inside:avoid; }
+            #printStatement .grp-title { font-size:14px; font-weight:800; margin-bottom:4px; }
+            #printStatement .grp-meta { font-size:11px; color:#666; margin-bottom:5px; line-height:1.6; }
+            #printStatement .grp-totals { font-size:11px; text-align:right; margin-bottom:6px; }
+            #printStatement .prog-outer { background:#eee; height:6px; border-radius:3px; margin-bottom:5px; overflow:hidden; }
             #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-            #printStatement table { width:100%; border-collapse:collapse; font-size:9.5px; table-layout:fixed; margin-bottom:4px; }
+            #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; margin-bottom:6px; }
             #printStatement thead { display:table-header-group; }
-            #printStatement th { background:#f5f5f5; border:1px solid #ccc; padding:4px 5px; font-size:8px; text-transform:uppercase; color:#555; font-weight:700; }
-            #printStatement td { border:1px solid #e0e0e0; padding:4px 5px; vertical-align:middle; word-break:break-word; }
+            #printStatement th { background:#f5f5f5; border:1px solid #ccc; padding:7px 6px; font-size:10px; text-transform:uppercase; color:#555; font-weight:700; }
+            #printStatement td { border:1px solid #e0e0e0; padding:7px 6px; vertical-align:middle; word-break:break-word; font-size:11px; }
             #printStatement tr { page-break-inside:avoid; }
-            #printStatement .ftr { margin-top:14px; border-top:1px solid #ddd; padding-top:6px; display:flex; justify-content:space-between; font-size:8px; color:#aaa; }
+            #printStatement .ftr { margin-top:16px; border-top:1px solid #ddd; padding-top:8px; display:flex; justify-content:space-between; font-size:10px; color:#aaa; }
             #printStatement .print-btn-bar { display:flex; gap:10px; margin-bottom:16px; }
             #printStatement .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
             #printStatement .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
@@ -225,18 +230,14 @@ async function printMemberStatement(mid){
             <div><div class="doc-title">MEMBER STATEMENT</div><div class="doc-sub">Generated: ${today}</div></div>
         </div>
         <div class="mbox">
-            <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-                <div>
-                    <div class="mname">${m.name}</div>
-                    <div class="msub">&#128222; ${m.phone||'—'}</div>
-                    <div class="msub">Groups: ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q+'chits':'')):'?';}).join(', ')||'—'}</div>
-                </div>
-                <div class="stats">
-                    <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
-                    <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
-                    <div class="stat"><div class="stat-v">${mPays.length}</div><div class="stat-l">Payments</div></div>
-                    <div class="stat"><div class="stat-v" style="color:#065f46;">${chitsPicked}</div><div class="stat-l">Chits Picked</div></div>
-                </div>
+            <div class="mname">${m.name}</div>
+            <div class="msub">&#128222; ${m.phone||'—'}</div>
+            <div class="msub">Groups: ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q+' chits':'')):'?';}).join(', ')||'—'}</div>
+            <div class="stats">
+                <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
+                <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
+                <div class="stat"><div class="stat-v">${mPays.length}</div><div class="stat-l">Payments</div></div>
+                <div class="stat"><div class="stat-v" style="color:#065f46;">${chitsPicked}</div><div class="stat-l">Chits Picked</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
