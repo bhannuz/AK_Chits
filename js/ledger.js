@@ -57,91 +57,96 @@ async function loadMemberLedger(){
             }
         });
 
-        // ── Full Schedule Table (all months) ─────────────────────────────────
-        const scheduleRows = allDueDates.map((dueDate, i)=>{
-            // Find payment for this slot
+        // ── Merged table: all months with payment details inline ─────────────
+        const mergedRows = allDueDates.map((dueDate, i)=>{
             const matchPay = slotPays.find(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
                 if(p.monthSlot!=null) return p.monthSlot===i;
                 return getMonthSlot(allDueDates, p.date) === i;
             });
 
-            const paidAmt = matchPay ? (parseFloat(matchPay.paid)||0) : 0;
-            const chitAmt = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
-
-            // Status logic: Paid / Partial / Overdue / Pending
+            const paidAmt   = matchPay ? (parseFloat(matchPay.paid)||0)    : 0;
+            const chitAmt   = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
+            const balAmt    = matchPay ? (parseFloat(matchPay.balance)||0)  : 0;
             const isFullPaid    = paidSlotSet.has(i) && chitAmt > 0 && paidAmt >= chitAmt;
             const isPartialPaid = paidSlotSet.has(i) && chitAmt > 0 && paidAmt > 0 && paidAmt < chitAmt;
-            const isAnyPaid     = paidSlotSet.has(i);  // legacy — no chit amount recorded
+            const isAnyPaid     = paidSlotSet.has(i);
             const isOverdue     = !isAnyPaid && dueDate < today;
+            const cp            = matchPay && matchPay.chitPicked === 'Yes';
+            const isMulti       = matchPay && matchPay.numMonths && matchPay.numMonths > 1;
 
-            // Row background
-            const rowBg = isFullPaid    ? 'rgba(16,185,129,0.06)'
-                        : isPartialPaid ? 'rgba(245,158,11,0.06)'
-                        : isOverdue     ? 'rgba(239,68,68,0.06)'
-                        : 'transparent';
+            // Row styling
+            const rowBg = isFullPaid    ? 'rgba(16,185,129,0.07)'
+                        : isPartialPaid ? 'rgba(245,158,11,0.07)'
+                        : cp            ? 'rgba(16,185,129,0.07)'
+                        : isMulti       ? 'rgba(99,102,241,0.07)'
+                        : isOverdue     ? 'rgba(239,68,68,0.05)'
+                        : '';
+            const rowBL = cp            ? 'border-left:3px solid #10b981;'
+                        : isMulti       ? 'border-left:3px solid #818cf8;'
+                        : isPartialPaid ? 'border-left:3px solid #f59e0b;'
+                        : '';
 
             // Status badge
             let statusBadge;
-            if(isFullPaid){
-                statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">✅ Paid</span>`;
+            if(isFullPaid || (isAnyPaid && chitAmt === 0)){
+                statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`;
             } else if(isPartialPaid){
-                const bal = chitAmt - paidAmt;
-                statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">⚡ Partial</span><div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;">Bal: ${fmtAmt(bal)}</div>`;
-            } else if(isAnyPaid){
-                // paid but no chit amount to compare — treat as paid
-                statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">✅ Paid</span>`;
+                statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
             } else if(isOverdue){
-                statusBadge = `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">🔴 Overdue</span>`;
+                statusBadge = `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">🔴 Overdue</span>`;
             } else {
-                statusBadge = `<span style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.25);border-radius:5px;padding:2px 8px;font-size:0.65rem;font-weight:800;">⏳ Pending</span>`;
+                statusBadge = `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
             }
 
-            const paidAmtCell = (isFullPaid || isPartialPaid || isAnyPaid) && matchPay
+            // Pay date — show actual date if paid
+            const payDateCell = matchPay
+                ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>`
+                : `<span style="color:var(--text-dim);">—</span>`;
+
+            // Paid amount cell
+            const paidCell = isAnyPaid && matchPay
                 ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(paidAmt)}</span>`
                 : `<span style="color:var(--text-dim);">—</span>`;
 
-            const chitCell = chitAmt > 0
-                ? fmtAmt(chitAmt)
+            // Balance cell — show only if partial or has balance
+            const balCell = matchPay && balAmt > 0
+                ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(balAmt)}</span>`
                 : `<span style="color:var(--text-dim);">—</span>`;
+
+            // Mode
+            const modeCell = matchPay && matchPay.paidBy
+                ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>`
+                : `<span style="color:var(--text-dim);">—</span>`;
+
+            // Chit picked
+            const chitPickedCell = cp
+                ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${matchPay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${matchPay.chitPickedBy}</div>`:''}`
+                : `<span style="color:var(--text-dim);">—</span>`;
+
+            // Edit button — only if payment exists
+            const editCell = !isMember && matchPay
+                ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>`
+                : '';
+
+            // Multi-month badge on due date
+            const multiTag = isMulti
+                ? `<span style="display:block;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-top:2px;">×${matchPay.numMonths} mo</span>`
+                : '';
 
             const dateColor = isFullPaid ? '#a5b4fc' : isPartialPaid ? '#fbbf24' : isOverdue ? '#f87171' : '#c7d2fe';
 
-            return `<tr style="background:${rowBg};">
-                <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.72rem;">${i+1}</td>
-                <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
-                <td style="color:#c4b5fd;">${chitCell}</td>
-                <td>${paidAmtCell}</td>
-                <td>${statusBadge}</td>
-            </tr>`;
-        }).join('');
-
-        // ── Payment History rows (actual payment records) ─────────────────────
-        const tableRows = slotPays.map((p,idx)=>{
-            const cp=p.chitPicked==='Yes';
-            const isMulti=p.numMonths&&p.numMonths>1;
-            const months=p.monthSlots||[];
-            let monthLabel='--';
-            if(isMulti&&months.length>0){
-                const f=months[0]>=0&&allDueDates[months[0]]?fmtDate(allDueDates[months[0]]):'--';
-                const l=months[months.length-1]>=0&&allDueDates[months[months.length-1]]?fmtDate(allDueDates[months[months.length-1]]):'--';
-                monthLabel=`${f} → ${l}`;
-            } else {
-                const si=p.monthSlot!==undefined?p.monthSlot:getMonthSlot(allDueDates,p.date);
-                monthLabel=si>=0&&allDueDates[si]?fmtDate(allDueDates[si]):'--';
-            }
-            const rowBg=cp?'rgba(16,185,129,0.08)':isMulti?'rgba(99,102,241,0.07)':'';
-            const rowBL=cp?'border-left:3px solid #10b981;':isMulti?'border-left:3px solid #818cf8;':'';
             return `<tr style="background:${rowBg};${rowBL}">
-                <td style="color:var(--text-dim);font-weight:700;text-align:center;">${idx+1}</td>
-                <td style="color:#a5b4fc;font-weight:700;">${monthLabel}${isMulti?`<br><span style="display:inline-flex;align-items:center;gap:3px;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.6rem;font-weight:800;">×${p.numMonths} months</span>`:''}</td>
-                <td>${fmtDate(p.date)}</td>
-                <td style="color:#c4b5fd;">${fmtAmt(p.chit)}${isMulti?`<span style="font-size:0.6rem;color:var(--text-dim);display:block;">/mo × ${p.numMonths}</span>`:''}</td>
-                <td style="color:#34d399;font-weight:700;">${fmtAmt(p.paid)}</td>
-                <td style="color:#f59e0b;">${fmtAmt(p.balance)}</td>
-                <td style="color:var(--text-dim);font-size:0.72rem;">${p.paidBy||'--'}</td>
-                <td>${cp?`<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:2px 7px;font-size:0.65rem;font-weight:800;display:inline-block;">Picked</span>${p.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:2px;">${p.chitPickedBy}</div>`:''}` :'<span style="color:var(--text-dim);">--</span>'}</td>
-                ${!isMember?`<td><button class="btn-edit-sm" onclick="openEditPayment('${p.id}')" style="font-size:0.65rem;padding:3px 8px;">Edit</button></td>`:'<td></td>'}
+                <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
+                <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}${multiTag}</td>
+                <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
+                <td>${payDateCell}</td>
+                <td>${paidCell}</td>
+                <td>${balCell}</td>
+                <td>${statusBadge}</td>
+                <td>${modeCell}</td>
+                <td>${chitPickedCell}</td>
+                <td>${editCell}</td>
             </tr>`;
         }).join('');
 
@@ -197,39 +202,13 @@ async function loadMemberLedger(){
             </div>
 
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;">
-
-                <!-- ── FULL SCHEDULE (collapsible) ── -->
-                <div onclick="toggleLedgerTable('${sectionId}_sched',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
-                    <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📅 Full Schedule (${totalMonths} months)</span>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        ${overdueCnt>0?`<span style="font-size:0.72rem;color:#f87171;font-weight:700;">${overdueCnt} overdue</span>`:''}
-                        <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
-                    </div>
-                </div>
-                <div id="${sectionId}_sched" style="display:none;">
-                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                        <table class="table-custom">
-                            <thead><tr>
-                                <th style="text-align:center;">#</th>
-                                <th>Due Date</th>
-                                <th>Chit Amount</th>
-                                <th>Paid</th>
-                                <th>Status</th>
-                            </tr></thead>
-                            <tbody>${scheduleRows}</tbody>
-                        </table>
-                    </div>
-                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);">
-                        ✅ Paid &nbsp;|&nbsp; ⚡ Partial &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Pending
-                    </div>
-                </div>
-
-                <!-- ── PAYMENT HISTORY (collapsible) ── -->
+                <!-- ── MERGED SCHEDULE + HISTORY ── -->
                 <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
-                    <span style="font-size:0.78rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;">🧾 Payment History (${slotPays.length} entries)</span>
+                    <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule &amp; Payments (${totalMonths} months)</span>
                     <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)} paid</span>
+                        <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)}</span>
                         ${tBal>0?`<span style="font-size:0.78rem;color:#f59e0b;font-weight:700;">${fmtAmt(tBal)} bal</span>`:''}
+                        ${overdueCnt>0?`<span style="font-size:0.72rem;color:#f87171;font-weight:700;">${overdueCnt} overdue</span>`:''}
                         <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
                     </div>
                 </div>
@@ -238,27 +217,30 @@ async function loadMemberLedger(){
                         <table class="table-custom">
                             <thead><tr>
                                 <th style="text-align:center;">#</th>
-                                <th>Month Covered</th>
-                                <th>Pay Date</th>
+                                <th>Due Date</th>
                                 <th>Chit/Mo</th>
-                                <th>Total Paid</th>
+                                <th>Pay Date</th>
+                                <th>Paid</th>
                                 <th>Balance</th>
+                                <th>Status</th>
                                 <th>Mode</th>
                                 <th>Chit Picked</th>
                                 <th></th>
                             </tr></thead>
                             <tbody>
-                                ${tableRows||`<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:20px;">No payments yet</td></tr>`}
-                                ${slotPays.length?`<tr style="font-weight:800;background:rgba(255,255,255,.04);">
+                                ${mergedRows}
+                                <tr style="font-weight:800;background:rgba(255,255,255,.04);">
                                     <td colspan="4" style="color:var(--text-dim);">Total</td>
                                     <td style="color:#34d399;">${fmtAmt(tPaid)}</td>
-                                    <td style="color:#f59e0b;">${fmtAmt(tBal)}</td>
-                                    <td colspan="3"></td>
-                                </tr>`:''}
+                                    <td style="color:#f59e0b;">${tBal>0?fmtAmt(tBal):'—'}</td>
+                                    <td colspan="4"></td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
-                    ${multiMonthCount>0?`<div style="padding:8px 14px 10px;font-size:0.68rem;color:#a5b4fc;border-top:1px solid var(--border);">Purple rows = multi-month bulk payments</div>`:''}
+                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);">
+                        ✅ Paid &nbsp;|&nbsp; ⚡ Partial &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Pending
+                    </div>
                 </div>
             </div>
         </div>`;
