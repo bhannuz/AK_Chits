@@ -541,6 +541,16 @@
     <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
     <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
 </div>
+    <script>
+        function toggleQrSection(){
+            var body    = document.getElementById('qrSectionBody');
+            var chevron = document.getElementById('qrSectionChevron');
+            if(!body) return;
+            var open = body.style.display !== 'none';
+            body.style.display      = open ? 'none'         : 'block';
+            chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+        }
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
