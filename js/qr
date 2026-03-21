@@ -1,0 +1,123 @@
+// ═══════════════════════════════════════════════════════════
+// AK Chit Funds — QR PAYMENT GENERATOR
+// Generates UPI payment QR codes for member due amounts
+// ═══════════════════════════════════════════════════════════
+
+var _qrCurrentData = {}; // store current QR params
+
+// ── Open QR modal ─────────────────────────────────────────────────────────────
+function showQrModal(memberName, amount, note, dueDate){
+    _qrCurrentData = {
+        memberName: decodeURIComponent(memberName),
+        amount:     parseFloat(amount)||0,
+        note:       decodeURIComponent(note),
+        dueDate:    dueDate
+    };
+
+    document.getElementById('qrMemberName').textContent = _qrCurrentData.memberName;
+    document.getElementById('qrDueDate').textContent    = 'Due: ' + dueDate;
+    document.getElementById('qrAmount').textContent     = '₹' + _qrCurrentData.amount.toLocaleString('en-IN');
+    document.getElementById('qrDisplayArea').style.display = 'none';
+    document.getElementById('qrCanvas').innerHTML = '';
+
+    // Restore saved UPI ID
+    var savedUpi = localStorage.getItem('akdf_upi_id') || '';
+    document.getElementById('qrUpiId').value = savedUpi;
+
+    openModal('qrModal');
+
+    // Auto-generate if UPI ID already saved
+    if(savedUpi) generateQrCode();
+}
+
+// ── Generate QR Code ──────────────────────────────────────────────────────────
+function generateQrCode(){
+    var upiId = document.getElementById('qrUpiId').value.trim();
+    if(!upiId){ showToast('❌ Enter your UPI ID first', false); return; }
+    if(!upiId.includes('@')){ showToast('❌ Invalid UPI ID — must contain @', false); return; }
+
+    // Save UPI ID for future use
+    localStorage.setItem('akdf_upi_id', upiId);
+
+    var amount = _qrCurrentData.amount;
+    var name   = _qrCurrentData.memberName;
+    var note   = _qrCurrentData.note;
+
+    // UPI deep link format (works with all Indian UPI apps)
+    var upiUrl = 'upi://pay?pa=' + encodeURIComponent(upiId) +
+                 '&pn=' + encodeURIComponent('AK Chit Funds') +
+                 '&am=' + amount.toFixed(2) +
+                 '&tn=' + encodeURIComponent(note) +
+                 '&cu=INR';
+
+    _qrCurrentData.upiUrl = upiUrl;
+    _qrCurrentData.upiId  = upiId;
+
+    // Use QR Server API — no library needed, returns PNG image
+    var qrApiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(upiUrl) +
+                   '&bgcolor=ffffff&color=000000&margin=10&format=png';
+
+    var canvasEl = document.getElementById('qrCanvas');
+    canvasEl.innerHTML = '<div style="color:var(--text-dim);font-size:0.82rem;padding:20px;">⏳ Generating QR...</div>';
+
+    var img = document.createElement('img');
+    img.style.cssText = 'width:220px;height:220px;border-radius:12px;border:4px solid #f39c12;display:block;';
+    img.alt = 'UPI Payment QR';
+    img.onload = function(){
+        canvasEl.innerHTML = '';
+        canvasEl.appendChild(img);
+        _qrCurrentData.qrImgSrc = qrApiUrl;
+        document.getElementById('qrDisplayArea').style.display = 'block';
+        showToast('✅ QR ready — scan to pay', true);
+    };
+    img.onerror = function(){
+        canvasEl.innerHTML = '<div style="color:#f87171;font-size:0.82rem;padding:20px;">❌ Failed to generate QR. Check internet connection.</div>';
+    };
+    img.src = qrApiUrl;
+}
+
+// ── Download QR ───────────────────────────────────────────────────────────────
+function downloadQrCode(){
+    if(!_qrCurrentData.qrImgSrc){ showToast('❌ Generate QR first', false); return; }
+    var a = document.createElement('a');
+    a.href = _qrCurrentData.qrImgSrc;
+    a.download = 'QR_' + (_qrCurrentData.memberName||'member').replace(/\s+/g,'_') + '_' + _qrCurrentData.amount + '.png';
+    a.target = '_blank';
+    a.click();
+    showToast('⬇ Downloading QR image...');
+}
+
+// ── Share QR ──────────────────────────────────────────────────────────────────
+async function shareQrCode(){
+    if(!_qrCurrentData.upiUrl){ showToast('❌ Generate QR first', false); return; }
+
+    var text = 'AK Chit Funds — Payment Request\n\n' +
+               'Member: ' + _qrCurrentData.memberName + '\n' +
+               'Due Date: ' + _qrCurrentData.dueDate + '\n' +
+               'Amount: ₹' + _qrCurrentData.amount.toLocaleString('en-IN') + '\n\n' +
+               'Pay via UPI: ' + _qrCurrentData.upiId + '\n' +
+               'UPI Link: ' + _qrCurrentData.upiUrl;
+
+    if(navigator.share){
+        try{
+            await navigator.share({ title: 'Chit Payment QR', text: text });
+        } catch(e){
+            // User cancelled or share failed — fallback to clipboard
+            copyToClipboardFallback(text);
+        }
+    } else {
+        copyToClipboardFallback(text);
+    }
+}
+
+function copyToClipboardFallback(text){
+    if(navigator.clipboard){
+        navigator.clipboard.writeText(text).then(function(){
+            showToast('📋 Payment details copied!');
+        }).catch(function(){
+            showToast('❌ Could not copy', false);
+        });
+    } else {
+        showToast('❌ Share not supported on this browser', false);
+    }
+}
