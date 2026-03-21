@@ -19,6 +19,7 @@
         'js/print.js',
         'js/auth.js',
         'js/quickview.js',
+        'js/qr.js',
         'js/init.js'
     ];
 
