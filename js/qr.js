@@ -5,16 +5,6 @@
 
 var _standaloneQrState = {};
 
-// ── Toggle QR section open/close ─────────────────────────────────────────────
-function toggleQrSection(){
-    var body    = document.getElementById('qrSectionBody');
-    var chevron = document.getElementById('qrSectionChevron');
-    if(!body) return;
-    var open = body.style.display !== 'none';
-    body.style.display    = open ? 'none'       : 'block';
-    chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
-}
-
 // ── Generate QR ───────────────────────────────────────────────────────────────
 function generateStandaloneQr(){
     var upiId  = (document.getElementById('qr_upi').value   ||'').trim();
