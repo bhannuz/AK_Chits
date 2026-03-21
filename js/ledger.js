@@ -141,7 +141,15 @@ async function loadMemberLedger(){
             const chitPickedCell = cp
                 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${matchPay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${matchPay.chitPickedBy}</div>`:''}`
                 : `<span style="color:var(--text-dim);">—</span>`;
-            const editCell       = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
+            const editCell = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
+
+            // QR button — show for unpaid/partial/overdue months
+            const amtForQr    = isPartialPaid ? balAmt : chitAmt;
+            const qrMemberName = encodeURIComponent(m.name||'Member');
+            const qrNote       = encodeURIComponent((grp.name||'Chit')+'_'+fmtDate(dueDate));
+            const qrCell = (!isFullPaid && !(isAnyPaid && chitAmt===0) && amtForQr>0)
+                ? `<button onclick="showQrModal('${qrMemberName}','${amtForQr}','${qrNote}','${fmtDate(dueDate)}')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:7px;padding:3px 7px;font-size:0.62rem;font-weight:700;cursor:pointer;white-space:nowrap;">📱 QR</button>`
+                : '';
 
             // Multi-month label on first row
             const multiTag = isFirstOfMulti
@@ -161,7 +169,7 @@ async function loadMemberLedger(){
                 <td${rs} style="vertical-align:middle;">${statusBadge}</td>
                 <td${rs} style="vertical-align:middle;">${modeCell}</td>
                 <td${rs} style="vertical-align:middle;">${chitPickedCell}</td>
-                <td${rs} style="vertical-align:middle;">${editCell}</td>
+                <td${rs} style="vertical-align:middle;white-space:nowrap;">${editCell}${qrCell}</td>
             </tr>`;
         }).join('');
 
@@ -240,7 +248,7 @@ async function loadMemberLedger(){
                                 <th>Status</th>
                                 <th>Mode</th>
                                 <th>Chit Picked</th>
-                                <th></th>
+                                <th>Action</th>
                             </tr></thead>
                             <tbody>
                                 ${mergedRows}
