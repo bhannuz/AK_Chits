@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 var _standaloneQrState = {};
+var _qrSelectedMembers = {}; // memberId -> memberName
 
 // ── Toggle section ────────────────────────────────────────────────────────────
 // Note: toggleQrSection is also defined inline in index.html for early availability
@@ -16,9 +17,9 @@ function generateStandaloneQr(){
     var note   = (document.getElementById('qr_note').value  ||'').trim() || 'ChitPayment';
     var due    = (document.getElementById('qr_due').value   ||'').trim();
 
-    // Member info from search
-    var memberName = (document.getElementById('qr_member_search').value||'').trim();
-    var memberId   = (document.getElementById('qr_member_id').value||'').trim();
+    // Selected members count
+    var memberCount = Object.keys(_qrSelectedMembers).length;
+    var memberNames = Object.values(_qrSelectedMembers);
 
     if(!upiId){   showToast('❌ Enter UPI ID', false); return; }
     if(!upiId.includes('@')){ showToast('❌ UPI ID must contain @ (e.g. 9876543210@ybl)', false); return; }
@@ -38,13 +39,13 @@ function generateStandaloneQr(){
         + '&data='    + encodeURIComponent(upiUrl)
         + '&bgcolor=ffffff&color=1a1a2e&margin=12&format=png';
 
-    _standaloneQrState = { upiUrl, upiId, amount, memberName, memberId, note, due, imgSrc: qrSrc };
+    _standaloneQrState = { upiUrl, upiId, amount, note, due, imgSrc: qrSrc };
 
     // Info summary
     var infoEl = document.getElementById('qr_info');
     if(infoEl){
         infoEl.innerHTML =
-            (memberName ? '<div style="font-size:0.9rem;font-weight:800;color:white;margin-bottom:4px;">' + memberName + '</div>' : '') +
+            (memberCount > 0 ? '<div style="font-size:0.82rem;font-weight:800;color:white;margin-bottom:4px;">👥 ' + memberCount + ' member(s): ' + memberNames.join(', ') + '</div>' : '') +
             '<div style="color:var(--text-dim);">' + note + (due?' · Due: '+fmtDate(due):'') + '</div>' +
             '<div style="font-size:1rem;font-weight:800;color:#f39c12;margin-top:6px;">₹' + amount.toLocaleString('en-IN') + ' → ' + upiId + '</div>';
     }
@@ -71,35 +72,92 @@ function generateStandaloneQr(){
     img.src = qrSrc;
 }
 
+// ── Add member to selection ───────────────────────────────────────────────────
+function qrAddMember(){
+    var nameEl = document.getElementById('qr_member_search');
+    var idEl   = document.getElementById('qr_member_id');
+    var name   = nameEl ? nameEl.value.trim() : '';
+    var id     = idEl   ? idEl.value.trim()   : '';
+    if(!id || !name){ showToast('❌ Search and select a member first', false); return; }
+    if(_qrSelectedMembers[id]){ showToast('ℹ️ Already added', true); return; }
+
+    _qrSelectedMembers[id] = name;
+
+    // Render chip
+    var container = document.getElementById('qr_selected_members');
+    if(container){
+        var chip = document.createElement('div');
+        chip.id  = 'qrchip_' + id;
+        chip.style.cssText = 'display:flex;align-items:center;gap:6px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:20px;padding:4px 10px 4px 12px;font-size:0.78rem;color:#a5b4fc;font-weight:700;';
+        var nameSpan = document.createElement('span');
+        nameSpan.textContent = name;
+        var removeBtn = document.createElement('button');
+        removeBtn.textContent = '✕';
+        removeBtn.style.cssText = 'background:none;border:none;color:#f87171;cursor:pointer;font-size:0.9rem;padding:0 0 0 4px;line-height:1;';
+        removeBtn.onclick = (function(mid){ return function(){ qrRemoveMember(mid); }; })(id);
+        chip.appendChild(nameSpan);
+        chip.appendChild(removeBtn);
+        container.appendChild(chip);
+    }
+
+    // Clear search
+    if(nameEl) nameEl.value = '';
+    if(idEl)   idEl.value   = '';
+    document.getElementById('qr_member_list').style.display = 'none';
+    showToast('✅ ' + name + ' added');
+}
+
+function qrRemoveMember(id){
+    delete _qrSelectedMembers[id];
+    var chip = document.getElementById('qrchip_' + id);
+    if(chip) chip.remove();
+}
+
 // ── Publish QR to member via Firestore ────────────────────────────────────────
 async function publishQrToMember(){
     var s = _standaloneQrState;
     if(!s.imgSrc){ showToast('❌ Generate QR first', false); return; }
-    if(!s.memberId){ showToast('❌ Select a member to publish to', false); return; }
+
+    var memberIds = Object.keys(_qrSelectedMembers);
+    if(!memberIds.length){ showToast('❌ Add at least one member', false); return; }
 
     var statusEl = document.getElementById('qr_publish_status');
-    if(statusEl){ statusEl.textContent = '⏳ Publishing...'; statusEl.style.color='var(--text-dim)'; }
+    if(statusEl){ statusEl.textContent = '⏳ Publishing to ' + memberIds.length + ' member(s)...'; statusEl.style.color='var(--text-dim)'; }
 
-    try{
-        // Save QR record to Firestore — overwrite any previous QR for this member
-        await db.collection('memberQrCodes').doc(s.memberId).set({
-            memberId:   s.memberId,
-            memberName: s.memberName,
-            upiId:      s.upiId,
-            upiUrl:     s.upiUrl,
-            imgSrc:     s.imgSrc,
-            amount:     s.amount,
-            note:       s.note,
-            due:        s.due,
-            publishedAt: new Date().toISOString(),
-            publishedBy: 'admin'
-        });
-        if(statusEl){ statusEl.textContent = '✅ Published! Member can now see the QR on login.'; statusEl.style.color='#34d399'; }
-        showToast('✅ QR published to ' + (s.memberName||'member') + '!');
-    } catch(err){
-        console.error(err);
-        if(statusEl){ statusEl.textContent = '❌ Failed to publish. Try again.'; statusEl.style.color='#f87171'; }
-        showToast('❌ Publish failed', false);
+    var success = 0, failed = 0;
+    for(var i=0; i<memberIds.length; i++){
+        var mId   = memberIds[i];
+        var mName = _qrSelectedMembers[mId];
+        try{
+            await db.collection('memberQrCodes').doc(mId).set({
+                memberId:    mId,
+                memberName:  mName,
+                upiId:       s.upiId,
+                upiUrl:      s.upiUrl,
+                imgSrc:      s.imgSrc,
+                amount:      s.amount,
+                note:        s.note,
+                due:         s.due,
+                publishedAt: new Date().toISOString(),
+                publishedBy: 'admin'
+            });
+            success++;
+        } catch(err){
+            console.error('Failed for ' + mName, err);
+            failed++;
+        }
+    }
+
+    if(failed === 0){
+        if(statusEl){ statusEl.textContent = '✅ Published to ' + success + ' member(s)!'; statusEl.style.color='#34d399'; }
+        showToast('✅ QR published to ' + success + ' member(s)!');
+        // Clear selected members after successful publish
+        _qrSelectedMembers = {};
+        var container = document.getElementById('qr_selected_members');
+        if(container) container.innerHTML = '';
+    } else {
+        if(statusEl){ statusEl.textContent = '⚠️ ' + success + ' published, ' + failed + ' failed.'; statusEl.style.color='#f59e0b'; }
+        showToast('⚠️ ' + success + ' published, ' + failed + ' failed', false);
     }
 }
 
