@@ -45,8 +45,15 @@ function filterSearch(inputId,listId,hiddenId){
         list.style.display='block';
         filtered.forEach(m=>{
             const div=document.createElement('div');div.className='suggestion-item';div.innerText=m.name;
-            div.onclick=()=>{document.getElementById(inputId).value=m.name;document.getElementById(hiddenId).value=m.id;list.style.display='none';
-                if(hiddenId==='summaryView')loadMemberLedger();if(hiddenId==='pMember')linkGroupForPayment();};
+            div.onclick=()=>{
+                document.getElementById(inputId).value=m.name;
+                document.getElementById(hiddenId).value=m.id;
+                list.style.display='none';
+                if(hiddenId==='summaryView') loadMemberLedger();
+                if(hiddenId==='pMember') linkGroupForPayment();
+                // Auto-add for QR member search
+                if(hiddenId==='qr_member_id') qrAddMember();
+            };
             list.appendChild(div);});
     }else{list.style.display='none';}
 }
