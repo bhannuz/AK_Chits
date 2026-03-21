@@ -173,12 +173,6 @@
                     <button onclick="ncpGenerate()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;">⚡ Generate Schedule</button>
                 </div>
 
-                <!-- AI Suggestion box -->
-                <div id="ncpSuggestionBox" style="display:none;padding:14px 16px;border-bottom:1px solid var(--border);background:rgba(99,102,241,0.06);">
-                    <div style="font-size:0.68rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">💡 Planner Insights</div>
-                    <div id="ncpSuggestionText" style="font-size:0.82rem;color:var(--text-dim);line-height:1.7;"></div>
-                </div>
-
                 <!-- Generated Schedule -->
                 <div id="ncp_tableWrap" style="display:none;">
                     <!-- Summary chips -->
@@ -191,7 +185,7 @@
                             <span style="width:22px;text-align:center;">#</span>
                             <span style="flex:1.6;">Due Date</span>
                             <span style="flex:1.1;">Monthly Pay</span>
-                            <span style="flex:1.1;color:#34d399;">Net Payout ↓auto</span>
+                            <span style="flex:1.1;color:#34d399;">Net Payout ✏️</span>
                             <span style="flex:1;color:#f59e0b;">Owner Profit ↓auto</span>
                             <span style="width:46px;text-align:center;color:#a5b4fc;">% Return</span>
                         </div>
@@ -214,6 +208,12 @@
                         <button onclick="ncpPrint()" style="flex:2;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:10px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;">🖨️ Print Schedule</button>
                     </div>
                 </div>
+            </div>
+
+            <!-- Planner Insights — shown at bottom after generation -->
+            <div id="ncpSuggestionBox" style="display:none;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:16px;margin-top:4px;">
+                <div style="font-size:0.68rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">💡 Planner Insights</div>
+                <div id="ncpSuggestionText" style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;"></div>
             </div>
         </div>
     </div>
