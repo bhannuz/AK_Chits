@@ -167,6 +167,7 @@ function applyUserSession(user){
         document.getElementById('adminMemberSearch').style.display = '';
         document.getElementById('memberLedgerArea').style.display = 'none';
     document.getElementById('qrGeneratorSection').style.display = '';
+    document.getElementById('waReminderSection').style.display = '';
     document.getElementById('memberQrArea').style.display = 'none';
         document.getElementById('adminQuickBtns').style.display = 'flex';
         updateUI();
@@ -189,6 +190,7 @@ function applyUserSession(user){
         document.querySelector('.nav-bar').style.display = 'none';
         document.getElementById('memberLedgerArea').style.display = 'block';
         document.getElementById('qrGeneratorSection').style.display = 'none';
+        document.getElementById('waReminderSection').style.display = 'none';
         document.getElementById('memberQrArea').style.display = 'block';
         document.getElementById('summaryView').value = user.memberId;
         loadMemberLedger();
@@ -211,6 +213,7 @@ function handleLogout(){
     document.getElementById('adminMemberSearch').style.display = '';
     document.getElementById('memberLedgerArea').style.display = 'none';
     document.getElementById('qrGeneratorSection').style.display = '';
+    document.getElementById('waReminderSection').style.display = '';
     document.getElementById('memberQrArea').style.display = 'none';
     document.getElementById('adminQuickBtns').style.display = 'flex';
     document.getElementById('logoutBtn').style.display = 'none';
