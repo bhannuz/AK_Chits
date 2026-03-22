@@ -113,56 +113,116 @@
                 <span style="font-size:0.82rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📱 QR Payment Generator</span>
                 <span id="qrSectionChevron" style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;">&#9654;</span>
             </div>
-            <div id="qrSectionBody" style="display:none;padding:14px 16px;border-top:1px solid var(--border);">
+            <div id="qrSectionBody" style="display:none;border-top:1px solid var(--border);">
 
-                <!-- Common fields: UPI, Amount, Note, Due -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                    <div>
-                        <label class="form-label-small">UPI ID</label>
-                        <input type="text" id="qr_upi" class="form-input" style="margin-bottom:0;" placeholder="e.g. 9876543210@ybl">
-                    </div>
-                    <div>
-                        <label class="form-label-small">Amount (₹)</label>
-                        <input type="number" id="qr_amt" class="form-input" style="margin-bottom:0;" placeholder="e.g. 23077">
-                    </div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
-                    <div>
-                        <label class="form-label-small">Group / Month</label>
-                        <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. 3 Lakhs – Apr 2026">
-                    </div>
-                    <div>
-                        <label class="form-label-small">Due Date</label>
-                        <input type="date" id="qr_due" class="form-input" style="margin-bottom:0;">
-                    </div>
+                <!-- ── Saved Versions ── -->
+                <div id="qr_versions_bar" style="padding:10px 14px;border-bottom:1px solid var(--border);display:none;">
+                    <div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📁 Saved Versions</div>
+                    <div id="qr_versions_list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
                 </div>
 
-                <!-- Member selection -->
-                <label class="form-label-small">Select Members to Publish</label>
-                <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="position:relative;flex:1;">
-                        <input type="text" id="qr_member_search" class="form-input" style="margin-bottom:0;" placeholder="🔍 Search and add member..." oninput="filterSearch('qr_member_search','qr_member_list','qr_member_id')">
-                        <input type="hidden" id="qr_member_id">
-                        <div id="qr_member_list" class="suggestions-list"></div>
+                <div style="padding:14px 16px;">
+                    <!-- Version name + save -->
+                    <div style="display:flex;gap:8px;margin-bottom:12px;">
+                        <input type="text" id="qr_version_name" class="form-input" style="margin-bottom:0;flex:1;" placeholder="Version name (e.g. 3 Lakhs Apr 2026)">
+                        <button onclick="qrSaveVersion()" style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;padding:10px 14px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;">💾 Save</button>
+                        <button onclick="qrNewForm()" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px 12px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;flex-shrink:0;">＋ New</button>
                     </div>
-                    <button onclick="qrAddMember()" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;flex-shrink:0;">＋ Add</button>
-                </div>
 
-                <!-- Selected members chips -->
-                <div id="qr_selected_members" style="display:flex;flex-wrap:wrap;gap:6px;min-height:20px;margin-bottom:14px;"></div>
+                    <!-- Common fields -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <div>
+                            <label class="form-label-small">UPI ID</label>
+                            <input type="text" id="qr_upi" class="form-input" style="margin-bottom:0;" placeholder="e.g. 9876543210@ybl">
+                        </div>
+                        <div>
+                            <label class="form-label-small">Amount (₹)</label>
+                            <input type="number" id="qr_amt" class="form-input" style="margin-bottom:0;" placeholder="e.g. 23077">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                        <div>
+                            <label class="form-label-small">Group / Month</label>
+                            <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. 3 Lakhs – Apr 2026">
+                        </div>
+                        <div>
+                            <label class="form-label-small">Due Date</label>
+                            <input type="date" id="qr_due" class="form-input" style="margin-bottom:0;">
+                        </div>
+                    </div>
 
-                <!-- Generate + Publish -->
-                <button onclick="generateStandaloneQr()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:8px;">⚡ Generate QR</button>
-                <div id="qr_display" style="display:none;">
-                    <div id="qr_info" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.82rem;color:var(--text-dim);text-align:center;"></div>
-                    <div id="qr_img" style="display:flex;justify-content:center;margin-bottom:10px;"></div>
-                    <div style="font-size:0.7rem;color:var(--text-dim);text-align:center;margin-bottom:12px;">Scan with PhonePe · GPay · Paytm · any UPI app</div>
+                    <!-- Member selection -->
+                    <label class="form-label-small">Select Members to Publish</label>
                     <div style="display:flex;gap:8px;margin-bottom:8px;">
-                        <button onclick="downloadStandaloneQr()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">⬇ Download</button>
-                        <button onclick="shareStandaloneQr()" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">↗ Share</button>
+                        <div style="position:relative;flex:1;">
+                            <input type="text" id="qr_member_search" class="form-input" style="margin-bottom:0;" placeholder="🔍 Type member name to add..." oninput="filterSearch('qr_member_search','qr_member_list','qr_member_id')">
+                            <input type="hidden" id="qr_member_id">
+                            <div id="qr_member_list" class="suggestions-list"></div>
+                        </div>
+                        <button onclick="qrAddMember()" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px 14px;border-radius:10px;font-size:0.82rem;font-weight:800;cursor:pointer;flex-shrink:0;">＋ Add</button>
                     </div>
-                    <button onclick="publishQrToMember()" style="width:100%;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:900;cursor:pointer;">📤 Publish to Selected Members</button>
-                    <div id="qr_publish_status" style="font-size:0.72rem;text-align:center;color:var(--text-dim);margin-top:6px;min-height:14px;"></div>
+                    <div id="qr_selected_members" style="display:flex;flex-wrap:wrap;gap:6px;min-height:16px;margin-bottom:14px;"></div>
+
+                    <!-- Generate + Publish -->
+                    <button onclick="generateStandaloneQr()" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:800;cursor:pointer;margin-bottom:8px;">⚡ Generate QR</button>
+                    <div id="qr_display" style="display:none;">
+                        <div id="qr_info" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:12px;margin-bottom:12px;font-size:0.82rem;color:var(--text-dim);text-align:center;"></div>
+                        <div id="qr_img" style="display:flex;justify-content:center;margin-bottom:10px;"></div>
+                        <div style="font-size:0.7rem;color:var(--text-dim);text-align:center;margin-bottom:12px;">Scan with PhonePe · GPay · Paytm · any UPI app</div>
+                        <div style="display:flex;gap:8px;margin-bottom:8px;">
+                            <button onclick="downloadStandaloneQr()" style="flex:1;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34d399;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">⬇ Download</button>
+                            <button onclick="shareStandaloneQr()" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:10px;border-radius:10px;font-size:0.78rem;font-weight:800;cursor:pointer;">↗ Share</button>
+                        </div>
+                        <button onclick="publishQrToMember()" style="width:100%;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;border:none;padding:12px;border-radius:10px;font-size:0.88rem;font-weight:900;cursor:pointer;">📤 Publish to Selected Members</button>
+                        <div id="qr_publish_status" style="font-size:0.72rem;text-align:center;color:var(--text-dim);margin-top:6px;min-height:14px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── WhatsApp Reminders (Admin only) ── -->
+        <div id="waReminderSection" class="admin-only-section" style="margin-top:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+            <div onclick="toggleWaSection()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:26px;height:26px;background:#25D366;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;">💬</div>
+                    <span style="font-size:0.82rem;font-weight:800;color:#34d399;text-transform:uppercase;letter-spacing:.5px;">WhatsApp Reminders</span>
+                </div>
+                <span id="waSectionChevron" style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;">&#9654;</span>
+            </div>
+            <div id="waSectionBody" style="display:none;border-top:1px solid var(--border);">
+                <div style="padding:14px 16px;">
+
+                    <!-- Contact number -->
+                    <div style="margin-bottom:12px;">
+                        <label class="form-label-small">Your Contact Number (appears in message)</label>
+                        <input type="text" id="wa_contact" class="form-input" style="margin-bottom:0;" placeholder="e.g. 9876543210">
+                    </div>
+
+                    <!-- Custom template (optional) -->
+                    <div style="margin-bottom:12px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                            <label class="form-label-small" style="margin-bottom:0;">Custom Template <span style="color:var(--text-dim);font-weight:400;">(optional)</span></label>
+                            <button onclick="document.getElementById('wa_template').value=''" style="background:none;border:none;color:var(--text-dim);font-size:0.65rem;cursor:pointer;padding:0;">Clear</button>
+                        </div>
+                        <textarea id="wa_template" class="form-input" rows="5" style="margin-bottom:4px;font-size:0.75rem;font-family:monospace;resize:vertical;" placeholder="Leave blank for default message. Use [Name] [Balance] [Groups] [Contact] as placeholders."></textarea>
+                        <div style="font-size:0.62rem;color:var(--text-dim);">Placeholders: [Name] [Balance] [Groups] [Contact]</div>
+                    </div>
+
+                    <!-- Member selection -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <label class="form-label-small" style="margin-bottom:0;">Select Members</label>
+                        <div style="display:flex;gap:6px;">
+                            <button onclick="waSelectAll()" style="background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);color:#34d399;border-radius:8px;padding:4px 10px;font-size:0.68rem;font-weight:800;cursor:pointer;">All</button>
+                            <button onclick="waClearAll()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;padding:4px 10px;font-size:0.68rem;font-weight:800;cursor:pointer;">Clear</button>
+                        </div>
+                    </div>
+                    <div id="waSelectedCount" style="font-size:0.7rem;color:#34d399;font-weight:700;margin-bottom:6px;min-height:14px;"></div>
+                    <div id="waMemberGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:260px;overflow-y:auto;margin-bottom:14px;"></div>
+
+                    <!-- Generate -->
+                    <button onclick="generateWaReminders()" style="width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;padding:13px;border-radius:12px;font-size:0.92rem;font-weight:800;cursor:pointer;margin-bottom:10px;">💬 Generate Reminders</button>
+                    <div id="waReminderCount" style="font-size:0.78rem;text-align:center;margin-bottom:8px;min-height:18px;"></div>
+                    <div id="waReminderList" style="display:flex;flex-direction:column;gap:10px;"></div>
                 </div>
             </div>
         </div>
@@ -572,6 +632,16 @@
             var open = body.style.display !== 'none';
             body.style.display      = open ? 'none'         : 'block';
             chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+            if(!open && typeof qrRenderVersions === 'function') qrRenderVersions();
+        }
+        function toggleWaSection(){
+            var body    = document.getElementById('waSectionBody');
+            var chevron = document.getElementById('waSectionChevron');
+            if(!body) return;
+            var open = body.style.display !== 'none';
+            body.style.display      = open ? 'none'         : 'block';
+            chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+            if(!open && typeof waRenderMemberGrid === 'function') waRenderMemberGrid();
         }
     </script>
     <script src="app.js"></script>
