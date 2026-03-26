@@ -166,11 +166,10 @@ function applyUserSession(user){
         document.getElementById('adminActionBtns').style.display = 'flex';
         document.getElementById('adminMemberSearch').style.display = '';
         document.getElementById('memberLedgerArea').style.display = 'none';
-    document.getElementById('qrGeneratorSection').style.display = '';
-    document.getElementById('waReminderSection').style.display = '';
-    document.getElementById('adminQuickBtns').style.display = '';
-    document.getElementById('memberQrArea').style.display = 'none';
+        document.getElementById('qrGeneratorSection').style.display = '';
+        document.getElementById('waReminderSection').style.display = '';
         document.getElementById('adminQuickBtns').style.display = 'flex';
+        document.getElementById('memberQrArea').style.display = 'none';
         updateUI();
         pollPendingRequests();
         setTimeout(checkAndShowBackupReminder, 1200);
@@ -216,9 +215,8 @@ function handleLogout(){
     document.getElementById('memberLedgerArea').style.display = 'none';
     document.getElementById('qrGeneratorSection').style.display = '';
     document.getElementById('waReminderSection').style.display = '';
-    document.getElementById('adminQuickBtns').style.display = '';
-    document.getElementById('memberQrArea').style.display = 'none';
     document.getElementById('adminQuickBtns').style.display = 'flex';
+    document.getElementById('memberQrArea').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('accessReqBtn').style.display = 'none';
     document.getElementById('headerRoleBadge').textContent = 'ADMIN';
