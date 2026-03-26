@@ -25,24 +25,16 @@ function renderMembersQuick(ms, gs, ps, filter=''){
         return;
     }
     list.innerHTML = filtered.map((m,i) => {
-        const mPays = ps.filter(p => p.memberId === m.id);
-        const totalPaid = mPays.reduce((s,p) => s+(parseFloat(p.paid)||0), 0);
-        const totalBal = mPays.reduce((s,p) => s+(parseFloat(p.balance)||0), 0);
-        const mGroups = (m.groupIds||[]).map(gid => { const g=gs.find(x=>x.id===gid); return g?g.name:'?'; }).join(', ');
         const initials = ini(m.name);
-        return `<div style="display:flex;align-items:center;gap:12px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
-            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;display:flex;align-items:center;justify-content:center;font-size:1.05rem;font-weight:900;flex-shrink:0;">${initials}</div>
+        return `<div style="display:flex;align-items:center;gap:10px;background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
+            <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;display:flex;align-items:center;justify-content:center;font-size:0.95rem;font-weight:900;flex-shrink:0;">${initials}</div>
             <div style="flex:1;min-width:0;">
-                <div style="font-weight:800;font-size:0.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
-                <div style="font-size:1.05rem;color:var(--text-dim);margin-top:1px;">📱 ${m.phone||'—'} &nbsp;·&nbsp; ${mGroups||'No groups'}</div>
-                <div style="display:flex;gap:8px;margin-top:4px;">
-                    <span style="font-size:1.05rem;color:#34d399;font-weight:700;">₹${totalPaid.toLocaleString('en-IN')} paid</span>
-                    ${totalBal>0?`<span style="font-size:1.05rem;color:#f59e0b;font-weight:700;">₹${totalBal.toLocaleString('en-IN')} bal</span>`:''}
-                </div>
+                <div style="font-weight:800;font-size:0.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.name}</div>
+                <div style="font-size:0.75rem;color:var(--text-dim);margin-top:2px;">📱 ${m.phone||'—'}</div>
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0;">
-                <button class="btn-edit-sm" onclick="closeModal('membersQuickModal');document.getElementById('summarySearch').value='${m.name.replace(/'/g,"\'")}';;document.getElementById('summaryView').value='${m.id}';loadMemberLedger();" style="font-size:1.05rem;padding:4px 9px;">📋 View</button>
-                ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditMember('${m.id}')" style="font-size:1.05rem;padding:4px 9px;">✏️</button>`:''}
+                <button class="btn-edit-sm" onclick="closeModal('membersQuickModal');document.getElementById('summarySearch').value='${m.name.replace(/'/g,"\'")}';document.getElementById('summaryView').value='${m.id}';loadMemberLedger();" style="font-size:0.7rem;padding:4px 9px;">📋 View</button>
+                ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditMember('${m.id}')" style="font-size:0.7rem;padding:4px 9px;">✏️</button>`:''}
             </div>
         </div>`;
     }).join('');
