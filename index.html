@@ -632,7 +632,19 @@
             var open = body.style.display !== 'none';
             body.style.display      = open ? 'none'         : 'block';
             chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
-            if(!open && typeof qrRenderVersions === 'function') qrRenderVersions();
+            if(!open){
+                // Poll until qr.js is loaded, then render versions
+                var attempts = 0;
+                var poll = setInterval(function(){
+                    attempts++;
+                    if(typeof qrRenderVersions === 'function'){
+                        clearInterval(poll);
+                        qrRenderVersions();
+                    } else if(attempts > 20){
+                        clearInterval(poll);
+                    }
+                }, 100);
+            }
         }
         function toggleWaSection(){
             var body    = document.getElementById('waSectionBody');
