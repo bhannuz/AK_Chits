@@ -203,7 +203,7 @@ async function loadMemberLedger(){
                     </div>
                     <div style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:8px;text-align:center;">
                         <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${(()=>{const nd=allDueDates.find((d,i)=>!paidSlotSet.has(i));return nd?fmtDate(nd):'--';})()}</div>
-                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Due Date</div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Next Due Date</div>
                     </div>
                     <div style="flex:1;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:8px;text-align:center;">
                         <div style="font-size:0.85rem;font-weight:800;color:#f87171;">${left} <span style="font-size:0.65rem;font-weight:600;">/ ${totalMonths}</span></div>
