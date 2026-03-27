@@ -83,7 +83,15 @@ async function renderGroupsTab(){
         });
         const totalSlots=expandedSlots.length;
         const memberRows=expandedSlots.map(({m,slotNum,totalSlots},i)=>{
-            const mp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
+            const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
+            const allMp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
+            const mp=totalSlots>1
+                ?allMp.filter(p=>{
+                    if(enr&&enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId&&(p.slotNum==null||p.slotNum===slotNum);
+                    if(p.slotNum!=null) return p.slotNum===slotNum;
+                    return slotNum===1;
+                })
+                :allMp;
             const paid=mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
             const bal=mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
             const pickedPay=mp.find(p=>p.chitPicked==='Yes');
