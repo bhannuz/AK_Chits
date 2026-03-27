@@ -7,9 +7,22 @@ var _qrSelectedMembers  = {}; // memberId -> memberName
 var _waSelectedMembers  = {}; // memberId -> memberName
 // ═══════════════════════════════════════════════════════════
 // QR — VERSION SAVING (Firestore — syncs across all devices)
+// Stored as array in: settings/qrVersions { list: [...] }
 // ═══════════════════════════════════════════════════════════
 
-var QR_VERSIONS_DOC = 'settings/qrVersions'; // single Firestore doc
+// Read full list from Firestore
+async function _qrFetchVersions(){
+    try{
+        var doc = await db.collection('settings').doc('qrVersions').get();
+        if(!doc.exists) return [];
+        return doc.data().list || [];
+    } catch(e){ console.error('qr fetch err:', e); return []; }
+}
+
+// Write full list back to Firestore
+async function _qrWriteVersions(list){
+    await db.collection('settings').doc('qrVersions').set({ list: list });
+}
 
 async function qrSaveVersion(){
     var name = (document.getElementById('qr_version_name').value||'').trim();
@@ -26,10 +39,11 @@ async function qrSaveVersion(){
     };
 
     try{
-        // Use set with merge so other versions are not overwritten
-        var update = {};
-        update['versions.' + name.replace(/\./g,'_')] = ver;
-        await db.collection('settings').doc('qrVersions').set(update, { merge: true });
+        var list = await _qrFetchVersions();
+        // Replace if same name exists, otherwise append
+        var idx = list.findIndex(function(v){ return v.name === name; });
+        if(idx >= 0) list[idx] = ver; else list.push(ver);
+        await _qrWriteVersions(list);
         showToast('💾 Saved: ' + name, true);
         qrRenderVersions();
     } catch(e){
@@ -38,23 +52,12 @@ async function qrSaveVersion(){
     }
 }
 
-async function qrLoadVersionsFromFirestore(){
-    try{
-        var doc = await db.collection('settings').doc('qrVersions').get();
-        return doc.exists ? (doc.data().versions || {}) : {};
-    } catch(e){
-        console.error(e);
-        return {};
-    }
-}
-
 function qrLoadVersion(ver){
-    // ver is the full version object (passed directly)
     document.getElementById('qr_version_name').value = ver.name || '';
-    document.getElementById('qr_upi').value   = ver.upi  || '';
-    document.getElementById('qr_amt').value   = ver.amt  || '';
-    document.getElementById('qr_note').value  = ver.note || '';
-    document.getElementById('qr_due').value   = ver.due  || '';
+    document.getElementById('qr_upi').value          = ver.upi  || '';
+    document.getElementById('qr_amt').value          = ver.amt  || '';
+    document.getElementById('qr_note').value         = ver.note || '';
+    document.getElementById('qr_due').value          = ver.due  || '';
 
     _qrSelectedMembers = Object.assign({}, ver.members||{});
     var container = document.getElementById('qr_selected_members');
@@ -69,9 +72,9 @@ function qrLoadVersion(ver){
 
 async function qrDeleteVersion(name){
     try{
-        var update = {};
-        update['versions.' + name.replace(/\./g,'_')] = firebase.firestore.FieldValue.delete();
-        await db.collection('settings').doc('qrVersions').update(update);
+        var list = await _qrFetchVersions();
+        list = list.filter(function(v){ return v.name !== name; });
+        await _qrWriteVersions(list);
         showToast('🗑 Deleted: ' + name);
         qrRenderVersions();
     } catch(e){
@@ -82,15 +85,16 @@ async function qrDeleteVersion(name){
 
 function qrNewForm(){
     document.getElementById('qr_version_name').value = '';
-    document.getElementById('qr_upi').value   = '';
-    document.getElementById('qr_amt').value   = '';
-    document.getElementById('qr_note').value  = '';
-    document.getElementById('qr_due').value   = '';
+    document.getElementById('qr_upi').value          = '';
+    document.getElementById('qr_amt').value          = '';
+    document.getElementById('qr_note').value         = '';
+    document.getElementById('qr_due').value          = '';
     _qrSelectedMembers = {};
     var c = document.getElementById('qr_selected_members');
     if(c) c.innerHTML = '';
     document.getElementById('qr_display').style.display = 'none';
-    document.getElementById('qr_publish_status').textContent = '';
+    var ps = document.getElementById('qr_publish_status');
+    if(ps) ps.textContent = '';
 }
 
 async function qrRenderVersions(){
@@ -98,34 +102,30 @@ async function qrRenderVersions(){
     var list = document.getElementById('qr_versions_list');
     if(!bar || !list) return;
 
-    list.innerHTML = '<div style="font-size:0.7rem;color:var(--text-dim);">⏳ Loading...</div>';
+    list.innerHTML = '<div style="font-size:0.7rem;color:var(--text-dim);padding:4px;">⏳ Loading...</div>';
     bar.style.display = 'block';
 
-    var vers = await qrLoadVersionsFromFirestore();
-    var keys = Object.keys(vers);
-
-    if(!keys.length){ bar.style.display = 'none'; return; }
+    var vers = await _qrFetchVersions();
+    if(!vers.length){ bar.style.display = 'none'; return; }
 
     list.innerHTML = '';
-    keys.forEach(function(key){
-        var ver  = vers[key];
-        var name = ver.name || key;
+    vers.forEach(function(ver){
         var memberCount = Object.keys(ver.members||{}).length;
 
         var wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        wrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-bottom:2px;';
 
         var btn = document.createElement('button');
         btn.style.cssText = 'background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.35);color:#f39c12;border-radius:16px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer;text-align:left;';
-        btn.innerHTML = '📂 ' + name +
-            (ver.amt ? ' <span style="color:var(--text-dim);">₹'+parseFloat(ver.amt).toLocaleString('en-IN')+'</span>' : '') +
-            (memberCount ? ' <span style="color:#a5b4fc;">·'+memberCount+'m</span>' : '');
+        btn.innerHTML = '📂 ' + ver.name
+            + (ver.amt  ? ' <span style="color:var(--text-dim);">₹'+parseFloat(ver.amt).toLocaleString('en-IN')+'</span>' : '')
+            + (memberCount ? ' <span style="color:#a5b4fc;"> · '+memberCount+' members</span>' : '');
         btn.onclick = (function(v){ return function(){ qrLoadVersion(v); }; })(ver);
 
         var del = document.createElement('button');
         del.textContent = '✕';
-        del.style.cssText = 'background:none;border:none;color:#f87171;cursor:pointer;font-size:0.8rem;padding:0 2px;';
-        del.onclick = (function(n){ return function(){ if(confirm('Delete "'+n+'"?')) qrDeleteVersion(n); }; })(name);
+        del.style.cssText = 'background:none;border:none;color:#f87171;cursor:pointer;font-size:0.8rem;padding:0 2px;line-height:1;';
+        del.onclick = (function(n){ return function(){ if(confirm('Delete version "'+n+'"?')) qrDeleteVersion(n); }; })(ver.name);
 
         wrap.appendChild(btn);
         wrap.appendChild(del);
