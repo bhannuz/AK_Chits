@@ -75,20 +75,25 @@ async function loadMemberLedger(){
         });
 
         const mergedRows = allDueDates.map((dueDate, i)=>{
-            const matchPay = slotPays.find(p=>{
+            // Collect ALL payments for this slot (handles multiple installments)
+            const slotMatchPays = slotPays.filter(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
                 if(p.monthSlot!=null) return p.monthSlot===i;
                 return getMonthSlot(allDueDates, p.date)===i;
             });
+            const matchPay = slotMatchPays.length ? slotMatchPays[0] : null;
+            const hasInstallments = slotMatchPays.length > 1;
 
-            const paidAmt       = matchPay ? (parseFloat(matchPay.paid)||0)   : 0;
-            const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
-            const balAmt        = matchPay ? (parseFloat(matchPay.balance)||0) : 0;
-            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && paidAmt>=chitAmt;
-            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && paidAmt>0 && paidAmt<chitAmt;
+            // Aggregate totals across all installments for this slot
+            const totalPaidForSlot = slotMatchPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+            const chitAmt          = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
+            const latestBal        = slotMatchPays.length ? (parseFloat(slotMatchPays[slotMatchPays.length-1].balance)||0) : 0;
+
+            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && totalPaidForSlot>=chitAmt;
+            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && totalPaidForSlot>0 && totalPaidForSlot<chitAmt;
             const isAnyPaid     = paidSlotSet.has(i);
             const isOverdue     = !isAnyPaid && dueDate < today;
-            const cp            = matchPay && matchPay.chitPicked==='Yes';
+            const cp            = slotMatchPays.some(p=>p.chitPicked==='Yes');
             const isMulti       = matchPay && matchPay.numMonths && matchPay.numMonths>1;
 
             // For multi-month: only render payment detail cells on FIRST slot row
@@ -109,11 +114,8 @@ async function loadMemberLedger(){
                         : '';
 
             const dateColor = isFullPaid ? '#a5b4fc' : isPartialPaid ? '#fbbf24' : isOverdue ? '#f87171' : '#c7d2fe';
-
-            // Due date cell — for sub-rows of multi just show the month date
             const dueDateCell = `<td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>`;
 
-            // If this is a sub-row of a multi-month payment, skip payment detail cells (already merged above)
             if(isSubOfMulti){
                 return `<tr style="background:${rowBg};${rowBL}">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
@@ -122,7 +124,7 @@ async function loadMemberLedger(){
                 </tr>`;
             }
 
-            // Status badge
+            // Status badge based on aggregated totals
             let statusBadge;
             if(isFullPaid || (isAnyPaid && chitAmt===0)){
                 statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`;
@@ -134,35 +136,75 @@ async function loadMemberLedger(){
                 statusBadge = `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
             }
 
-            const payDateCell    = matchPay ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-            const paidCell       = isAnyPaid && matchPay ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(paidAmt)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-            const balCell        = matchPay && balAmt>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(balAmt)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-            const modeCell       = matchPay && matchPay.paidBy ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-            const chitPickedCell = cp
-                ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${matchPay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${matchPay.chitPickedBy}</div>`:''}`
-                : `<span style="color:var(--text-dim);">—</span>`;
-            const editCell = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
-
-            // Multi-month label on first row
+            const rs = span > 1 ? ` rowspan="${span}"` : '';
             const multiTag = isFirstOfMulti
                 ? `<span style="display:block;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-top:2px;">×${matchPay.numMonths} months bulk</span>`
                 : '';
 
-            // rowspan attr for merged payment detail cells
-            const rs = span > 1 ? ` rowspan="${span}"` : '';
+            // ── Single payment row (no installments) ──────────────────────────
+            if(!hasInstallments){
+                const payDateCell    = matchPay ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+                const paidCell       = isAnyPaid && matchPay ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+                const balCell        = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+                const modeCell       = matchPay && matchPay.paidBy ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+                const cpPay          = slotMatchPays.find(p=>p.chitPicked==='Yes');
+                const chitPickedCell = cpPay
+                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${cpPay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${cpPay.chitPickedBy}</div>`:''}`
+                    : `<span style="color:var(--text-dim);">—</span>`;
+                const editCell = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
+                return `<tr style="background:${rowBg};${rowBL}">
+                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
+                    ${dueDateCell}
+                    <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
+                    <td${rs} style="vertical-align:middle;">${payDateCell}${multiTag}</td>
+                    <td${rs} style="vertical-align:middle;">${paidCell}</td>
+                    <td${rs} style="vertical-align:middle;">${balCell}</td>
+                    <td${rs} style="vertical-align:middle;">${statusBadge}</td>
+                    <td${rs} style="vertical-align:middle;">${modeCell}</td>
+                    <td${rs} style="vertical-align:middle;">${chitPickedCell}</td>
+                    <td${rs} style="vertical-align:middle;">${editCell}</td>
+                </tr>`;
+            }
+
+            // ── Multiple installments for this slot ───────────────────────────
+            // Main row: shows due date, chit/mo, aggregated total, final balance, status
+            const installmentSubRows = slotMatchPays.map((ip, idx)=>{
+                const iPaid = parseFloat(ip.paid)||0;
+                const iBal  = parseFloat(ip.balance)||0;
+                const iMode = ip.paidBy||'—';
+                const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
+                const iCp   = ip.chitPicked==='Yes';
+                return `<tr style="background:rgba(99,102,241,0.04);border-left:3px solid rgba(99,102,241,0.3);">
+                    <td style="text-align:center;color:rgba(99,102,241,0.5);font-size:0.6rem;padding:4px 6px;">↳${idx+1}</td>
+                    <td style="font-size:0.65rem;color:var(--text-dim);padding:4px 6px;">Installment ${idx+1}</td>
+                    <td style="padding:4px 6px;"></td>
+                    <td style="padding:4px 6px;font-size:0.7rem;color:var(--text-dim);">${fmtDate(ip.date)}</td>
+                    <td style="padding:4px 6px;font-size:0.75rem;font-weight:700;color:${idx===slotMatchPays.length-1&&isFullPaid?'#34d399':'#fbbf24'};">${fmtAmt(iPaid)}</td>
+                    <td style="padding:4px 6px;font-size:0.75rem;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
+                    <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iCp?'🏆':''}</td>
+                    <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iMode}</td>
+                    <td style="padding:4px 6px;"></td>
+                    <td style="padding:4px 6px;">${iEdit}</td>
+                </tr>`;
+            }).join('');
+
+            const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span><span style="display:block;font-size:0.58rem;color:var(--text-dim);margin-top:1px;">${slotMatchPays.length} installments</span>`;
+            const finalBalCell  = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+            const cpPay2        = slotMatchPays.find(p=>p.chitPicked==='Yes');
+            const cpCell2       = cpPay2 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : `<span style="color:var(--text-dim);">—</span>`;
 
             return `<tr style="background:${rowBg};${rowBL}">
-                <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
-                ${dueDateCell}
-                <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                <td${rs} style="vertical-align:middle;">${payDateCell}${multiTag}</td>
-                <td${rs} style="vertical-align:middle;">${paidCell}</td>
-                <td${rs} style="vertical-align:middle;">${balCell}</td>
-                <td${rs} style="vertical-align:middle;">${statusBadge}</td>
-                <td${rs} style="vertical-align:middle;">${modeCell}</td>
-                <td${rs} style="vertical-align:middle;">${chitPickedCell}</td>
-                <td${rs} style="vertical-align:middle;">${editCell}</td>
-            </tr>`;
+                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
+                    ${dueDateCell}
+                    <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
+                    <td style="vertical-align:middle;font-size:0.65rem;color:var(--text-dim);">multiple</td>
+                    <td style="vertical-align:middle;">${totalPaidCell}</td>
+                    <td style="vertical-align:middle;">${finalBalCell}</td>
+                    <td style="vertical-align:middle;">${statusBadge}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.65rem;">—</td>
+                    <td style="vertical-align:middle;">${cpCell2}</td>
+                    <td style="vertical-align:middle;"></td>
+                </tr>${installmentSubRows}`;
         }).join('');
 
         // ── Count summary for schedule ────────────────────────────────────────
