@@ -14,14 +14,30 @@ var _waSelectedMembers  = {}; // memberId -> memberName
 async function _qrFetchVersions(){
     try{
         var doc = await db.collection('settings').doc('qrVersions').get();
+        console.log('[QR] fetch exists:', doc.exists, doc.exists ? 'list len:' + (doc.data().list||[]).length : 'no doc');
         if(!doc.exists) return [];
-        return doc.data().list || [];
-    } catch(e){ console.error('qr fetch err:', e); return []; }
+        var list = doc.data().list || [];
+        // Sanitize — ensure each item is a plain object
+        return list.filter(function(v){ return v && typeof v === 'object' && v.name; });
+    } catch(e){
+        console.error('[QR] fetch error:', e.code, e.message);
+        return [];
+    }
 }
 
-// Write full list back to Firestore
+// Write full list back to Firestore — sanitize members map before writing
 async function _qrWriteVersions(list){
-    await db.collection('settings').doc('qrVersions').set({ list: list });
+    // Strip any non-serializable values from members
+    var clean = list.map(function(v){
+        var m = {};
+        Object.keys(v.members||{}).forEach(function(k){
+            var val = v.members[k];
+            m[k] = (typeof val === 'string') ? val : String(val||'');
+        });
+        return Object.assign({}, v, { members: m });
+    });
+    console.log('[QR] writing', clean.length, 'version(s)');
+    await db.collection('settings').doc('qrVersions').set({ list: clean });
 }
 
 async function qrSaveVersion(){
@@ -102,21 +118,30 @@ async function qrRenderVersions(){
     var list = document.getElementById('qr_versions_list');
     if(!bar || !list) return;
 
-    list.innerHTML = '<div style="font-size:0.7rem;color:var(--text-dim);padding:4px;">⏳ Loading...</div>';
+    // Show loading immediately
     bar.style.display = 'block';
+    list.innerHTML = '<div style="font-size:0.72rem;color:var(--text-dim);padding:4px 0;">⏳ Loading saved versions...</div>';
 
     var vers = await _qrFetchVersions();
-    if(!vers.length){ bar.style.display = 'none'; return; }
 
+    if(!vers || !vers.length){
+        bar.style.display = 'none';
+        list.innerHTML = '';
+        return;
+    }
+
+    bar.style.display = 'block';
     list.innerHTML = '';
+
     vers.forEach(function(ver){
+        if(!ver || !ver.name) return;
         var memberCount = Object.keys(ver.members||{}).length;
 
         var wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-bottom:2px;';
+        wrap.style.cssText = 'display:flex;align-items:center;gap:4px;margin-bottom:4px;';
 
         var btn = document.createElement('button');
-        btn.style.cssText = 'background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.35);color:#f39c12;border-radius:16px;padding:5px 12px;font-size:0.72rem;font-weight:700;cursor:pointer;text-align:left;';
+        btn.style.cssText = 'background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.35);color:#f39c12;border-radius:16px;padding:6px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;text-align:left;max-width:85%;';
         btn.innerHTML = '📂 ' + ver.name
             + (ver.amt  ? ' <span style="color:var(--text-dim);">₹'+parseFloat(ver.amt).toLocaleString('en-IN')+'</span>' : '')
             + (memberCount ? ' <span style="color:#a5b4fc;"> · '+memberCount+' members</span>' : '');
@@ -124,7 +149,7 @@ async function qrRenderVersions(){
 
         var del = document.createElement('button');
         del.textContent = '✕';
-        del.style.cssText = 'background:none;border:none;color:#f87171;cursor:pointer;font-size:0.8rem;padding:0 2px;line-height:1;';
+        del.style.cssText = 'background:none;border:none;color:#f87171;cursor:pointer;font-size:0.85rem;padding:2px 4px;line-height:1;flex-shrink:0;';
         del.onclick = (function(n){ return function(){ if(confirm('Delete version "'+n+'"?')) qrDeleteVersion(n); }; })(ver.name);
 
         wrap.appendChild(btn);
