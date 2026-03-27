@@ -179,15 +179,11 @@ async function loadMemberLedger(){
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${gStartDisplay}</span>
-                            ${grp.dueDay?`<span style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f39c12;">Due: ${gDueDayOrd}</span>`:''}
                             ${chitAmount>0?`<span style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">💰 ${fmtAmt(chitAmount)}/mo</span>`:''}
                             ${chitPickedPay?`<span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#34d399;">🏆 Chit Picked</span>`:''}
                         </div>
                     </div>
-                    <div style="text-align:right;flex-shrink:0;">
-                        <div style="font-size:1.1rem;font-weight:900;color:#a5b4fc;">${left}<span style="font-size:0.72rem;color:var(--text-dim);">/${totalMonths}</span></div>
-                        <div style="font-size:0.62rem;color:var(--text-dim);text-transform:uppercase;">months pending</div>
-                    </div>
+
                 </div>
                 <!-- Progress bar -->
                 <div style="margin-top:10px;">
@@ -206,8 +202,12 @@ async function loadMemberLedger(){
                         <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Paid</div>
                     </div>
                     <div style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:8px;text-align:center;">
-                        <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${fmtAmt(tBal)}</div>
-                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Balance Due</div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${grp.dueDay?`${gDueDayOrd} of mo`:'--'}</div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Due Date</div>
+                    </div>
+                    <div style="flex:1;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:8px;text-align:center;">
+                        <div style="font-size:0.85rem;font-weight:800;color:#f87171;">${left} <span style="font-size:0.65rem;font-weight:600;">/ ${totalMonths}</span></div>
+                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Pending</div>
                     </div>
                     ${chitAmount>0?`<div style="flex:1;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;padding:8px;text-align:center;">
                         <div style="font-size:0.85rem;font-weight:800;color:#a5b4fc;">${fmtAmt(chitAmount*left)}</div>
