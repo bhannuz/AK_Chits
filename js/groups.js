@@ -5,15 +5,23 @@
 
 // GROUP CRUD
 // ══════════════════════════════════════════
+function toggleGroupAmtType(){
+    const isFixed = document.getElementById('gAmtFixed').checked;
+    document.getElementById('gFixedAmtRow').style.display = isFixed ? 'block' : 'none';
+}
+
 function openAddGroup(){
     if(!isAdmin()){showToast('🚫 Access denied',false);return;}
     document.getElementById('gName').value='';
     document.getElementById('gDuration').value='';
     document.getElementById('gDueDay').value='';
     document.getElementById('gStart').value='';
+    document.getElementById('gFixedAmt').value='';
     document.getElementById('editGroupId').value='';
     document.getElementById('groupModalTitle').textContent='🏦 New Group';
     document.getElementById('deleteGroupArea').style.display='none';
+    document.getElementById('gAmtFixed').checked=true;
+    toggleGroupAmtType();
     openModal('groupModal');
 }
 
@@ -25,6 +33,11 @@ async function openEditGroup(gid){
     document.getElementById('gDuration').value=g.duration||g.gDuration||'';
     document.getElementById('gDueDay').value=g.dueDay||'';
     document.getElementById('gStart').value=g.startDate||g.gStart||'';
+    document.getElementById('gFixedAmt').value=g.fixedAmt||'';
+    const isFixed = g.amtType!=='variable';
+    document.getElementById('gAmtFixed').checked=isFixed;
+    document.getElementById('gAmtVariable').checked=!isFixed;
+    toggleGroupAmtType();
     document.getElementById('groupModalTitle').textContent='✏️ Edit Group';
     document.getElementById('deleteGroupArea').style.display='block';
     openModal('groupModal');
@@ -39,8 +52,11 @@ async function saveGroup(){
     const eid=document.getElementById('editGroupId').value;
     if(!name)return showToast('❌ Enter group name',false);
     if(dueDay&&(dueDay<1||dueDay>31))return showToast('❌ Due Day must be 1–31',false);
-    const data={name,duration,startDate};
+    const amtType = document.querySelector('input[name="gAmtType"]:checked')?.value||'fixed';
+    const fixedAmt = amtType==='fixed'?(parseFloat(document.getElementById('gFixedAmt').value)||0):0;
+    const data={name,duration,startDate,amtType};
     if(dueDay) data.dueDay=dueDay;
+    if(amtType==='fixed'&&fixedAmt>0) data.fixedAmt=fixedAmt;
     if(eid)await db.collection('groups').doc(eid).update(data);
     else await db.collection('groups').add(data);
     bustCache('groups');
@@ -93,7 +109,18 @@ async function renderGroupsTab(){
                 })
                 :allMp;
             const paid=mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-            const bal=mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+            const rawBal=mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+            // For fixed-amount groups: compute outstanding balance = (overdue unpaid months * fixedAmt) + any recorded balance
+            const fixedAmt=g.amtType!=='variable'&&g.fixedAmt?parseFloat(g.fixedAmt):0;
+            const allDD=getGroupDueDates(g);
+            const paidSlotNums=new Set();
+            mp.forEach(p=>{
+                if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>paidSlotNums.add(s));
+                else if(p.monthSlot!=null)paidSlotNums.add(p.monthSlot);
+            });
+            const todayStr=new Date().toISOString().split('T')[0];
+            const unpaidOverdueMonths=fixedAmt>0?allDD.filter((d,idx)=>!paidSlotNums.has(idx)&&d<todayStr).length:0;
+            const bal=fixedAmt>0?(rawBal+(unpaidOverdueMonths*fixedAmt)):rawBal;
             const pickedPay=mp.find(p=>p.chitPicked==='Yes');
             const pickedAmt=pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
             const pickedBy=pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
