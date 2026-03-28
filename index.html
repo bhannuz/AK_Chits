@@ -258,21 +258,16 @@
                 <div style="padding:16px;border-bottom:1px solid var(--border);">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
                         <div>
-                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🏷️ Group Name</div>
-                            <input id="ncp_name" type="text" class="form-input" placeholder="e.g. Gold Chit" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
-                        </div>
-                        <div>
                             <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">💰 Chit Amount (₹)</div>
                             <input id="ncp_amount" type="number" class="form-input" placeholder="e.g. 500000" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
                         </div>
-                        <div style="grid-column:span 2;">
-                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">👥 Members / Duration (e.g. 13/13)</div>
-                            <div style="display:flex;align-items:center;gap:0;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
-                                <input id="ncp_members" type="number" class="form-input" placeholder="Members" oninput="ncpSyncMembDur();ncpAutoSave();" style="margin-bottom:0;padding:9px 11px;font-size:0.95rem;font-weight:800;text-align:center;border:none;border-radius:0;flex:1;background:transparent;">
-                                <span style="font-size:1.2rem;font-weight:900;color:var(--text-dim);padding:0 4px;">/</span>
-                                <input id="ncp_duration" type="number" class="form-input" placeholder="Months" oninput="ncpAutoSave();" style="margin-bottom:0;padding:9px 11px;font-size:0.95rem;font-weight:800;text-align:center;border:none;border-radius:0;flex:1;background:transparent;">
+                        <div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">👥 Members / Months</div>
+                            <div style="display:flex;align-items:center;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+                                <input id="ncp_members" type="number" class="form-input" placeholder="13" oninput="ncpSyncMembDur();ncpAutoSave();" style="margin-bottom:0;padding:9px 8px;font-size:0.95rem;font-weight:800;text-align:center;border:none;border-radius:0;flex:1;background:transparent;">
+                                <span style="font-size:1.1rem;font-weight:900;color:var(--text-dim);padding:0 2px;">/</span>
+                                <input id="ncp_duration" type="number" class="form-input" placeholder="13" oninput="ncpAutoSave();" style="margin-bottom:0;padding:9px 8px;font-size:0.95rem;font-weight:800;text-align:center;border:none;border-radius:0;flex:1;background:transparent;">
                             </div>
-                            <div style="font-size:0.6rem;color:var(--text-dim);margin-top:4px;text-align:center;">No. of Members / Duration in months — type members to auto-fill duration</div>
                         </div>
                         <div>
                             <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">🗓️ Start Date</div>
@@ -303,8 +298,8 @@
                                 <input id="ncp_incr_min" type="number" min="0" max="50" step="0.5" class="form-input" placeholder="e.g. 10" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
                             </div>
                             <div>
-                                <div style="font-size:0.6rem;color:var(--text-dim);margin-bottom:4px;">Max Discount % <span style="color:#34d399;">(last winner)</span></div>
-                                <input id="ncp_incr_max" type="number" min="0" max="50" step="0.5" class="form-input" placeholder="e.g. 0" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
+                                <div style="font-size:0.6rem;color:var(--text-dim);margin-bottom:4px;">Max Discount % <span style="color:#34d399;">(last winner — use negative for bonus)</span></div>
+                                <input id="ncp_incr_max" type="number" min="-50" max="50" step="0.5" class="form-input" placeholder="e.g. -10 or 0" oninput="ncpAutoSave()" style="margin-bottom:0;padding:9px 11px;font-size:0.85rem;">
                             </div>
                         </div>
                         <div style="font-size:0.6rem;color:var(--text-dim);margin-top:6px;">Month 1 winner gets lowest payout (highest discount). Last month winner gets full/near-full amount. Leave blank to use commission-based spread.</div>
