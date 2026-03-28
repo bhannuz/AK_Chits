@@ -266,19 +266,21 @@ function ncpGenerate(savedRows){
         var incrMin = parseFloat(document.getElementById('ncp_incr_min').value)||0; // discount % for month 1
         var incrMax = parseFloat(document.getElementById('ncp_incr_max').value)||0; // discount % for last month
         var autoChit;
-        if(incrMin > 0 || incrMax > 0){
-            // Linearly interpolate from (amount * (1 - incrMin/100)) to (amount * (1 - incrMax/100))
+        if(incrMin !== 0 || incrMax !== 0){
+            // Linearly interpolate: negative incrMax = bonus above chit amount for last winner
             var payoutStart = Math.round(amount * (1 - incrMin / 100));
             var payoutEnd   = Math.round(amount * (1 - incrMax / 100));
             autoChit = duration > 1
                 ? Math.round(payoutStart + ((payoutEnd - payoutStart) / (duration - 1)) * i)
                 : payoutEnd;
+            // Do NOT cap at amount when bonus is intended (negative incrMax)
+            if(incrMax >= 0 && autoChit > amount) autoChit = amount;
         } else {
             autoChit = duration > 1
                 ? Math.round((amount - commAmt) + (commAmt / (duration - 1)) * i)
                 : amount;
         }
-        if(autoChit > amount) autoChit = amount;
+        if(incrMin === 0 && incrMax === 0 && autoChit > amount) autoChit = amount;
 
         var savedPay  = savedRows && savedRows[i] ? savedRows[i].pay  : (monthlyPay||'');
         var savedChit = savedRows && savedRows[i] ? savedRows[i].chit : autoChit;
