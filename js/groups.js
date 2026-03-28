@@ -100,8 +100,9 @@ async function renderGroupsTab(){
         const totalSlots=expandedSlots.length;
         const memberRows=expandedSlots.map(({m,slotNum,totalSlots},i)=>{
             const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
+            const memberQty=enr?parseInt(enr.qty||1):1; // per-member chit count
             const allMp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
-            const mp=totalSlots>1
+            const mp=memberQty>1
                 ?allMp.filter(p=>{
                     if(enr&&enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId&&(p.slotNum==null||p.slotNum===slotNum);
                     if(p.slotNum!=null) return p.slotNum===slotNum;
@@ -124,7 +125,14 @@ async function renderGroupsTab(){
             const pickedPay=mp.find(p=>p.chitPicked==='Yes');
             const pickedAmt=pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
             const pickedBy=pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
-            const monthsCovered=mp.reduce((s,p)=>s+(p.numMonths||1),0);
+            // Count unique paid slots (not sum of numMonths) to avoid double-counting installments
+            const _paidSlots=new Set();
+            mp.forEach(p=>{
+                if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>_paidSlots.add(s));
+                else if(p.monthSlot!=null)_paidSlots.add(p.monthSlot);
+                else _paidSlots.add('pay_'+p.id);
+            });
+            const monthsCovered=_paidSlots.size;
             const multiChitBadge=totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">×${totalSlots} chits</span>`:'';
             const slotLabel=totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
             return [
