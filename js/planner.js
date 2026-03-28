@@ -15,6 +15,13 @@ function ncpGetAll(){
 function ncpSetAll(obj){ localStorage.setItem(NCP_STORE_KEY, JSON.stringify(obj)); }
 
 // ── Read current form values ─────────────────────────────────────────────────
+function ncpSyncMembDur(){
+    // Auto-fill duration when members is typed (13/13 pattern)
+    var m = parseInt(document.getElementById('ncp_members').value)||0;
+    var d = document.getElementById('ncp_duration');
+    if(m > 0 && !d.value) d.value = m;
+}
+
 function ncpReadForm(){
     var rows = [];
     document.querySelectorAll('#ncp_rows .ncp-row').forEach(function(row){
@@ -29,6 +36,8 @@ function ncpReadForm(){
         dueday:     document.getElementById('ncp_dueday').value,
         commission: document.getElementById('ncp_commission').value,
         member:     document.getElementById('ncp_member').value,
+        incr_min:   document.getElementById('ncp_incr_min').value,
+        incr_max:   document.getElementById('ncp_incr_max').value,
         rows:       rows,
         tableVisible: document.getElementById('ncp_tableWrap').style.display !== 'none'
     };
@@ -44,6 +53,8 @@ function ncpFillForm(data){
     document.getElementById('ncp_dueday').value     = data.dueday     || '';
     document.getElementById('ncp_commission').value = data.commission || '';
     document.getElementById('ncp_member').value     = data.member     || '';
+    document.getElementById('ncp_incr_min').value   = data.incr_min   || '';
+    document.getElementById('ncp_incr_max').value   = data.incr_max   || '';
     if(data.tableVisible && data.rows && data.rows.length){
         ncpGenerate(data.rows);
     } else {
@@ -90,7 +101,7 @@ function ncpSaveVersion(){
 function ncpNewPlanner(){
     _ncpActive = null;
     localStorage.removeItem(NCP_ACTIVE_KEY);
-    ['ncp_name','ncp_amount','ncp_members','ncp_duration','ncp_start','ncp_dueday','ncp_commission','ncp_member'].forEach(function(id){
+    ['ncp_name','ncp_amount','ncp_members','ncp_duration','ncp_start','ncp_dueday','ncp_commission','ncp_member','ncp_incr_min','ncp_incr_max'].forEach(function(id){
         document.getElementById(id).value = '';
     });
     document.getElementById('ncp_version_label').value = '';
@@ -251,10 +262,22 @@ function ncpGenerate(savedRows){
 
         // Increasing net payout: month 1 = amount - commAmt, month N = amount
         // Spread evenly across duration
-        var autoChit = duration > 1
-            ? Math.round((amount - commAmt) + (commAmt / (duration - 1)) * i)
-            : amount;
-        // Cap at chit amount
+        // Payout spread: use incr range if provided, else fall back to commission spread
+        var incrMin = parseFloat(document.getElementById('ncp_incr_min').value)||0; // discount % for month 1
+        var incrMax = parseFloat(document.getElementById('ncp_incr_max').value)||0; // discount % for last month
+        var autoChit;
+        if(incrMin > 0 || incrMax > 0){
+            // Linearly interpolate from (amount * (1 - incrMin/100)) to (amount * (1 - incrMax/100))
+            var payoutStart = Math.round(amount * (1 - incrMin / 100));
+            var payoutEnd   = Math.round(amount * (1 - incrMax / 100));
+            autoChit = duration > 1
+                ? Math.round(payoutStart + ((payoutEnd - payoutStart) / (duration - 1)) * i)
+                : payoutEnd;
+        } else {
+            autoChit = duration > 1
+                ? Math.round((amount - commAmt) + (commAmt / (duration - 1)) * i)
+                : amount;
+        }
         if(autoChit > amount) autoChit = amount;
 
         var savedPay  = savedRows && savedRows[i] ? savedRows[i].pay  : (monthlyPay||'');
