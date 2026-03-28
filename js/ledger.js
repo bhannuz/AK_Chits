@@ -25,7 +25,17 @@ async function loadMemberLedger(){
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
-        const monthsDone   = slotPays.reduce((s,p)=>s+(p.numMonths||1),0);
+        // Only count months that are FULLY paid (total paid >= chit amount for that slot)
+        const chitRef = slotPays.length ? (parseFloat(slotPays[slotPays.length-1].chit)||0) : 0;
+        const _allDD  = allDueDates; // reference for slot matching below
+        // Build per-slot paid totals to determine fully paid months
+        const _slotTotals = {};
+        slotPays.forEach(p=>{
+            const slots = Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
+            slots.forEach(s=>{ _slotTotals[s]=(_slotTotals[s]||0)+(parseFloat(p.paid)||0); });
+        });
+        const fullyPaidSlots = Object.keys(_slotTotals).filter(s=>chitRef<=0||_slotTotals[s]>=chitRef).length;
+        const monthsDone   = fullyPaidSlots;
         const left         = Math.max(0,totalMonths-monthsDone);
         const pct          = Math.min(100,Math.round(monthsDone/totalMonths*100));
         const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
@@ -46,7 +56,7 @@ async function loadMemberLedger(){
             ? `<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>` : '';
 
         // ── Build paid slot set for schedule ─────────────────────────────────
-        const paidSlotSet = new Set();
+        const paidSlotSet = new Set(); // any payment (including partial)
         slotPays.forEach(p=>{
             if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s=>paidSlotSet.add(s));
             else if(p.monthSlot!=null) paidSlotSet.add(p.monthSlot);
@@ -56,6 +66,14 @@ async function loadMemberLedger(){
                 if(si>=0) paidSlotSet.add(si);
             }
         });
+        // fullyPaidSlotSet — only slots where total paid >= chit amount (used for Next Due Date)
+        const _chitRef2 = slotPays.length?(parseFloat(slotPays[slotPays.length-1].chit)||0):0;
+        const _perSlotTotals2 = {};
+        slotPays.forEach(p=>{
+            const slots2=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
+            slots2.forEach(s=>{ _perSlotTotals2[s]=(_perSlotTotals2[s]||0)+(parseFloat(p.paid)||0); });
+        });
+        const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals2).filter(s=>_chitRef2<=0||_perSlotTotals2[s]>=_chitRef2).map(Number));
 
         // ── Merged table: rowspan for multi-month payments ───────────────────
         // Build a map: payId -> first slot index (to know where to render merged cell)
@@ -167,19 +185,19 @@ async function loadMemberLedger(){
             }
 
             // ── Multiple installments for this slot ───────────────────────────
-            // Main row: shows due date, chit/mo, aggregated total, final balance, status
+            const instGroupId = `inst_${sectionId}_${i}`;
             const installmentSubRows = slotMatchPays.map((ip, idx)=>{
                 const iPaid = parseFloat(ip.paid)||0;
                 const iBal  = parseFloat(ip.balance)||0;
                 const iMode = ip.paidBy||'—';
                 const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
                 const iCp   = ip.chitPicked==='Yes';
-                return `<tr style="background:rgba(99,102,241,0.04);border-left:3px solid rgba(99,102,241,0.3);">
-                    <td style="text-align:center;color:rgba(99,102,241,0.5);font-size:0.6rem;padding:4px 6px;">↳${idx+1}</td>
-                    <td style="font-size:0.65rem;color:var(--text-dim);padding:4px 6px;">Installment ${idx+1}</td>
+                return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;">
+                    <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
+                    <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
                     <td style="padding:4px 6px;"></td>
                     <td style="padding:4px 6px;font-size:0.7rem;color:var(--text-dim);">${fmtDate(ip.date)}</td>
-                    <td style="padding:4px 6px;font-size:0.75rem;font-weight:700;color:${idx===slotMatchPays.length-1&&isFullPaid?'#34d399':'#fbbf24'};">${fmtAmt(iPaid)}</td>
+                    <td style="padding:4px 6px;font-size:0.78rem;font-weight:800;color:${idx===slotMatchPays.length-1&&isFullPaid?'#34d399':'#fbbf24'};">${fmtAmt(iPaid)}</td>
                     <td style="padding:4px 6px;font-size:0.75rem;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
                     <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iCp?'🏆':''}</td>
                     <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iMode}</td>
@@ -188,17 +206,19 @@ async function loadMemberLedger(){
                 </tr>`;
             }).join('');
 
-            const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span><span style="display:block;font-size:0.58rem;color:var(--text-dim);margin-top:1px;">${slotMatchPays.length} installments</span>`;
+            const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>`;
+            const instBadge     = `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${slotMatchPays.length} inst.</span>`;
             const finalBalCell  = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
             const cpPay2        = slotMatchPays.find(p=>p.chitPicked==='Yes');
             const cpCell2       = cpPay2 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : `<span style="color:var(--text-dim);">—</span>`;
+            const expandArrow   = `<span id="arr_${instGroupId}" style="font-size:0.7rem;color:#818cf8;transition:transform .2s;display:inline-block;">▶</span>`;
 
-            return `<tr style="background:${rowBg};${rowBL}">
+            return `<tr style="background:${rowBg};${rowBL};cursor:pointer;" onclick="toggleInstRows('${instGroupId}')">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
                     ${dueDateCell}
                     <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td style="vertical-align:middle;font-size:0.65rem;color:var(--text-dim);">multiple</td>
-                    <td style="vertical-align:middle;">${totalPaidCell}</td>
+                    <td style="vertical-align:middle;">${expandArrow}</td>
+                    <td style="vertical-align:middle;">${totalPaidCell}${instBadge}</td>
                     <td style="vertical-align:middle;">${finalBalCell}</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.65rem;">—</td>
@@ -244,7 +264,7 @@ async function loadMemberLedger(){
                         <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Paid</div>
                     </div>
                     <div style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:8px;text-align:center;">
-                        <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${(()=>{const nd=allDueDates.find((d,i)=>!paidSlotSet.has(i));return nd?fmtDate(nd):'--';})()}</div>
+                        <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${(()=>{const nd=allDueDates.find((d,i)=>!fullyPaidSlotSet.has(i));return nd?fmtDate(nd):'--';})()}</div>
                         <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Next Due Date</div>
                     </div>
                     <div style="flex:1;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:8px;text-align:center;">
@@ -351,6 +371,14 @@ async function loadMemberLedger(){
     } else {
         document.getElementById('ledgerData').innerHTML = ledgerHtml;
     }
+}
+
+function toggleInstRows(groupId){
+    const rows = document.querySelectorAll('.inst-'+groupId);
+    const arrow = document.getElementById('arr_'+groupId);
+    const isOpen = rows.length && rows[0].style.display !== 'none';
+    rows.forEach(r=>r.style.display=isOpen?'none':'table-row');
+    if(arrow) arrow.style.transform = isOpen?'rotate(0deg)':'rotate(90deg)';
 }
 
 function toggleLedgerTable(id, header){
