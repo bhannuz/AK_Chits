@@ -243,12 +243,22 @@ async function onGroupChange(){
     document.getElementById('totalChitRef').style.display='none';
     const mid=document.getElementById('pMember').value;
     const gid=document.getElementById('pGroup').value;
-    // Auto-fill chit amount from group fixedAmt if set
+    // Auto-fill chit amount: prefer group fixedAmt, fallback to last payment's chit
     if(gid){
         const gs=await getCollection('groups');
         const grp=gs.find(g=>g.id===gid);
+        let autoChit=0;
         if(grp && grp.amtType!=='variable' && grp.fixedAmt){
-            document.getElementById('pChit').value=parseFloat(grp.fixedAmt)||'';
+            autoChit=parseFloat(grp.fixedAmt)||0;
+        }
+        if(!autoChit && mid){
+            // Fallback: use chit amount from most recent payment for this member+group
+            const ps2=await getCollection('payments');
+            const lastP=ps2.filter(p=>p.memberId===mid&&p.groupId===gid&&p.chit).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+            if(lastP.length) autoChit=parseFloat(lastP[0].chit)||0;
+        }
+        if(autoChit){
+            document.getElementById('pChit').value=autoChit;
             calcBalance();
         }
     }
