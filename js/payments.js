@@ -243,6 +243,15 @@ async function onGroupChange(){
     document.getElementById('totalChitRef').style.display='none';
     const mid=document.getElementById('pMember').value;
     const gid=document.getElementById('pGroup').value;
+    // Auto-fill chit amount from group fixedAmt if set
+    if(gid){
+        const gs=await getCollection('groups');
+        const grp=gs.find(g=>g.id===gid);
+        if(grp && grp.amtType!=='variable' && grp.fixedAmt){
+            document.getElementById('pChit').value=parseFloat(grp.fixedAmt)||'';
+            calcBalance();
+        }
+    }
     if(mid&&gid){
         const ps=await getCollection('payments');
         const alreadyPicked=ps.some(p=>p.memberId===mid&&p.groupId===gid&&p.chitPicked==='Yes');
