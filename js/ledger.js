@@ -241,7 +241,7 @@ async function loadMemberLedger(){
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${gStartDisplay}</span>
-                            ${chitAmount>0?`<span style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">💰 ${fmtAmt(chitAmount)}/mo</span>`:''}
+
                             ${chitPickedPay?`<span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#34d399;">🏆 Chit Picked</span>`:''}
                         </div>
                     </div>
