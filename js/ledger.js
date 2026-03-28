@@ -45,9 +45,10 @@ async function loadMemberLedger(){
         const gStartDisplay   = fmtDate(grp.startDate||grp.gStart||'');
         const gDueDayOrd      = grp.dueDay?`${grp.dueDay}${['st','nd','rd'][((grp.dueDay%100-11)%10)-1]||'th'}`:'--';
 
-        // Get fixed chit amount from last payment or first payment
+        // Get fixed chit amount — from group fixedAmt (if set) or from last payment record
         const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
-        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : 0;
+        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : (parseFloat(grp.fixedAmt)||0);
+        const isFixedAmtGroup = grp.amtType !== 'variable';
 
         const chitSlotBadge = totalSlots>1
             ? `<span style="background:rgba(245,158,11,0.25);border:1px solid rgba(245,158,11,0.5);color:#fbbf24;border-radius:5px;padding:2px 9px;font-size:0.75rem;font-weight:800;margin-left:6px;">Chit ${slotNum}</span>`
@@ -163,7 +164,11 @@ async function loadMemberLedger(){
             if(!hasInstallments){
                 const payDateCell    = matchPay ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
                 const paidCell       = isAnyPaid && matchPay ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-                const balCell        = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
+                const balCell        = latestBal>0
+                    ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>`
+                    : (!isAnyPaid && isFixedAmtGroup && chitAmt>0)
+                        ? `<span style="color:#f87171;font-weight:700;">${fmtAmt(chitAmt)}</span>`
+                        : `<span style="color:var(--text-dim);">—</span>`;
                 const modeCell       = matchPay && matchPay.paidBy ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>` : `<span style="color:var(--text-dim);">—</span>`;
                 const cpPay          = slotMatchPays.find(p=>p.chitPicked==='Yes');
                 const chitPickedCell = cpPay
