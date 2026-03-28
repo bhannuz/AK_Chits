@@ -395,6 +395,21 @@
         <input type="number" id="gDueDay" class="form-input" placeholder="e.g. 5 means 5th of every month" min="1" max="31">
         <label class="form-label-small">Start Date</label>
         <input type="date" id="gStart" class="form-input">
+        <label class="form-label-small">Amount Type</label>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <label style="flex:1;display:flex;align-items:center;gap:8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:10px 12px;cursor:pointer;">
+                <input type="radio" name="gAmtType" id="gAmtFixed" value="fixed" onchange="toggleGroupAmtType()" checked style="accent-color:#6366f1;">
+                <span style="font-size:0.85rem;font-weight:700;color:#a5b4fc;">💰 Fixed Amount</span>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:8px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px;padding:10px 12px;cursor:pointer;">
+                <input type="radio" name="gAmtType" id="gAmtVariable" value="variable" onchange="toggleGroupAmtType()" style="accent-color:#f59e0b;">
+                <span style="font-size:0.85rem;font-weight:700;color:#f59e0b;">📊 Variable Amount</span>
+            </label>
+        </div>
+        <div id="gFixedAmtRow" style="margin-bottom:12px;">
+            <label class="form-label-small">Fixed Monthly Amount (₹)</label>
+            <input type="number" id="gFixedAmt" class="form-input" placeholder="e.g. 23077">
+        </div>
         <button class="btn-save" onclick="saveGroup()">✓ Save Group</button>
         <div id="deleteGroupArea" style="display:none;">
             <button class="btn-danger-full" onclick="deleteGroupFromModal()">🗑 Delete Group</button>
