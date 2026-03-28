@@ -251,19 +251,18 @@ async function loadMemberLedger(){
                     <div style="background:#252f48;border-radius:5px;height:6px;overflow:hidden;">
                         <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%;"></div>
                     </div>
-                    <div style="display:flex;justify-content:space-between;margin-top:3px;font-size:0.65rem;color:var(--text-dim);">
-                        <span>Month ${monthsDone}/${totalMonths} paid</span>
-                        <span>${overdueCnt>0?`<span style="color:#f87171;">${overdueCnt} overdue</span> · `:''}${pendingCnt} upcoming</span>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
+                        <span style="font-size:0.65rem;color:var(--text-dim);">Month ${monthsDone}/${totalMonths} paid${overdueCnt>0?` · <span style="color:#f87171;">${overdueCnt} overdue</span>`:''}</span>
+                        ${(()=>{
+                            const s=grp.startDate||grp.gStart;
+                            if(!s||!totalMonths) return `<span style="font-size:0.65rem;color:var(--text-dim);">${pendingCnt} upcoming</span>`;
+                            const sd=new Date(s+'T00:00:00');
+                            sd.setMonth(sd.getMonth()+totalMonths);
+                            const pad=n=>String(n).padStart(2,'0');
+                            const endStr=`${pad(sd.getDate())}/${pad(sd.getMonth()+1)}/${sd.getFullYear()}`;
+                            return `<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f87171;">🏁 Ends: ${endStr}</span>`;
+                        })()}
                     </div>
-                    ${(()=>{
-                        const s=grp.startDate||grp.gStart;
-                        if(!s||!totalMonths) return '';
-                        const sd=new Date(s+'T00:00:00');
-                        sd.setMonth(sd.getMonth()+totalMonths);
-                        const pad=n=>String(n).padStart(2,'0');
-                        const endStr=`${pad(sd.getDate())}/${pad(sd.getMonth()+1)}/${sd.getFullYear()}`;
-                        return `<div style="font-size:0.65rem;color:#f87171;margin-top:4px;">🏁 Chit ends: ${endStr}</div>`;
-                    })()}
                 </div>
                 <!-- Summary money chips -->
                 <div style="display:flex;gap:8px;margin-top:10px;">
