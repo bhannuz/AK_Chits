@@ -241,7 +241,6 @@ async function loadMemberLedger(){
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
                             <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${gStartDisplay}</span>
-
                             ${chitPickedPay?`<span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#34d399;">🏆 Chit Picked</span>`:''}
                         </div>
                     </div>
@@ -256,6 +255,15 @@ async function loadMemberLedger(){
                         <span>Month ${monthsDone}/${totalMonths} paid</span>
                         <span>${overdueCnt>0?`<span style="color:#f87171;">${overdueCnt} overdue</span> · `:''}${pendingCnt} upcoming</span>
                     </div>
+                    ${(()=>{
+                        const s=grp.startDate||grp.gStart;
+                        if(!s||!totalMonths) return '';
+                        const sd=new Date(s+'T00:00:00');
+                        sd.setMonth(sd.getMonth()+totalMonths);
+                        const pad=n=>String(n).padStart(2,'0');
+                        const endStr=`${pad(sd.getDate())}/${pad(sd.getMonth()+1)}/${sd.getFullYear()}`;
+                        return `<div style="font-size:0.65rem;color:#f87171;margin-top:4px;">🏁 Chit ends: ${endStr}</div>`;
+                    })()}
                 </div>
                 <!-- Summary money chips -->
                 <div style="display:flex;gap:8px;margin-top:10px;">
