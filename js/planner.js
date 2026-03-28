@@ -293,8 +293,9 @@ function ncpGenerate(savedRows){
             '<span class="ncp-due" style="flex:1.5;font-size:0.75rem;color:#a5b4fc;white-space:nowrap;">'+dueStr+'</span>'+
             // Monthly Pay (editable)
             '<input type="number" class="ncp-pay form-input" value="'+(savedPay||'')+'" placeholder="Pay/mo" style="flex:1;margin-bottom:0;padding:5px 6px;font-size:0.78rem;" oninput="ncpUpdateTotals();ncpAutoSave();">'+
-            // Net Payout (editable — pre-filled with increasing value)
-            '<input type="number" class="ncp-chit form-input" value="'+(savedChit||'')+'" placeholder="Payout" style="flex:1.1;margin-bottom:0;padding:5px 6px;font-size:0.78rem;color:#34d399;" oninput="ncpUpdateTotals();ncpAutoSave();">'+
+            // Payout Amount (editable — the actual chit payout member receives)
+            '<input type="number" class="ncp-chit form-input" value="'+(savedChit||'')+'" placeholder="Payout" style="flex:1;margin-bottom:0;padding:5px 6px;font-size:0.78rem;color:#a5b4fc;" oninput="ncpUpdateTotals();ncpAutoSave();">'+
+
             // Foreman profit = (monthly × members) - net payout (auto, updates on input)
             '<span class="ncp-profit" style="flex:0.9;font-size:0.72rem;font-weight:700;color:#f59e0b;text-align:center;background:rgba(245,158,11,0.07);border-radius:6px;padding:5px 3px;">—</span>'+
             // % return (auto)
@@ -364,7 +365,12 @@ function ncpUpdateTotals(){
     var profTotEl = document.getElementById('ncp_totalProfit');
 
     if(payEl)    payEl.textContent    = totalPay    > 0 ? '₹'+totalPay.toLocaleString('en-IN')    : '—';
-    if(payoutEl) payoutEl.textContent = '—'; // no sum for net payout
+    // Sum payout column
+    var totalChitPayout = 0;
+    document.querySelectorAll('#ncp_rows .ncp-row').forEach(function(r){
+        var c = r.querySelector('.ncp-chit'); totalChitPayout += parseFloat(c?c.value:0)||0;
+    });
+    if(payoutEl) payoutEl.textContent = totalChitPayout > 0 ? '₹'+totalChitPayout.toLocaleString('en-IN') : '—';
     if(profTotEl) profTotEl.textContent = totalProfit > 0 ? '₹'+totalProfit.toLocaleString('en-IN') : '—';
 }
 
@@ -464,7 +470,6 @@ function ncpPrint(){
         return '<tr style="background:'+(r.i%2===0?'#f9fafb':'#fff')+';">'+
             '<td style="text-align:center;color:#888;font-size:13px;">'+(r.i+1)+'</td>'+
             '<td>'+r.due+'</td>'+
-            '<td style="color:#065f46;font-weight:700;">'+(r.mp?'₹'+r.mp.toLocaleString('en-IN'):'—')+'</td>'+
             '<td style="color:#1d4ed8;font-weight:700;">'+(r.cp?'₹'+r.cp.toLocaleString('en-IN'):'—')+'</td>'+
             '<td style="text-align:center;font-weight:800;color:'+pctColor+';">'+(pct!=='—'?pct+'%':'—')+'</td>'+
             '</tr>';
@@ -516,10 +521,9 @@ function ncpPrint(){
         (amount>0?'<div class="chip"><div class="chip-v" style="color:#065f46;">₹'+Math.round(amount/members).toLocaleString('en-IN')+'</div><div class="chip-l">Monthly/Member</div></div>':'')+
         '</div></div>'+
         '<table>'+
-        '<thead><tr><th style="width:6%;text-align:center;">#</th><th style="width:28%;">Due Date</th><th style="width:25%;">Monthly Pay</th><th style="width:25%;">Chit Payout</th><th style="width:16%;text-align:center;">% Return</th></tr></thead>'+
+        '<thead><tr><th style="width:6%;text-align:center;">#</th><th style="width:40%;">Due Date</th><th style="width:36%;">Chit Payout</th><th style="width:18%;text-align:center;">% Return</th></tr></thead>'+
         '<tbody>'+tableRows+'</tbody>'+
         '<tfoot><tr><td colspan="2" style="text-align:right;padding-right:10px;font-weight:800;">TOTAL</td>'+
-        '<td style="color:#065f46;font-weight:800;">₹'+totalPay.toLocaleString('en-IN')+'</td>'+
         '<td style="color:#888;">—</td>'+
         '<td></td></tr></tfoot>'+
         '</table>'+
