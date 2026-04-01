@@ -232,7 +232,15 @@
     </div>
 
     <!-- GROUPS TAB -->
-    <div id="groupsTab" class="tab-content"><div id="groupListArea" class="mt-2"></div></div>
+    <div id="groupsTab" class="tab-content">
+        <!-- Sub-tab bar -->
+        <div style="display:flex;gap:6px;margin-top:10px;margin-bottom:10px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:5px;">
+            <button id="grpSubGroups" onclick="switchGroupsSubTab('groups')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:rgba(243,156,18,0.18);color:#f39c12;">📂 Groups</button>
+            <button id="grpSubCollections" onclick="switchGroupsSubTab('collections')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:transparent;color:var(--text-dim);">📅 Monthly Collection</button>
+        </div>
+        <div id="groupListArea"></div>
+        <div id="collectionsArea" style="display:none;"></div>
+    </div>
 
     <!-- PLANNER TAB -->
     <div id="plannerTab" class="tab-content">
