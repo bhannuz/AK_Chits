@@ -3,16 +3,22 @@
 // Edit only this file when changing the Chit Planner logic
 // ═══════════════════════════════════════════════════════════
 
-const NCP_STORE_KEY   = 'akdf_ncp_planners';   // localStorage key
-const NCP_ACTIVE_KEY  = 'akdf_ncp_active';
-
 let _ncpActive = null; // currently loaded version key
+let _ncpCache  = null; // in-memory cache so we don't hit Firestore on every keystroke
 
-// ── Storage helpers ──────────────────────────────────────────────────────────
-function ncpGetAll(){
-    try{ return JSON.parse(localStorage.getItem(NCP_STORE_KEY))||{}; }catch(e){ return {}; }
+// ── Firestore storage helpers (syncs across all devices) ─────────────────────
+async function ncpGetAll(){
+    if(_ncpCache) return _ncpCache;
+    try{
+        var doc = await db.collection('settings').doc('ncpPlanners').get();
+        _ncpCache = doc.exists ? (doc.data().planners||{}) : {};
+    }catch(e){ _ncpCache = {}; }
+    return _ncpCache;
 }
-function ncpSetAll(obj){ localStorage.setItem(NCP_STORE_KEY, JSON.stringify(obj)); }
+async function ncpSetAll(obj){
+    _ncpCache = obj;
+    try{ await db.collection('settings').doc('ncpPlanners').set({planners: obj}); }catch(e){}
+}
 
 // ── Read current form values ─────────────────────────────────────────────────
 function ncpSyncMembDur(){
@@ -68,39 +74,39 @@ function ncpFillForm(data){
 var _ncpSaveTimer = null;
 function ncpAutoSave(){
     clearTimeout(_ncpSaveTimer);
-    _ncpSaveTimer = setTimeout(function(){
+    _ncpSaveTimer = setTimeout(async function(){
         if(!_ncpActive) return;
-        var all = ncpGetAll();
+        var all = await ncpGetAll();
         if(!all[_ncpActive]) return;
         var data = ncpReadForm();
         data._label   = all[_ncpActive]._label;
         data._savedAt = all[_ncpActive]._savedAt;
         all[_ncpActive] = data;
-        ncpSetAll(all);
+        await ncpSetAll(all);
     }, 1500);
 }
 
 // ── Save / overwrite version ──────────────────────────────────────────────────
-function ncpSaveVersion(){
+async function ncpSaveVersion(){
     var label = document.getElementById('ncp_version_label').value.trim();
     if(!label){ showToast('❌ Enter a version name', false); return; }
     var key  = 'ncp_' + label.replace(/\s+/g,'_').toLowerCase();
-    var all  = ncpGetAll();
+    var all  = await ncpGetAll();
+    var isUpdate = !!all[key];
     var data = ncpReadForm();
     data._label   = label;
     data._savedAt = new Date().toLocaleString('en-IN');
     all[key] = data;
-    ncpSetAll(all);
+    await ncpSetAll(all);
     _ncpActive = key;
-    localStorage.setItem(NCP_ACTIVE_KEY, key);
-    ncpRenderSaved();
-    showToast(all[key] ? '🔄 "'+label+'" updated' : '✅ Saved "'+label+'"');
+    await ncpRenderSaved();
+    showToast(isUpdate ? '🔄 "'+label+'" updated' : '✅ Saved "'+label+'"');
 }
 
 // ── New blank planner ─────────────────────────────────────────────────────────
 function ncpNewPlanner(){
     _ncpActive = null;
-    localStorage.removeItem(NCP_ACTIVE_KEY);
+    _ncpCache = null;
     ['ncp_name','ncp_amount','ncp_members','ncp_duration','ncp_start','ncp_dueday','ncp_commission','ncp_member','ncp_incr_min','ncp_incr_max'].forEach(function(id){
         document.getElementById(id).value = '';
     });
@@ -113,14 +119,13 @@ function ncpNewPlanner(){
 }
 
 // ── Load a version ────────────────────────────────────────────────────────────
-function ncpLoadVersion(key){
-    var all = ncpGetAll();
+async function ncpLoadVersion(key){
+    var all = await ncpGetAll();
     if(!all[key]) return;
     _ncpActive = key;
-    localStorage.setItem(NCP_ACTIVE_KEY, key);
     document.getElementById('ncp_version_label').value = all[key]._label || '';
     ncpFillForm(all[key]);
-    ncpRenderSaved();
+    await ncpRenderSaved();
     showToast('📂 Loaded "' + (all[key]._label||key) + '"');
     setTimeout(function(){
         var el = document.getElementById('plannerTab');
@@ -129,20 +134,20 @@ function ncpLoadVersion(key){
 }
 
 // ── Delete a version ──────────────────────────────────────────────────────────
-function ncpDeleteVersion(key){
-    var all = ncpGetAll();
+async function ncpDeleteVersion(key){
+    var all = await ncpGetAll();
     var label = all[key] ? (all[key]._label||key) : key;
     if(!confirm('Delete version "'+label+'"?')) return;
     delete all[key];
-    ncpSetAll(all);
+    await ncpSetAll(all);
     if(_ncpActive === key){ ncpNewPlanner(); return; }
-    ncpRenderSaved();
+    await ncpRenderSaved();
     showToast('🗑 Deleted "'+label+'"');
 }
 
 // ── Render saved versions list ────────────────────────────────────────────────
-function ncpRenderSaved(){
-    var all  = ncpGetAll();
+async function ncpRenderSaved(){
+    var all  = await ncpGetAll();
     var keys = Object.keys(all);
     var bar  = document.getElementById('ncpSavedBar');
     if(!keys.length){ bar.innerHTML = ''; return; }
@@ -545,13 +550,15 @@ function ncpPrint(){
 }
 
 // ── Restore session on tab open ───────────────────────────────────────────────
-function ncpRestoreSession(){
-    var lastKey = localStorage.getItem(NCP_ACTIVE_KEY);
-    var all     = ncpGetAll();
-    ncpRenderSaved();
-    if(lastKey && all[lastKey]){
-        _ncpActive = lastKey;
-        document.getElementById('ncp_version_label').value = all[lastKey]._label || '';
-        ncpFillForm(all[lastKey]);
+async function ncpRestoreSession(){
+    _ncpCache = null; // force fresh load from Firestore
+    var all = await ncpGetAll();
+    await ncpRenderSaved();
+    // Restore last active if only one version, or just show saved list
+    var keys = Object.keys(all);
+    if(keys.length === 1){
+        _ncpActive = keys[0];
+        document.getElementById('ncp_version_label').value = all[keys[0]]._label || '';
+        ncpFillForm(all[keys[0]]);
     }
 }
