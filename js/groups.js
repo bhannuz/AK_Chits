@@ -104,12 +104,54 @@ function _applyGroupsSubTabStyles(){
     }
 }
 
+// ── Payout storage helpers (shared across devices via Firestore) ─────────────
+async function _getPayouts(){
+    try{
+        const doc = await db.collection('settings').doc('collectionPayouts').get();
+        return doc.exists ? (doc.data().payouts||{}) : {};
+    }catch(e){ return {}; }
+}
+async function _savePayouts(payouts){
+    try{ await db.collection('settings').doc('collectionPayouts').set({payouts}); }catch(e){}
+}
+
+// Called when admin edits a payout cell
+async function updateCollectionPayout(el){
+    const gid = el.dataset.gid;
+    const idx = parseInt(el.dataset.idx);
+    const val = el.value;
+    const payouts = await _getPayouts();
+    const key = gid+'_'+idx;
+    payouts[key] = parseFloat(val)||0;
+    await _savePayouts(payouts);
+    // Update balance cell live
+    const balEl = document.getElementById('colbal_'+gid+'_'+idx);
+    const recEl = document.getElementById('colrec_'+gid+'_'+idx);
+    if(balEl && recEl){
+        const received = parseFloat(recEl.dataset.received)||0;
+        const payout   = parseFloat(val)||0;
+        const balance  = received - payout;
+        balEl.textContent = balance !== 0 ? (balance > 0 ? '+' : '') + '₹' + Math.abs(balance).toLocaleString('en-IN') : '—';
+        balEl.style.color = balance < 0 ? '#f87171' : balance > 0 ? '#34d399' : 'var(--text-dim)';
+    }
+}
+
+function toggleCollectionCard(gid){
+    const body = document.getElementById('colbody_'+gid);
+    const chevron = document.getElementById('colchev_'+gid);
+    if(!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
 async function renderCollectionsTab(){
     const colArea = document.getElementById('collectionsArea');
     if(!colArea) return;
     colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
     const gs = await getCollection('groups');
     const ps = await getCollection('payments');
+    const payouts = await _getPayouts();
     if(!gs.length){ colArea.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>'; return; }
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -119,73 +161,84 @@ async function renderCollectionsTab(){
         const gPays = ps.filter(p=>p.groupId===g.id);
         const totalMonths = parseInt(g.duration||g.gDuration)||21;
         const fixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt)||0 : 0;
-
-        // Total received & balance across all months
         const totalReceived = gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
         const elapsed = allDD.filter(d=>d<=todayStr).length;
+        const totalPayout = allDD.reduce((s,_,idx)=>s+(payouts[g.id+'_'+idx]||0),0);
+        const totalBalance = totalReceived - totalPayout;
 
-        // Build month rows
         const rows = allDD.map((dueDate, idx)=>{
             const slotPays = gPays.filter(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(idx);
                 if(p.monthSlot!=null) return p.monthSlot===idx;
                 return false;
             });
-            const received = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-            const isPast   = dueDate < todayStr;
-            const isToday  = dueDate === todayStr;
-            const isFuture = dueDate > todayStr;
-            const balance  = fixedAmt>0 ? Math.max(0, fixedAmt - received) : 0;
-            const status   = received===0&&isFuture ? 'upcoming'
-                           : received===0&&(isPast||isToday) ? 'overdue'
-                           : fixedAmt>0&&balance>0 ? 'partial'
-                           : received>0 ? 'full' : 'upcoming';
-            const statusBadge = status==='full'    ? '<span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">✅ Full</span>'
-                              : status==='partial' ? '<span style="background:rgba(245,158,11,0.12);color:#f59e0b;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">⚡ Partial</span>'
-                              : status==='overdue' ? '<span style="background:rgba(239,68,68,0.12);color:#f87171;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">🔴 Overdue</span>'
+            const received  = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+            const payout    = payouts[g.id+'_'+idx]||0;
+            const balance   = received - payout;
+            const isPast    = dueDate < todayStr;
+            const isToday   = dueDate === todayStr;
+            const isFuture  = dueDate > todayStr;
+            const status    = received===0&&isFuture ? 'upcoming'
+                            : received===0&&(isPast||isToday) ? 'overdue'
+                            : balance<0 ? 'deficit'
+                            : payout>0&&balance===0 ? 'full'
+                            : received>0&&payout===0 ? 'received'
+                            : received>0 ? 'partial' : 'upcoming';
+            const statusBadge = status==='full'     ? '<span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">✅ Settled</span>'
+                              : status==='deficit'  ? '<span style="background:rgba(239,68,68,0.12);color:#f87171;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">⬇ Deficit</span>'
+                              : status==='received' ? '<span style="background:rgba(52,211,153,0.12);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">💰 Received</span>'
+                              : status==='partial'  ? '<span style="background:rgba(245,158,11,0.12);color:#f59e0b;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">⚡ Partial</span>'
+                              : status==='overdue'  ? '<span style="background:rgba(239,68,68,0.12);color:#f87171;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">🔴 Overdue</span>'
                               : '<span style="background:rgba(255,255,255,0.05);color:#555f7a;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">⏳ Upcoming</span>';
-            const rowBg = status==='full'?'rgba(16,185,129,0.04)':status==='partial'?'rgba(245,158,11,0.04)':status==='overdue'?'rgba(239,68,68,0.04)':'';
+            const rowBg     = status==='full'?'rgba(16,185,129,0.04)':status==='deficit'||status==='overdue'?'rgba(239,68,68,0.04)':status==='received'||status==='partial'?'rgba(245,158,11,0.03)':'';
             const dateColor = isPast||isToday ? '#c7d2fe' : '#555f7a';
-            return `<tr style="background:${rowBg};border-bottom:1px solid rgba(255,255,255,0.04);">
-                <td style="text-align:center;color:var(--text-dim);font-size:0.68rem;padding:7px 4px;font-weight:700;">${idx+1}</td>
-                <td style="font-size:0.75rem;color:${dateColor};padding:7px 8px;white-space:nowrap;">${fmtDate(dueDate)}</td>
-                <td style="font-size:0.78rem;font-weight:700;color:${received>0?'#34d399':'var(--text-dim)'};padding:7px 8px;">${received>0?fmtAmt(received):'—'}</td>
-                <td style="font-size:0.78rem;font-weight:700;color:${balance>0?'#f87171':'var(--text-dim)'};padding:7px 8px;">${fixedAmt>0?(balance>0?fmtAmt(balance):'—'):'—'}</td>
-                <td style="text-align:center;padding:7px 6px;">${statusBadge}</td>
-            </tr>`;
+            const balColor  = balance<0?'#f87171':balance>0?'#34d399':'var(--text-dim)';
+            const balDisp   = balance!==0 ? (balance>0?'+':'')+fmtAmt(balance) : '—';
+            return '<tr style="background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
+                +'<td style="text-align:center;color:var(--text-dim);font-size:0.68rem;padding:7px 4px;font-weight:700;">'+(idx+1)+'</td>'
+                +'<td style="font-size:0.75rem;color:'+dateColor+';padding:7px 8px;white-space:nowrap;">'+fmtDate(dueDate)+'</td>'
+                +'<td id="colrec_'+g.id+'_'+idx+'" data-received="'+received+'" style="font-size:0.78rem;font-weight:700;color:'+(received>0?'#34d399':'var(--text-dim)')+';padding:7px 8px;">'+(received>0?fmtAmt(received):'—')+'</td>'
+                +'<td style="padding:5px 6px;">'
+                    +'<input type="number" value="'+(payout||'')+'" placeholder="Rs payout" '
+                    +'data-gid="'+g.id+'" data-idx="'+idx+'" '
+                    +'onchange="updateCollectionPayout(this)" '
+                    +'style="width:90px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:7px;padding:4px 7px;font-size:0.75rem;font-weight:700;outline:none;">'
+                +'</td>'
+                +'<td id="colbal_'+g.id+'_'+idx+'" style="font-size:0.78rem;font-weight:700;color:'+balColor+';padding:7px 8px;">'+balDisp+'</td>'
+                +'<td style="text-align:center;padding:7px 6px;">'+statusBadge+'</td>'
+                +'</tr>';
         }).join('');
 
-        const totalBalance = fixedAmt>0 ? Math.max(0, fixedAmt*elapsed - totalReceived) : 0;
+        const balColor = totalBalance<0?'#f87171':totalBalance>0?'#34d399':'var(--text-dim)';
 
-        return `<div style="background:#1c253b;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;">
-            <div style="padding:12px 16px;border-bottom:1px solid var(--border);">
-                <div style="font-size:0.95rem;font-weight:800;color:#f39c12;margin-bottom:6px;">📂 ${g.name}</div>
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
-                    <div style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:9px;padding:8px;text-align:center;">
-                        <div style="font-size:0.88rem;font-weight:800;color:#34d399;">${fmtAmt(totalReceived)}</div>
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Received</div>
-                    </div>
-                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:9px;padding:8px;text-align:center;">
-                        <div style="font-size:0.88rem;font-weight:800;color:#f87171;">${fixedAmt>0?fmtAmt(totalBalance):'—'}</div>
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Balance</div>
-                    </div>
-                    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:9px;padding:8px;text-align:center;">
-                        <div style="font-size:0.88rem;font-weight:800;color:#f59e0b;">${elapsed}/${totalMonths}</div>
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Months Elapsed</div>
+        const gid = g.id;
+        return `<div style="background:#1c253b;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
+            <div onclick="toggleCollectionCard('${gid}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
+                <div>
+                    <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">&#128194; ${g.name}</div>
+                    <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
+                        <span style="font-size:0.68rem;color:#34d399;">Rcvd: ${fmtAmt(totalReceived)}</span>
+                        <span style="font-size:0.68rem;color:#a5b4fc;">Paid out: ${fmtAmt(totalPayout)}</span>
+                        <span style="font-size:0.68rem;color:${balColor};">Bal: ${totalBalance!==0?(totalBalance>0?'+':'')+fmtAmt(Math.abs(totalBalance)):'—'}</span>
+                        <span style="font-size:0.68rem;color:var(--text-dim);">${elapsed}/${totalMonths} mo</span>
                     </div>
                 </div>
+                <span id="colchev_${gid}" style="font-size:0.85rem;color:var(--text-dim);transition:transform .2s;transform:rotate(0deg);">&#9654;</span>
             </div>
-            <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;min-width:320px;">
-                    <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
-                        <th style="text-align:center;font-size:0.6rem;color:var(--text-dim);padding:6px 4px;font-weight:500;">#</th>
-                        <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;">Due Date</th>
-                        <th style="font-size:0.6rem;color:#34d399;padding:6px 8px;font-weight:500;">Received</th>
-                        <th style="font-size:0.6rem;color:#f87171;padding:6px 8px;font-weight:500;">Balance</th>
-                        <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;text-align:center;">Status</th>
-                    </tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
+            <div id="colbody_${gid}" style="display:none;border-top:1px solid var(--border);">
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;min-width:380px;">
+                        <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                            <th style="text-align:center;font-size:0.6rem;color:var(--text-dim);padding:6px 4px;font-weight:500;">#</th>
+                            <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;">Due Date</th>
+                            <th style="font-size:0.6rem;color:#34d399;padding:6px 8px;font-weight:500;">Received</th>
+                            <th style="font-size:0.6rem;color:#a5b4fc;padding:6px 8px;font-weight:500;">Chit Payout &#9999;</th>
+                            <th style="font-size:0.6rem;color:#f59e0b;padding:6px 8px;font-weight:500;">Balance</th>
+                            <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;text-align:center;">Status</th>
+                        </tr></thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
             </div>
         </div>`;
     }).join('');
