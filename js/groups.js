@@ -81,19 +81,26 @@ let _activeGroupsSubTab = 'groups';
 
 function switchGroupsSubTab(tab){
     _activeGroupsSubTab = tab;
+    _applyGroupsSubTabStyles();
+    if(tab === 'collections') renderCollectionsTab();
+}
+
+function _applyGroupsSubTabStyles(){
     const grpBtn = document.getElementById('grpSubGroups');
     const colBtn = document.getElementById('grpSubCollections');
     const grpArea = document.getElementById('groupListArea');
     const colArea = document.getElementById('collectionsArea');
-    if(tab === 'groups'){
-        grpBtn.style.background='rgba(243,156,18,0.18)'; grpBtn.style.color='#f39c12';
-        colBtn.style.background='transparent'; colBtn.style.color='var(--text-dim)';
-        grpArea.style.display='block'; colArea.style.display='none';
+    if(!grpBtn||!colBtn||!grpArea||!colArea) return;
+    if(_activeGroupsSubTab === 'groups'){
+        grpBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:rgba(243,156,18,0.18);color:#f39c12;';
+        colBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:transparent;color:#888;';
+        grpArea.style.display='block';
+        colArea.style.display='none';
     } else {
-        colBtn.style.background='rgba(52,211,153,0.15)'; colBtn.style.color='#34d399';
-        grpBtn.style.background='transparent'; grpBtn.style.color='var(--text-dim)';
-        grpArea.style.display='none'; colArea.style.display='block';
-        renderCollectionsTab();
+        colBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:rgba(52,211,153,0.15);color:#34d399;';
+        grpBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:transparent;color:#888;';
+        grpArea.style.display='none';
+        colArea.style.display='block';
     }
 }
 
@@ -187,6 +194,7 @@ async function renderCollectionsTab(){
 }
 
 async function renderGroupsTab(){
+    _applyGroupsSubTabStyles();
     const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');
     if(!gs.length){document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';return;}
     document.getElementById('groupListArea').innerHTML=gs.map((g,gIdx)=>{
@@ -290,95 +298,6 @@ async function renderGroupsTab(){
             </div>
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
 
-                <!-- ── Monthly Collection Summary ── -->
-                <div style="border-bottom:1px solid var(--border);">
-                    <div onclick="toggleMonthlyCollection('mc_${gIdx}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;background:rgba(52,211,153,0.05);">
-                        <div>
-                            <span style="font-size:0.75rem;font-weight:800;color:#34d399;text-transform:uppercase;letter-spacing:.5px;">📅 Monthly Collection</span>
-                            <span style="font-size:0.65rem;color:var(--text-dim);margin-left:8px;">${tPaid>0?fmtAmt(tPaid)+' collected':''}</span>
-                        </div>
-                        <span style="font-size:0.8rem;color:#34d399;transition:transform .25s;transform:rotate(90deg);" class="mc-chevron">&#9654;</span>
-                    </div>
-                    <div id="mc_${gIdx}" style="display:block;overflow-x:auto;padding:0 16px 12px;">
-                        ${(()=>{
-                            const allDD = getGroupDueDates(g);
-                            if(!allDD.length) return '<div style="color:var(--text-dim);font-size:0.78rem;padding:8px;">No due dates configured.</div>';
-                            const todayStr = new Date().toISOString().split('T')[0];
-                            const totalSlotCount = gMs.reduce((s,m)=>{const e=(m.enrollments||[]).find(x=>x.groupId===g.id);return s+(e?parseInt(e.qty||1):1);},0);
-                            const fixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt)||0 : 0;
-                            const rows = allDD.map((dueDate, idx)=>{
-                                // Match payments to this month slot across ALL members of this group
-                                // Priority: monthSlots array > monthSlot field > date-based fallback
-                                const slotPays = gPays.filter(p=>{
-                                    if(Array.isArray(p.monthSlots)&&p.monthSlots.length) return p.monthSlots.includes(idx);
-                                    if(p.monthSlot!=null) return p.monthSlot===idx;
-                                    // fallback: derive slot from payment date
-                                    return getMonthSlot(allDD, p.date)===idx;
-                                });
-
-                                // Collected = sum of all payments toward this month from all members
-                                const collected = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-
-                                // Expected = fixedAmt × total chit slots in this group
-                                const expected = fixedAmt>0 ? fixedAmt*totalSlotCount : 0;
-                                const isPast = dueDate < todayStr;
-                                const isFuture = dueDate > todayStr;
-                                const isToday = dueDate === todayStr;
-                                const pending = expected>0 ? Math.max(0, expected-collected) : 0;
-
-                                // Who paid vs who hasn't for this month
-                                const paidMemberIds = new Set(slotPays.map(p=>p.memberId));
-                                const paidMembers = [...paidMemberIds].map(mid=>{
-                                    const mem=gMs.find(m=>m.id===mid);
-                                    const mp=slotPays.filter(p=>p.memberId===mid);
-                                    const amt=mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-                                    return mem ? \`\${mem.name} (\${fmtAmt(amt)})\` : '?';
-                                });
-                                const unpaidMembers = (isPast||isToday) ? gMs.filter(m=>!paidMemberIds.has(m.id)).map(m=>m.name) : [];
-                                const paidCount = paidMemberIds.size;
-                                const unpaidCount = gMs.length - paidCount;
-
-                                const statusLabel = collected===0&&isFuture ? '⏳ Upcoming'
-                                    : collected===0&&isPast ? '🔴 No payment'
-                                    : pending>0 ? \`⚡ \${unpaidCount} pending\`
-                                    : '✅ Complete';
-                                const statusColor = collected===0&&isPast ? '#f87171' : pending>0 ? '#f59e0b' : collected>0 ? '#34d399' : 'var(--text-dim)';
-                                const rowBg = collected===0&&isPast ? 'rgba(239,68,68,0.05)' : pending>0&&isPast ? 'rgba(245,158,11,0.05)' : collected>0&&pending===0 ? 'rgba(16,185,129,0.04)' : '';
-
-                                const paidList = paidMembers.length
-                                    ? \`<div style="font-size:0.62rem;color:#34d399;margin-top:2px;line-height:1.5;">✅ \${paidMembers.join(' · ')}</div>\`
-                                    : \`<span style="font-size:0.62rem;color:var(--text-dim);">No payments yet</span>\`;
-                                const unpaidList = unpaidMembers.length
-                                    ? \`<div style="font-size:0.62rem;color:#f87171;margin-top:2px;line-height:1.5;">⏳ \${unpaidMembers.join(' · ')}</div>\`
-                                    : '';
-
-                                return \`<tr style="background:\${rowBg};border-bottom:1px solid rgba(255,255,255,0.05);">
-                                    <td style="text-align:center;color:var(--text-dim);font-size:0.68rem;padding:6px 4px;font-weight:700;">\${idx+1}</td>
-                                    <td style="font-size:0.72rem;color:\${isPast?'#c7d2fe':isToday?'#f39c12':'var(--text-dim)'};white-space:nowrap;padding:6px 8px;font-weight:\${isToday?'800':'400'};">\${fmtDate(dueDate)}\${isToday?' 📌':''}</td>
-                                    <td style="font-size:0.82rem;font-weight:800;color:\${collected>0?'#34d399':'var(--text-dim)'};padding:6px 8px;">\${collected>0?fmtAmt(collected):'—'}</td>
-                                    \${expected>0?
-                                        \`<td style="font-size:0.72rem;color:var(--text-dim);padding:6px 8px;">\${fmtAmt(expected)}</td>
-                                         <td style="font-size:0.78rem;font-weight:700;color:\${pending>0?'#f87171':'#34d399'};padding:6px 8px;">\${pending>0?fmtAmt(pending):'—'}</td>\`
-                                        :'<td></td><td></td>'}
-                                    <td style="font-size:0.68rem;padding:6px 8px;min-width:140px;">\${paidList}\${unpaidList}</td>
-                                    <td style="font-size:0.68rem;font-weight:700;color:\${statusColor};padding:6px 8px;white-space:nowrap;">\${statusLabel}</td>
-                                </tr>\`;
-                            }).join('');
-                            return \`<table style="width:100%;border-collapse:collapse;">
-                                <thead><tr style="border-bottom:2px solid var(--border);background:rgba(255,255,255,0.02);">
-                                    <th style="text-align:center;font-size:0.6rem;color:var(--text-dim);padding:6px 4px;font-weight:700;">Mo.</th>
-                                    <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:700;">Due Date</th>
-                                    <th style="font-size:0.6rem;color:#34d399;padding:6px 8px;font-weight:700;">Collected</th>
-                                    \${fixedAmt>0?'<th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:700;">Expected</th><th style="font-size:0.6rem;color:#f87171;padding:6px 8px;font-weight:700;">Pending</th>':'<th></th><th></th>'}
-                                    <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:700;">Paid by / Yet to pay</th>
-                                    <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:700;">Status</th>
-                                </tr></thead>
-                                <tbody>\${rows}</tbody>
-                            </table>\`;
-                        })()}
-                    </div>
-                </div>
-
                 ${gMs.length?`<div class="table-wrap"><table class="table-custom">
                     <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Chit Picked Amt</th><th></th></tr></thead>
                     <tbody>${memberRows}</tbody>
@@ -388,14 +307,6 @@ async function renderGroupsTab(){
     }).join('');
 }
 
-function toggleMonthlyCollection(id, header){
-    const el = document.getElementById(id);
-    if(!el) return;
-    const chevron = header.querySelector('.mc-chevron');
-    const isOpen = el.style.display !== 'none';
-    el.style.display = isOpen ? 'none' : 'block';
-    if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
-}
 
 function toggleGroupCard(bodyId, header){
     const body=document.getElementById(bodyId);
