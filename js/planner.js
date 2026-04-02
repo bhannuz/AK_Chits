@@ -3,70 +3,74 @@
 // Edit only this file when changing the Chit Planner logic
 // ═══════════════════════════════════════════════════════════
 
-let _ncpActive = null; // currently loaded version key
-let _ncpCache  = null; // in-memory cache so we don't hit Firestore on every keystroke
+let _ncpActive = null;
 
-// ── Firestore storage helpers (syncs across all devices) ─────────────────────
-async function ncpGetAll(){
-    if(_ncpCache) return _ncpCache;
+// ── Firestore helpers — mirrors QR pattern exactly ───────────────────────────
+async function _ncpFetch(){
     try{
         var doc = await db.collection('settings').doc('ncpPlanners').get();
-        _ncpCache = doc.exists ? (doc.data().planners||{}) : {};
-    }catch(e){ _ncpCache = {}; }
-    return _ncpCache;
+        console.log('[NCP] fetch exists:', doc.exists);
+        if(!doc.exists) return {};
+        return doc.data().planners || {};
+    }catch(e){ console.error('[NCP] fetch error:', e.code, e.message); return {}; }
 }
-async function ncpSetAll(obj){
-    _ncpCache = obj;
-    try{ await db.collection('settings').doc('ncpPlanners').set({planners: obj}); }catch(e){}
+async function _ncpWrite(planners){
+    try{
+        console.log('[NCP] writing', Object.keys(planners).length, 'version(s)');
+        await db.collection('settings').doc('ncpPlanners').set({ planners: planners });
+    }catch(e){ console.error('[NCP] write error:', e.code, e.message); }
 }
+
+// ── Null-safe field reader ────────────────────────────────────────────────────
+function _ncpVal(id){ var el=document.getElementById(id); return el ? el.value : ''; }
+function _ncpSet(id, val){ var el=document.getElementById(id); if(el) el.value = val||''; }
 
 // ── Read current form values ─────────────────────────────────────────────────
 function ncpSyncMembDur(){
-    // Auto-fill duration when members is typed (13/13 pattern)
-    var m = parseInt(document.getElementById('ncp_members').value)||0;
+    var m = parseInt(_ncpVal('ncp_members'))||0;
     var d = document.getElementById('ncp_duration');
-    if(m > 0 && !d.value) d.value = m;
+    if(m > 0 && d && !d.value) d.value = m;
 }
 
 function ncpReadForm(){
     var rows = [];
     document.querySelectorAll('#ncp_rows .ncp-row').forEach(function(row){
-        rows.push({ pay: row.querySelector('.ncp-pay').value, chit: row.querySelector('.ncp-chit').value });
+        var pay=row.querySelector('.ncp-pay'); var chit=row.querySelector('.ncp-chit');
+        rows.push({ pay: pay?pay.value:'', chit: chit?chit.value:'' });
     });
+    var wrap = document.getElementById('ncp_tableWrap');
     return {
-        name:       document.getElementById('ncp_name').value,
-        amount:     document.getElementById('ncp_amount').value,
-        members:    document.getElementById('ncp_members').value,
-        duration:   document.getElementById('ncp_duration').value,
-        start:      document.getElementById('ncp_start').value,
-        dueday:     document.getElementById('ncp_dueday').value,
-        commission: document.getElementById('ncp_commission').value,
-        member:     document.getElementById('ncp_member').value,
-        incr_min:   document.getElementById('ncp_incr_min').value,
-        incr_max:   document.getElementById('ncp_incr_max').value,
+        amount:     _ncpVal('ncp_amount'),
+        members:    _ncpVal('ncp_members'),
+        duration:   _ncpVal('ncp_duration'),
+        start:      _ncpVal('ncp_start'),
+        dueday:     _ncpVal('ncp_dueday'),
+        commission: _ncpVal('ncp_commission'),
+        member:     _ncpVal('ncp_member'),
+        incr_min:   _ncpVal('ncp_incr_min'),
+        incr_max:   _ncpVal('ncp_incr_max'),
         rows:       rows,
-        tableVisible: document.getElementById('ncp_tableWrap').style.display !== 'none'
+        tableVisible: wrap ? wrap.style.display !== 'none' : false
     };
 }
 
 // ── Fill form from saved data ─────────────────────────────────────────────────
 function ncpFillForm(data){
-    document.getElementById('ncp_name').value       = data.name       || '';
-    document.getElementById('ncp_amount').value     = data.amount     || '';
-    document.getElementById('ncp_members').value    = data.members    || '';
-    document.getElementById('ncp_duration').value   = data.duration   || '';
-    document.getElementById('ncp_start').value      = data.start      || '';
-    document.getElementById('ncp_dueday').value     = data.dueday     || '';
-    document.getElementById('ncp_commission').value = data.commission || '';
-    document.getElementById('ncp_member').value     = data.member     || '';
-    document.getElementById('ncp_incr_min').value   = data.incr_min   || '';
-    document.getElementById('ncp_incr_max').value   = data.incr_max   || '';
+    _ncpSet('ncp_amount',     data.amount);
+    _ncpSet('ncp_members',    data.members);
+    _ncpSet('ncp_duration',   data.duration);
+    _ncpSet('ncp_start',      data.start);
+    _ncpSet('ncp_dueday',     data.dueday);
+    _ncpSet('ncp_commission', data.commission);
+    _ncpSet('ncp_member',     data.member);
+    _ncpSet('ncp_incr_min',   data.incr_min);
+    _ncpSet('ncp_incr_max',   data.incr_max);
     if(data.tableVisible && data.rows && data.rows.length){
         ncpGenerate(data.rows);
     } else {
-        document.getElementById('ncp_tableWrap').style.display = 'none';
-        document.getElementById('ncp_rows').innerHTML = '';
-        document.getElementById('ncpSuggestionBox').style.display = 'none';
+        var w=document.getElementById('ncp_tableWrap'); if(w) w.style.display='none';
+        var r=document.getElementById('ncp_rows'); if(r) r.innerHTML='';
+        var s=document.getElementById('ncpSuggestionBox'); if(s) s.style.display='none';
     }
 }
 
@@ -76,56 +80,53 @@ function ncpAutoSave(){
     clearTimeout(_ncpSaveTimer);
     _ncpSaveTimer = setTimeout(async function(){
         if(!_ncpActive) return;
-        var all = await ncpGetAll();
+        var all = await _ncpFetch();
         if(!all[_ncpActive]) return;
         var data = ncpReadForm();
         data._label   = all[_ncpActive]._label;
         data._savedAt = all[_ncpActive]._savedAt;
         all[_ncpActive] = data;
-        await ncpSetAll(all);
+        await _ncpWrite(all);
     }, 1500);
 }
 
 // ── Save / overwrite version ──────────────────────────────────────────────────
 async function ncpSaveVersion(){
-    var label = document.getElementById('ncp_version_label').value.trim();
+    var label = (document.getElementById('ncp_version_label').value||'').trim();
     if(!label){ showToast('❌ Enter a version name', false); return; }
     var key  = 'ncp_' + label.replace(/\s+/g,'_').toLowerCase();
-    var all  = await ncpGetAll();
+    var all  = await _ncpFetch();
     var isUpdate = !!all[key];
     var data = ncpReadForm();
     data._label   = label;
     data._savedAt = new Date().toLocaleString('en-IN');
     all[key] = data;
-    await ncpSetAll(all);
+    await _ncpWrite(all);
     _ncpActive = key;
-    await ncpRenderSaved();
+    ncpRenderSaved();
     showToast(isUpdate ? '🔄 "'+label+'" updated' : '✅ Saved "'+label+'"');
 }
 
 // ── New blank planner ─────────────────────────────────────────────────────────
 function ncpNewPlanner(){
     _ncpActive = null;
-    _ncpCache = null;
-    ['ncp_name','ncp_amount','ncp_members','ncp_duration','ncp_start','ncp_dueday','ncp_commission','ncp_member','ncp_incr_min','ncp_incr_max'].forEach(function(id){
-        document.getElementById(id).value = '';
-    });
-    document.getElementById('ncp_version_label').value = '';
-    document.getElementById('ncp_tableWrap').style.display = 'none';
-    document.getElementById('ncp_rows').innerHTML = '';
-    document.getElementById('ncpSuggestionBox').style.display = 'none';
+    ['ncp_amount','ncp_members','ncp_duration','ncp_start','ncp_dueday','ncp_commission','ncp_member','ncp_incr_min','ncp_incr_max'].forEach(function(id){ _ncpSet(id,''); });
+    _ncpSet('ncp_version_label','');
+    var w=document.getElementById('ncp_tableWrap'); if(w) w.style.display='none';
+    var r=document.getElementById('ncp_rows'); if(r) r.innerHTML='';
+    var s=document.getElementById('ncpSuggestionBox'); if(s) s.style.display='none';
     ncpRenderSaved();
     showToast('📋 New planner ready');
 }
 
 // ── Load a version ────────────────────────────────────────────────────────────
 async function ncpLoadVersion(key){
-    var all = await ncpGetAll();
+    var all = await _ncpFetch();
     if(!all[key]) return;
     _ncpActive = key;
-    document.getElementById('ncp_version_label').value = all[key]._label || '';
+    _ncpSet('ncp_version_label', all[key]._label);
     ncpFillForm(all[key]);
-    await ncpRenderSaved();
+    ncpRenderSaved();
     showToast('📂 Loaded "' + (all[key]._label||key) + '"');
     setTimeout(function(){
         var el = document.getElementById('plannerTab');
@@ -135,19 +136,19 @@ async function ncpLoadVersion(key){
 
 // ── Delete a version ──────────────────────────────────────────────────────────
 async function ncpDeleteVersion(key){
-    var all = await ncpGetAll();
+    var all = await _ncpFetch();
     var label = all[key] ? (all[key]._label||key) : key;
     if(!confirm('Delete version "'+label+'"?')) return;
     delete all[key];
-    await ncpSetAll(all);
+    await _ncpWrite(all);
     if(_ncpActive === key){ ncpNewPlanner(); return; }
-    await ncpRenderSaved();
+    ncpRenderSaved();
     showToast('🗑 Deleted "'+label+'"');
 }
 
 // ── Render saved versions list ────────────────────────────────────────────────
 async function ncpRenderSaved(){
-    var all  = await ncpGetAll();
+    var all  = await _ncpFetch();
     var keys = Object.keys(all);
     var bar  = document.getElementById('ncpSavedBar');
     if(!keys.length){ bar.innerHTML = ''; return; }
@@ -440,7 +441,7 @@ function ncpShowInsights(){
 
 // ── Print schedule ────────────────────────────────────────────────────────────
 function ncpPrint(){
-    var name       = document.getElementById('ncp_name').value.trim() || 'Chit Group';
+    var name       = _ncpVal('ncp_version_label') || 'Chit Group';
     var memberName = document.getElementById('ncp_member').value.trim();
     var members    = parseInt(document.getElementById('ncp_members').value)||0;
     var duration   = parseInt(document.getElementById('ncp_duration').value)||0;
@@ -551,14 +552,12 @@ function ncpPrint(){
 
 // ── Restore session on tab open ───────────────────────────────────────────────
 async function ncpRestoreSession(){
-    _ncpCache = null; // force fresh load from Firestore
-    var all = await ncpGetAll();
-    await ncpRenderSaved();
-    // Restore last active if only one version, or just show saved list
+    var all = await _ncpFetch();
     var keys = Object.keys(all);
+    ncpRenderSaved();
     if(keys.length === 1){
         _ncpActive = keys[0];
-        document.getElementById('ncp_version_label').value = all[keys[0]]._label || '';
+        _ncpSet('ncp_version_label', all[keys[0]]._label);
         ncpFillForm(all[keys[0]]);
     }
 }
