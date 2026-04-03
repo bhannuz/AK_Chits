@@ -384,9 +384,19 @@ async function loadMemberLedger(){
 function toggleInstRows(groupId){
     const rows = document.querySelectorAll('.inst-'+groupId);
     const arrow = document.getElementById('arr_'+groupId);
-    const isOpen = rows.length && rows[0].style.display !== 'none';
-    rows.forEach(r=>r.style.display=isOpen?'none':'table-row');
-    if(arrow) arrow.style.transform = isOpen?'rotate(0deg)':'rotate(90deg)';
+    
+    if(rows.length === 0) return;
+    
+    const isOpen = rows[0].style.display !== 'none';
+    
+    rows.forEach(r => {
+        r.style.display = isOpen ? 'none' : 'table-row';
+    });
+    
+    if(arrow) {
+        arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+        arrow.textContent = isOpen ? '▶' : '▼';
+    }
 }
 
 function toggleLedgerTable(id, header){
