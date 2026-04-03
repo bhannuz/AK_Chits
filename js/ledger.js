@@ -231,9 +231,9 @@ async function loadMemberLedger(){
         const overdueCnt = allDueDates.filter((d,i)=>!paidSlotSet.has(i)&&d<today).length;
         const pendingCnt = allDueDates.filter((d,i)=>!paidSlotSet.has(i)&&d>=today).length;
 
-        return `<div style="margin-bottom:16px;">
+        return `<div style="margin-bottom:16px;page-break-inside:avoid;">
             <!-- Group Header -->
-            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;">
+            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
                     <div>
                         <div style="font-size:1rem;font-weight:900;color:#f39c12;margin-bottom:6px;">
@@ -281,9 +281,9 @@ async function loadMemberLedger(){
                 </div>
             </div>
 
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;">
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;page-break-inside:avoid;">
                 <!-- ── MERGED SCHEDULE + HISTORY ── -->
-                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
+                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);page-break-inside:avoid;">
                     <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule &amp; Payments (${totalMonths} months)</span>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)}</span>
@@ -292,10 +292,10 @@ async function loadMemberLedger(){
                         <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
                     </div>
                 </div>
-                <div id="${sectionId}" style="display:none;">
-                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                        <table class="table-custom">
-                            <thead><tr>
+                <div id="${sectionId}" style="display:none;page-break-inside:avoid;">
+                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;page-break-inside:avoid;">
+                        <table class="table-custom" style="table-layout:auto !important;width:100% !important;">
+                            <thead><tr style="page-break-inside:avoid;">
                                 <th style="text-align:center;">#</th>
                                 <th>Due Date</th>
                                 <th>Chit/Mo</th>
@@ -307,9 +307,9 @@ async function loadMemberLedger(){
                                 <th>Chit Picked</th>
                                 <th></th>
                             </tr></thead>
-                            <tbody>
+                            <tbody style="page-break-inside:avoid;">
                                 ${mergedRows}
-                                <tr style="font-weight:800;background:rgba(255,255,255,.04);">
+                                <tr style="font-weight:800;background:rgba(255,255,255,.04);page-break-inside:avoid;">
                                     <td colspan="4" style="color:var(--text-dim);">Total</td>
                                     <td style="color:#34d399;">${fmtAmt(tPaid)}</td>
                                     <td style="color:#f59e0b;">${tBal>0?fmtAmt(tBal):'—'}</td>
@@ -318,7 +318,7 @@ async function loadMemberLedger(){
                             </tbody>
                         </table>
                     </div>
-                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);">
+                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);page-break-inside:avoid;">
                         ✅ Paid &nbsp;|&nbsp; ⚡ Partial &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Pending
                     </div>
                 </div>
