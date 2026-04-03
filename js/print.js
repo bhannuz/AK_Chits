@@ -375,9 +375,9 @@ async function generateGroupPDF(gid){
     const printHTML = `<div id="groupPrintDoc">
     <style>
         #groupPrintDoc { font-family:Arial,sans-serif; color:#111; max-width:860px; margin:0 auto; padding:16px; }
-        #groupPrintDoc .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; }
+        #groupPrintDoc .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; page-break-inside:avoid; }
         #groupPrintDoc .brand { font-size:16px; font-weight:900; color:#f39c12; }
-        #groupPrintDoc .info-box { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:12px 16px; margin-bottom:14px; }
+        #groupPrintDoc .info-box { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:12px 16px; margin-bottom:14px; page-break-inside:avoid; }
         #groupPrintDoc .chips { display:flex; gap:0; border:1px solid #e5c76b; border-radius:8px; overflow:hidden; margin-top:10px; }
         #groupPrintDoc .chip { flex:1; padding:8px; text-align:center; border-right:1px solid #e5c76b; }
         #groupPrintDoc .chip:last-child { border-right:none; }
@@ -385,25 +385,28 @@ async function generateGroupPDF(gid){
         #groupPrintDoc .chip-l { font-size:9px; color:#888; text-transform:uppercase; margin-top:2px; }
         #groupPrintDoc .prog-outer { background:#eee; height:6px; border-radius:3px; margin:8px 0 4px; overflow:hidden; }
         #groupPrintDoc .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-        #groupPrintDoc .sec-title { font-size:8px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:16px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; }
-        #groupPrintDoc table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; margin-bottom:4px; }
-        #groupPrintDoc thead { display:table-header-group; }
+        #groupPrintDoc .sec-title { font-size:8px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:16px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; page-break-after:avoid; }
+        #groupPrintDoc table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto !important; margin-bottom:4px; page-break-inside:avoid; }
+        #groupPrintDoc thead { display:table-header-group; background:#f5f5f5; }
         #groupPrintDoc th { background:#f5f5f5; border:1px solid #ccc; padding:6px 7px; font-size:9px; text-transform:uppercase; color:#555; font-weight:700; }
-        #groupPrintDoc td { border:1px solid #e0e0e0; padding:6px 7px; vertical-align:middle; word-break:break-word; }
-        #groupPrintDoc tr { page-break-inside:avoid; }
-        #groupPrintDoc .stats { display:flex; gap:8px; margin-top:10px; }
-        #groupPrintDoc .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:6px; text-align:center; }
+        #groupPrintDoc td { border:1px solid #e0e0e0; padding:6px 7px; vertical-align:middle; word-break:break-word; overflow-wrap:break-word; }
+        #groupPrintDoc tr { page-break-inside:avoid; page-break-after:auto; }
+        #groupPrintDoc .stats { display:flex; gap:8px; margin-top:10px; page-break-inside:avoid; }
+        #groupPrintDoc .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:6px; text-align:center; page-break-inside:avoid; }
         #groupPrintDoc .stat-v { font-size:14px; font-weight:800; }
         #groupPrintDoc .stat-l { font-size:8px; color:#888; text-transform:uppercase; }
-        #groupPrintDoc .ftr { margin-top:14px; border-top:1px solid #ddd; padding-top:6px; display:flex; justify-content:space-between; font-size:8px; color:#aaa; }
+        #groupPrintDoc .ftr { margin-top:14px; border-top:1px solid #ddd; padding-top:6px; display:flex; justify-content:space-between; font-size:8px; color:#aaa; page-break-inside:avoid; }
         #groupPrintDoc .print-btn-bar { display:flex; gap:10px; margin-bottom:16px; }
         #groupPrintDoc .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
         #groupPrintDoc .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
         @media print {
             body > *:not(#printOverlay) { display:none !important; }
-            #printOverlay { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; background:white !important; z-index:99999 !important; }
+            #printOverlay { position:static !important; top:0 !important; left:0 !important; width:100% !important; height:auto !important; background:white !important; z-index:99999 !important; padding:0 !important; overflow:visible !important; }
+            #groupPrintDoc { max-width:100% !important; padding:0 !important; margin:0 !important; }
             #groupPrintDoc .print-btn-bar { display:none !important; }
-            @page { size:A4; margin:10mm; }
+            #groupPrintDoc table { table-layout:auto !important; width:100% !important; margin-bottom:8mm !important; }
+            #groupPrintDoc td, #groupPrintDoc th { word-break:break-word !important; overflow-wrap:break-word !important; }
+            @page { size:A4; margin:8mm 10mm; }
         }
     </style>
     <div class="print-btn-bar">
