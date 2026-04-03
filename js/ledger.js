@@ -185,14 +185,14 @@ async function loadMemberLedger(){
             }
 
             // ── Multiple installments for this slot ───────────────────────────
-            // ALWAYS SHOW INSTALLMENTS (no expand/collapse needed)
+            const instGroupId = `inst_${sectionId}_${i}`;
             const installmentSubRows = slotMatchPays.map((ip, idx)=>{
                 const iPaid = parseFloat(ip.paid)||0;
                 const iBal  = parseFloat(ip.balance)||0;
                 const iMode = ip.paidBy||'—';
                 const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
                 const iCp   = ip.chitPicked==='Yes';
-                return `<tr style="background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;">
+                return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
                     <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
                     <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
                     <td style="padding:4px 6px;"></td>
@@ -206,17 +206,20 @@ async function loadMemberLedger(){
                 </tr>`;
             }).join('');
 
+            const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>`;
+            const instBadge     = `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${slotMatchPays.length} inst.</span>`;
             const finalBalCell  = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
             const cpPay2        = slotMatchPays.find(p=>p.chitPicked==='Yes');
             const cpCell2       = cpPay2 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : `<span style="color:var(--text-dim);">—</span>`;
+            const expandArrow   = `<span id="arr_${instGroupId}" style="font-size:0.7rem;color:#818cf8;transition:transform .2s;display:inline-block;">▶</span>`;
 
-            // Main month row (without expand/collapse - installments always visible below)
-            return `<tr style="background:${rowBg};${rowBL};">
+            // Main month row (clickable to toggle installments)
+            return `<tr style="background:${rowBg};${rowBL};cursor:pointer;" onclick="toggleInstRows('${instGroupId}')">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
                     ${dueDateCell}
                     <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td style="vertical-align:middle;"></td>
-                    <td style="vertical-align:middle;">—</td>
+                    <td style="vertical-align:middle;">${expandArrow}</td>
+                    <td style="vertical-align:middle;">${totalPaidCell}${instBadge}</td>
                     <td style="vertical-align:middle;">${finalBalCell}</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.65rem;">—</td>
