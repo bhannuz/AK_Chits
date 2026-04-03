@@ -165,7 +165,191 @@
             .modal-content-custom { padding:28px; }
         }
 
+        /* ════════════════════════════════════════════════════════
+           ── PRINT MEDIA QUERIES (MOBILE PRINTING FIX) ──
+           Fixes: Bottom content missing, tables cut off, page breaks
+           ════════════════════════════════════════════════════════ */
+        @media print {
+            /* ── GLOBAL PRINT SETUP ── */
+            * { background: transparent !important; color: black !important; box-shadow: none !important; text-shadow: none !important; }
+            html, body { width: 100% !important; height: 100% !important; margin: 0 !important; padding: 0 !important; }
+            body { background: white !important; font-family: Arial, sans-serif !important; }
+            
+            /* ── PAGE DIMENSIONS ── */
+            @page { size: A4; margin: 8mm 10mm; }
+            
+            /* ── HIDE NON-ESSENTIAL ELEMENTS ── */
+            .app-header, .nav-bar, .modal-overlay, #adminHeader, #memberHeader, 
+            #adminStatCards, #adminActionBtns, #adminMemberSearch,
+            .print-btn-bar, .btn-pdf, .btn-edit-sm, .btn-del-sm,
+            button, input[type="text"], input[type="search"],
+            .form-input, .suggestions-list, .modal-content-custom,
+            [onclick*="Modal"], [onclick*="Delete"], .backup-badge-btn { 
+                display: none !important; 
+            }
+            
+            /* ── SHOW PRINT CONTENT ── */
+            .tab-content { display: block !important; }
+            #ledgerData { display: block !important; }
+            #printOverlay { display: block !important; position: static !important; width: 100% !important; height: auto !important; }
+            #groupPrintDoc { display: block !important; }
+            
+            /* ── MAKE SCROLLABLE CONTENT VISIBLE ── */
+            .table-wrap { 
+                overflow: visible !important; 
+                -webkit-overflow-scrolling: auto !important;
+                max-width: 100% !important;
+            }
+            
+            /* ── TABLE PRINTING FIXES ── */
+            table { 
+                width: 100% !important; 
+                border-collapse: collapse !important; 
+                page-break-inside: avoid !important;
+                table-layout: auto !important;
+                margin-bottom: 8mm !important;
+            }
+            table, th, td { 
+                border: 1px solid #333 !important; 
+                color: black !important;
+            }
+            thead { 
+                display: table-header-group !important; 
+                background: #f0f0f0 !important;
+            }
+            tbody { 
+                display: table-row-group !important; 
+            }
+            tr { 
+                page-break-inside: avoid !important; 
+                page-break-after: auto !important;
+            }
+            th, td { 
+                padding: 8px 6px !important; 
+                text-align: left !important;
+                word-break: break-word !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+            }
+            th { 
+                background: #e0e0e0 !important; 
+                font-weight: bold !important; 
+                color: black !important;
+            }
+            
+            /* ── LEDGER SECTION FIXES ── */
+            #ledgerData > div { 
+                page-break-inside: avoid !important; 
+                page-break-after: auto !important;
+                margin-bottom: 12mm !important;
+            }
+            .group-card { 
+                page-break-inside: avoid !important; 
+                page-break-after: auto !important;
+            }
+            
+            /* ── STAT CARDS & INFO BOXES ── */
+            .stat-card, .info-box, .mini-stat, .stat { 
+                page-break-inside: avoid !important;
+                background: white !important;
+                border: 1px solid black !important;
+            }
+            
+            /* ── COLOR & TEXT PRESERVATION FOR PRINT ── */
+            .brand, .ledger-section-header, .group-card-header { 
+                color: black !important; 
+                font-weight: bold !important;
+            }
+            .stat-num, .stat-label, .stat-v, .stat-l { 
+                color: black !important;
+            }
+            
+            /* ── FLEX & GRID ADJUSTMENTS FOR PRINT ── */
+            .row { 
+                page-break-inside: avoid !important; 
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .col-4, .col-6, .col-12, [class*="col-"] { 
+                display: block !important; 
+                width: 100% !important; 
+                margin: 0 !important;
+                padding: 4mm 0 !important;
+                page-break-inside: avoid !important;
+            }
+            
+            /* ── PROGRESS BARS & VISUAL ELEMENTS ── */
+            .prog-bar-outer, .prog-outer { 
+                border: 1px solid #ccc !important; 
+                background: #f5f5f5 !important;
+            }
+            .prog-bar-inner, .prog-inner { 
+                background: #999 !important;
+            }
+            
+            /* ── TEXT COLORS FOR READABILITY ── */
+            a { color: black !important; text-decoration: underline !important; }
+            .due-badge, .partial-badge, .chit-yes-badge, .multi-month-badge { 
+                color: black !important; 
+                border: 1px solid black !important;
+            }
+            
+            /* ── CHEVRONS & ICONS ── */
+            .chevron-icon, .ledger-chevron { 
+                display: inline !important;
+            }
+            
+            /* ── SPACES & MARGINS ── */
+            body { padding-bottom: 0 !important; }
+            .container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+            
+            /* ── PRINT SPECIFIC WIDTHS ── */
+            .hdr { display: flex !important; page-break-inside: avoid !important; margin-bottom: 8mm !important; }
+            .info-box { page-break-inside: avoid !important; margin-bottom: 6mm !important; }
+            .sec-title { page-break-after: avoid !important; }
+            
+            /* ── ENSURE CONTENT DOESN'T OVERFLOW ── */
+            #groupPrintDoc { max-width: 210mm !important; margin: 0 !important; padding: 0 !important; }
+            #groupPrintDoc * { max-width: 100% !important; }
+        }
+        
+        /* ── PRINT PREVIEW IN BROWSER ── */
+        @media screen and (max-width: 600px) {
+            /* Hide on mobile when NOT printing */
+            @supports (display: none) {
+                /* This rule only applies in print preview */
+            }
+        }
+
         /* ── UTILITY: no-shrink inline text ── */
         .nowrap { white-space:nowrap; }
         .text-xs { font-size:var(--fs-xs); }
         .text-sm { font-size:var(--fs-sm); }
+
+        /* ── INSTALLMENT ROWS (Hide on screen, show on print) ── */
+        .inst-row { display:none !important; }
+        
+        @media print {
+            /* Show table sections that are hidden on screen */
+            [id^="ledger_"] { 
+                display:block !important; 
+                page-break-inside:avoid !important;
+            }
+            
+            /* Show all installment rows in print */
+            .inst-row { 
+                display:table-row !important; 
+                page-break-inside:avoid !important;
+                background:rgba(99,102,241,0.06) !important;
+                border-left:3px solid #6366f1 !important;
+            }
+            
+            /* Ensure ledger sections print properly */
+            #ledgerData { display:block !important; }
+            #ledgerData > div { 
+                page-break-inside:avoid !important;
+                display:block !important;
+            }
+        }
