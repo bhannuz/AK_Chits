@@ -327,15 +327,3 @@
         .nowrap { white-space:nowrap; }
         .text-xs { font-size:var(--fs-xs); }
         .text-sm { font-size:var(--fs-sm); }
-
-        /* ── INSTALLMENT ROWS (Hide on screen, show on print) ── */
-        .inst-row { display:none !important; }
-        
-        @media print {
-            .inst-row { 
-                display:table-row !important; 
-                page-break-inside:avoid !important;
-                background:rgba(99,102,241,0.06) !important;
-                border-left:3px solid #6366f1 !important;
-            }
-        }
