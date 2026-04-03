@@ -388,18 +388,39 @@ function toggleInstRows(groupId){
     const rows = document.querySelectorAll('.inst-'+groupId);
     const arrow = document.getElementById('arr_'+groupId);
     
-    if(rows.length === 0) return;
+    if(rows.length === 0) {
+        console.log('No rows found for:', 'inst-'+groupId);
+        return;
+    }
     
-    const isOpen = rows[0].style.display !== 'none';
+    // Check current state - look at actual computed style
+    const isCurrentlyHidden = rows[0].style.display === 'none' || getComputedStyle(rows[0]).display === 'none';
     
+    // Toggle visibility
     rows.forEach(r => {
-        r.style.display = isOpen ? 'none' : 'table-row';
+        if(isCurrentlyHidden) {
+            r.style.display = 'table-row';
+            r.classList.add('inst-row-visible');
+            r.classList.remove('inst-row-hidden');
+        } else {
+            r.style.display = 'none';
+            r.classList.add('inst-row-hidden');
+            r.classList.remove('inst-row-visible');
+        }
     });
     
+    // Rotate arrow
     if(arrow) {
-        arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
-        arrow.textContent = isOpen ? '▶' : '▼';
+        if(isCurrentlyHidden) {
+            arrow.style.transform = 'rotate(90deg)';
+            arrow.textContent = '▼';
+        } else {
+            arrow.style.transform = 'rotate(0deg)';
+            arrow.textContent = '▶';
+        }
     }
+    
+    console.log('Toggled', groupId, '- now', isCurrentlyHidden ? 'visible' : 'hidden');
 }
 
 function toggleLedgerTable(id, header){
