@@ -93,11 +93,14 @@ async function loadMemberLedger(){
         });
 
         const mergedRows = allDueDates.map((dueDate, i)=>{
-            // Collect ALL payments for this slot (handles multiple installments)
+            // Collect ALL payments that match this due date (simpler approach)
             const slotMatchPays = slotPays.filter(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
                 if(p.monthSlot!=null) return p.monthSlot===i;
-                return getMonthSlot(allDueDates, p.date)===i;
+                // SIMPLIFIED: Just match by date directly
+                const pDate = p.date ? p.date.substring(0, 7) : ''; // YYYY-MM format
+                const dDate = dueDate.substring(0, 7); // YYYY-MM format
+                return pDate === dDate || getMonthSlot(allDueDates, p.date)===i;
             });
             const matchPay = slotMatchPays.length ? slotMatchPays[0] : null;
             const hasInstallments = slotMatchPays.length > 1;
@@ -207,7 +210,7 @@ async function loadMemberLedger(){
             }).join('');
 
             const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>`;
-            const instBadge     = `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${slotMatchPays.length} inst.</span>`;
+            const instBadge     = slotMatchPays.length > 1 ? `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${slotMatchPays.length} inst.</span>` : '';
             const finalBalCell  = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
             const cpPay2        = slotMatchPays.find(p=>p.chitPicked==='Yes');
             const cpCell2       = cpPay2 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : `<span style="color:var(--text-dim);">—</span>`;
