@@ -192,7 +192,7 @@ async function loadMemberLedger(){
                 const iMode = ip.paidBy||'—';
                 const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
                 const iCp   = ip.chitPicked==='Yes';
-                return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;">
+                return `<tr class="inst-row inst-${instGroupId}" style="background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
                     <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
                     <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
                     <td style="padding:4px 6px;"></td>
