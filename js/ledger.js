@@ -34,8 +34,18 @@ async function loadMemberLedger(){
             const slots = Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
             slots.forEach(s=>{ _slotTotals[s]=(_slotTotals[s]||0)+(parseFloat(p.paid)||0); });
         });
-        const fullyPaidSlots = Object.keys(_slotTotals).filter(s=>chitRef<=0||_slotTotals[s]>=chitRef).length;
-        const monthsDone   = fullyPaidSlots;
+        
+        // Calculate fullyPaidSlotSet first (needed for monthsDone)
+        const _chitRef = slotPays.length?(parseFloat(slotPays[slotPays.length-1].chit)||0):0;
+        const _perSlotTotals = {};
+        slotPays.forEach(p=>{
+            const slots=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
+            slots.forEach(s=>{ _perSlotTotals[s]=(_perSlotTotals[s]||0)+(parseFloat(p.paid)||0); });
+        });
+        const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals).filter(s=>_chitRef<=0||_perSlotTotals[s]>=_chitRef).map(Number));
+        
+        // Now calculate monthsDone using fullyPaidSlotSet
+        const monthsDone   = fullyPaidSlotSet.size;
         const left         = Math.max(0,totalMonths-monthsDone);
         const pct          = Math.min(100,Math.round(monthsDone/totalMonths*100));
         const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
@@ -66,15 +76,8 @@ async function loadMemberLedger(){
                 if(si>=0) paidSlotSet.add(si);
             }
         });
-        // fullyPaidSlotSet — only slots where total paid >= chit amount (used for Next Due Date)
-        const _chitRef2 = slotPays.length?(parseFloat(slotPays[slotPays.length-1].chit)||0):0;
-        const _perSlotTotals2 = {};
-        slotPays.forEach(p=>{
-            const slots2=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
-            slots2.forEach(s=>{ _perSlotTotals2[s]=(_perSlotTotals2[s]||0)+(parseFloat(p.paid)||0); });
-        });
-        const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals2).filter(s=>_chitRef2<=0||_perSlotTotals2[s]>=_chitRef2).map(Number));
-
+        // paidSlotSet is already calculated above, skip duplicate fullyPaidSlotSet
+        
         // ── Merged table: rowspan for multi-month payments ───────────────────
         // Build a map: payId -> first slot index (to know where to render merged cell)
         const payFirstSlot = {}; // payId -> first slot index
@@ -189,25 +192,31 @@ async function loadMemberLedger(){
 
             // ── Multiple installments for this slot ───────────────────────────
             const instGroupId = `inst_${sectionId}_${i}`;
-            const installmentSubRows = slotMatchPays.map((ip, idx)=>{
-                const iPaid = parseFloat(ip.paid)||0;
-                const iBal  = parseFloat(ip.balance)||0;
-                const iMode = ip.paidBy||'—';
-                const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
-                const iCp   = ip.chitPicked==='Yes';
-                return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
-                    <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
-                    <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
-                    <td style="padding:4px 6px;"></td>
-                    <td style="padding:4px 6px;font-size:0.7rem;color:var(--text-dim);">${fmtDate(ip.date)}</td>
-                    <td style="padding:4px 6px;font-size:0.78rem;font-weight:800;color:${idx===slotMatchPays.length-1&&isFullPaid?'#34d399':'#fbbf24'};">${fmtAmt(iPaid)}</td>
-                    <td style="padding:4px 6px;font-size:0.75rem;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
-                    <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iCp?'🏆':''}</td>
-                    <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iMode}</td>
-                    <td style="padding:4px 6px;"></td>
-                    <td style="padding:4px 6px;">${iEdit}</td>
-                </tr>`;
-            }).join('');
+            
+            // Generate installment rows - MUST be created even if hidden
+            let installmentSubRows = '';
+            if(slotMatchPays.length > 1) {
+                installmentSubRows = slotMatchPays.map((ip, idx)=>{
+                    const iPaid = parseFloat(ip.paid)||0;
+                    const iBal  = parseFloat(ip.balance)||0;
+                    const iMode = ip.paidBy||'—';
+                    const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
+                    const iCp   = ip.chitPicked==='Yes';
+                    
+                    return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
+                        <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
+                        <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
+                        <td style="padding:4px 6px;"></td>
+                        <td style="padding:4px 6px;font-size:0.7rem;color:var(--text-dim);">${fmtDate(ip.date)}</td>
+                        <td style="padding:4px 6px;font-size:0.78rem;font-weight:800;color:${idx===slotMatchPays.length-1&&isFullPaid?'#34d399':'#fbbf24'};">${fmtAmt(iPaid)}</td>
+                        <td style="padding:4px 6px;font-size:0.75rem;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
+                        <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iCp?'🏆':''}</td>
+                        <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iMode}</td>
+                        <td style="padding:4px 6px;"></td>
+                        <td style="padding:4px 6px;">${iEdit}</td>
+                    </tr>`;
+                }).join('');
+            }
 
             const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>`;
             const instBadge     = slotMatchPays.length > 1 ? `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${slotMatchPays.length} inst.</span>` : '';
@@ -385,42 +394,63 @@ async function loadMemberLedger(){
 }
 
 function toggleInstRows(groupId){
-    const rows = document.querySelectorAll('.inst-'+groupId);
-    const arrow = document.getElementById('arr_'+groupId);
+    console.log('=== TOGGLE DEBUG ===');
+    console.log('Toggling groupId:', groupId);
+    
+    // Try multiple selectors
+    let rows = document.querySelectorAll('.inst-'+groupId);
+    console.log('Selector .inst-'+groupId, '- Found:', rows.length, 'rows');
     
     if(rows.length === 0) {
-        console.log('No rows found for:', 'inst-'+groupId);
+        // Try alternate selector
+        rows = document.querySelectorAll('[data-inst-group="'+groupId+'"]');
+        console.log('Alternate selector [data-inst-group], Found:', rows.length, 'rows');
+    }
+    
+    const arrow = document.getElementById('arr_'+groupId);
+    console.log('Arrow element found:', arrow ? 'Yes' : 'No');
+    
+    if(rows.length === 0) {
+        console.log('ERROR: No installment rows found!');
         return;
     }
     
-    // Check current state - look at actual computed style
-    const isCurrentlyHidden = rows[0].style.display === 'none' || getComputedStyle(rows[0]).display === 'none';
+    // Check current visibility
+    const firstRow = rows[0];
+    const computedStyle = window.getComputedStyle(firstRow);
+    const isCurrentlyHidden = firstRow.style.display === 'none' || computedStyle.display === 'none';
     
-    // Toggle visibility
-    rows.forEach(r => {
+    console.log('First row display:', firstRow.style.display);
+    console.log('Computed display:', computedStyle.display);
+    console.log('Is currently hidden:', isCurrentlyHidden);
+    
+    // Toggle all rows
+    rows.forEach((r, idx) => {
         if(isCurrentlyHidden) {
             r.style.display = 'table-row';
-            r.classList.add('inst-row-visible');
-            r.classList.remove('inst-row-hidden');
+            r.style.removeProperty('display');  // Remove to let CSS rule work
+            setTimeout(() => {
+                r.style.display = 'table-row !important';
+            }, 0);
         } else {
             r.style.display = 'none';
-            r.classList.add('inst-row-hidden');
-            r.classList.remove('inst-row-visible');
         }
+        console.log('Row', idx, '- Set to:', isCurrentlyHidden ? 'table-row' : 'none');
     });
     
-    // Rotate arrow
+    // Update arrow
     if(arrow) {
         if(isCurrentlyHidden) {
-            arrow.style.transform = 'rotate(90deg)';
             arrow.textContent = '▼';
+            arrow.style.transform = 'rotate(90deg)';
         } else {
-            arrow.style.transform = 'rotate(0deg)';
             arrow.textContent = '▶';
+            arrow.style.transform = 'rotate(0deg)';
         }
+        console.log('Arrow updated to:', isCurrentlyHidden ? '▼' : '▶');
     }
     
-    console.log('Toggled', groupId, '- now', isCurrentlyHidden ? 'visible' : 'hidden');
+    console.log('=== END TOGGLE ===');
 }
 
 function toggleLedgerTable(id, header){
