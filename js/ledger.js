@@ -218,7 +218,7 @@ async function loadMemberLedger(){
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
                     ${dueDateCell}
                     <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td style="vertical-align:middle;">${expandArrow}</td>
+                    <td style="vertical-align:middle;font-size:0.7rem;color:var(--text-dim);">${expandArrow} ${slotMatchPays[0]?fmtDate(slotMatchPays[0].date):'—'}</td>
                     <td style="vertical-align:middle;">${totalPaidCell}${instBadge}</td>
                     <td style="vertical-align:middle;">${finalBalCell}</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
