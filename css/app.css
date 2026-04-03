@@ -330,6 +330,8 @@
 
         /* ── INSTALLMENT ROWS (Hide on screen, show on print) ── */
         .inst-row { display:none !important; }
+        .inst-row-visible { display:table-row !important; }
+        .inst-row-hidden { display:none !important; }
         
         @media print {
             /* Show table sections that are hidden on screen */
