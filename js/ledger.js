@@ -192,7 +192,7 @@ async function loadMemberLedger(){
                 const iMode = ip.paidBy||'—';
                 const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
                 const iCp   = ip.chitPicked==='Yes';
-                return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;">
+                return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
                     <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
                     <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
                     <td style="padding:4px 6px;"></td>
@@ -211,13 +211,14 @@ async function loadMemberLedger(){
             const finalBalCell  = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
             const cpPay2        = slotMatchPays.find(p=>p.chitPicked==='Yes');
             const cpCell2       = cpPay2 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : `<span style="color:var(--text-dim);">—</span>`;
-            const expandArrow   = `<span id="arr_${instGroupId}" style="font-size:0.7rem;color:#818cf8;transition:transform .2s;display:inline-block;">▶</span>`;
 
+            // Main month row (clickable to toggle installments)
+            const payDateStr = slotMatchPays[0] ? fmtDate(slotMatchPays[0].date) : '—';
             return `<tr style="background:${rowBg};${rowBL};cursor:pointer;" onclick="toggleInstRows('${instGroupId}')">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
                     ${dueDateCell}
                     <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td style="vertical-align:middle;">${expandArrow}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;"><span id="arr_${instGroupId}" style="color:#818cf8;font-weight:700;">▶</span> ${payDateStr}</td>
                     <td style="vertical-align:middle;">${totalPaidCell}${instBadge}</td>
                     <td style="vertical-align:middle;">${finalBalCell}</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
@@ -231,9 +232,9 @@ async function loadMemberLedger(){
         const overdueCnt = allDueDates.filter((d,i)=>!paidSlotSet.has(i)&&d<today).length;
         const pendingCnt = allDueDates.filter((d,i)=>!paidSlotSet.has(i)&&d>=today).length;
 
-        return `<div style="margin-bottom:16px;">
+        return `<div style="margin-bottom:16px;page-break-inside:avoid;">
             <!-- Group Header -->
-            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;">
+            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
                     <div>
                         <div style="font-size:1rem;font-weight:900;color:#f39c12;margin-bottom:6px;">
@@ -281,9 +282,9 @@ async function loadMemberLedger(){
                 </div>
             </div>
 
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;">
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;page-break-inside:avoid;">
                 <!-- ── MERGED SCHEDULE + HISTORY ── -->
-                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);">
+                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);page-break-inside:avoid;">
                     <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule &amp; Payments (${totalMonths} months)</span>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)}</span>
@@ -292,10 +293,10 @@ async function loadMemberLedger(){
                         <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
                     </div>
                 </div>
-                <div id="${sectionId}" style="display:none;">
-                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
-                        <table class="table-custom">
-                            <thead><tr>
+                <div id="${sectionId}" style="display:none;page-break-inside:avoid;">
+                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;page-break-inside:avoid;">
+                        <table class="table-custom" style="table-layout:auto !important;width:100% !important;">
+                            <thead><tr style="page-break-inside:avoid;">
                                 <th style="text-align:center;">#</th>
                                 <th>Due Date</th>
                                 <th>Chit/Mo</th>
@@ -307,9 +308,9 @@ async function loadMemberLedger(){
                                 <th>Chit Picked</th>
                                 <th></th>
                             </tr></thead>
-                            <tbody>
+                            <tbody style="page-break-inside:avoid;">
                                 ${mergedRows}
-                                <tr style="font-weight:800;background:rgba(255,255,255,.04);">
+                                <tr style="font-weight:800;background:rgba(255,255,255,.04);page-break-inside:avoid;">
                                     <td colspan="4" style="color:var(--text-dim);">Total</td>
                                     <td style="color:#34d399;">${fmtAmt(tPaid)}</td>
                                     <td style="color:#f59e0b;">${tBal>0?fmtAmt(tBal):'—'}</td>
@@ -318,7 +319,7 @@ async function loadMemberLedger(){
                             </tbody>
                         </table>
                     </div>
-                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);">
+                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);page-break-inside:avoid;">
                         ✅ Paid &nbsp;|&nbsp; ⚡ Partial &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Pending
                     </div>
                 </div>
@@ -383,9 +384,19 @@ async function loadMemberLedger(){
 function toggleInstRows(groupId){
     const rows = document.querySelectorAll('.inst-'+groupId);
     const arrow = document.getElementById('arr_'+groupId);
-    const isOpen = rows.length && rows[0].style.display !== 'none';
-    rows.forEach(r=>r.style.display=isOpen?'none':'table-row');
-    if(arrow) arrow.style.transform = isOpen?'rotate(0deg)':'rotate(90deg)';
+    
+    if(rows.length === 0) return;
+    
+    const isOpen = rows[0].style.display !== 'none';
+    
+    rows.forEach(r => {
+        r.style.display = isOpen ? 'none' : 'table-row';
+    });
+    
+    if(arrow) {
+        arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+        arrow.textContent = isOpen ? '▶' : '▼';
+    }
 }
 
 function toggleLedgerTable(id, header){
