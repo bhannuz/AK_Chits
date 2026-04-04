@@ -184,7 +184,27 @@ async function renderCollectionsTab(){
                 if(p.monthSlot!=null) return p.monthSlot===idx;
                 return false;
             });
-            const membersPaidThisMonth = new Set(slotPays.map(p=>p.memberId)).size;
+            
+            // Count PAID SLOTS (not unique members)
+            // If member with 3 chits pays, count as 3 payments
+            let membersPaidThisMonth = 0;
+            expandedSlots.forEach(({m, slotNum, totalSlots}) => {
+                // Find if this member paid for this month
+                const hasPaid = slotPays.some(p => {
+                    if(p.memberId !== m.id) return false;
+                    // Check if payment matches this slot
+                    if(m.enrollments && m.enrollments.length > 0) {
+                        const enr = m.enrollments.find(e => e.groupId === g.id);
+                        if(enr && enr.enrollmentId && p.enrollmentId) {
+                            return p.enrollmentId === enr.enrollmentId && (p.slotNum == null || p.slotNum === slotNum);
+                        }
+                    }
+                    if(p.slotNum != null) return p.slotNum === slotNum;
+                    return slotNum === 1;  // Default to first slot if no slot info
+                });
+                if(hasPaid) membersPaidThisMonth++;
+            });
+            
             const received  = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
             const payout    = payouts[g.id+'_'+idx]||0;
             const balance   = received - payout;
