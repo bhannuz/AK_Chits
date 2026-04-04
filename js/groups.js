@@ -165,6 +165,10 @@ async function renderCollectionsTab(){
         const elapsed = allDD.filter(d=>d<=todayStr).length;
         const totalPayout = allDD.reduce((s,_,idx)=>s+(payouts[g.id+'_'+idx]||0),0);
         const totalBalance = totalReceived - totalPayout;
+        
+        // Get total unique members in this group
+        const uniqueMembers = new Set(gPays.map(p=>p.memberId)).size;
+        const totalMembers = uniqueMembers > 0 ? uniqueMembers : 0;
 
         const rows = allDD.map((dueDate, idx)=>{
             const slotPays = gPays.filter(p=>{
@@ -172,6 +176,7 @@ async function renderCollectionsTab(){
                 if(p.monthSlot!=null) return p.monthSlot===idx;
                 return false;
             });
+            const membersPaidThisMonth = new Set(slotPays.map(p=>p.memberId)).size;
             const received  = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
             const payout    = payouts[g.id+'_'+idx]||0;
             const balance   = received - payout;
@@ -194,10 +199,14 @@ async function renderCollectionsTab(){
             const dateColor = isPast||isToday ? '#c7d2fe' : '#555f7a';
             const balColor  = balance<0?'#f87171':balance>0?'#34d399':'var(--text-dim)';
             const balDisp   = balance!==0 ? (balance>0?'+':'')+fmtAmt(balance) : '—';
+            const membersPaidBadge = totalMembers > 0 
+                ? `<span style="background:rgba(167,139,250,0.15);color:#a78bfa;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:5px;">${membersPaidThisMonth}/${totalMembers}</span>`
+                : '—';
             return '<tr style="background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
                 +'<td style="text-align:center;color:var(--text-dim);font-size:0.68rem;padding:7px 4px;font-weight:700;">'+(idx+1)+'</td>'
                 +'<td style="font-size:0.75rem;color:'+dateColor+';padding:7px 8px;white-space:nowrap;">'+fmtDate(dueDate)+'</td>'
                 +'<td id="colrec_'+g.id+'_'+idx+'" data-received="'+received+'" style="font-size:0.78rem;font-weight:700;color:'+(received>0?'#34d399':'var(--text-dim)')+';padding:7px 8px;">'+(received>0?fmtAmt(received):'—')+'</td>'
+                +'<td style="text-align:center;padding:7px 6px;">'+membersPaidBadge+'</td>'
                 +'<td style="padding:5px 6px;">'
                     +'<input type="number" value="'+(payout||'')+'" placeholder="Rs payout" '
                     +'data-gid="'+g.id+'" data-idx="'+idx+'" '
@@ -232,6 +241,7 @@ async function renderCollectionsTab(){
                             <th style="text-align:center;font-size:0.6rem;color:var(--text-dim);padding:6px 4px;font-weight:500;">#</th>
                             <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;">Due Date</th>
                             <th style="font-size:0.6rem;color:#34d399;padding:6px 8px;font-weight:500;">Received</th>
+                            <th style="font-size:0.6rem;color:#a78bfa;padding:6px 8px;font-weight:500;text-align:center;">Members Paid</th>
                             <th style="font-size:0.6rem;color:#a5b4fc;padding:6px 8px;font-weight:500;">Chit Payout &#9999;</th>
                             <th style="font-size:0.6rem;color:#f59e0b;padding:6px 8px;font-weight:500;">Balance</th>
                             <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;text-align:center;">Status</th>
