@@ -26,14 +26,58 @@
         }
 
         /* ── HEADER ── */
-        .app-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); background:var(--card-bg); position:sticky; top:0; z-index:500; }
-        .brand-wrap { display:flex; align-items:center; gap:10px; }
+        .app-header { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--border); background:var(--card-bg); position:sticky; top:0; z-index:500; flex-wrap:wrap; gap:8px; }
+        .brand-wrap { display:flex; align-items:center; gap:10px; min-width:0; flex-shrink:1; }
         .brand-logo { flex-shrink:0; }
-        .brand-name { color:#f39c12; font-weight:900; font-size:var(--fs-lg); letter-spacing:-.3px; display:flex; align-items:center; gap:6px; }
-        .brand-cloud { font-size:0.62rem; background:rgba(46,204,113,.15); color:#2ecc71; border:1px solid rgba(46,204,113,.3); border-radius:4px; padding:2px 6px; font-weight:800; }
+        .brand-name { color:#f39c12; font-weight:900; font-size:var(--fs-lg); letter-spacing:-.3px; display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .brand-cloud { font-size:0.62rem; background:rgba(46,204,113,.15); color:#2ecc71; border:1px solid rgba(46,204,113,.3); border-radius:4px; padding:2px 6px; font-weight:800; flex-shrink:0; }
         .brand-sub { font-size:0.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.6px; margin-top:2px; }
+        
+        @media (max-width:480px) {
+            .app-header { padding:10px 12px; gap:6px; }
+            .brand-name { font-size:0.95rem; gap:4px; }
+            .brand-cloud { display:none; }
+            .brand-sub { display:none; }
+            .app-header > div:last-child { display:flex; gap:4px; flex-wrap:wrap; }
+            .app-header button { padding:4px 6px !important; font-size:0.65rem !important; min-height:36px !important; white-space:nowrap; flex-shrink:0; }
+            #headerRoleBadge { padding:2px 4px !important; font-size:0.55rem !important; }
+            #logoutBtn { padding:4px 6px !important; }
+        }
+        
+        @media (max-width:360px) {
+            .app-header { padding:8px 10px; }
+            .brand-logo img { width:36px !important; height:36px !important; }
+            .brand-name { font-size:0.85rem; }
+            .app-header button { padding:3px 5px !important; font-size:0.55rem !important; }
+        }
 
-        /* ── STAT CARDS ── */
+        /* ── RESPONSIVE FIXES FOR MOBILE ── */
+        @media (max-width:768px) {
+            .container { padding-left:8px !important; padding-right:8px !important; }
+            .btn { padding:12px !important; font-size:0.95rem !important; }
+            .stat-card { padding:12px 8px !important; }
+            .stat-num { font-size:1.3rem !important; }
+            .stat-label { font-size:0.65rem !important; }
+        }
+        
+        @media (max-width:480px) {
+            .container { padding-left:6px !important; padding-right:6px !important; }
+            .btn { padding:10px !important; font-size:0.9rem !important; min-height:44px !important; }
+            .stat-card { padding:10px 6px !important; }
+            .stat-num { font-size:1.15rem !important; }
+            .stat-label { font-size:0.6rem !important; }
+            .modal-content-custom { padding:16px 14px !important; }
+            .form-input { padding:12px 10px !important; font-size:0.95rem !important; }
+            .form-label-small { font-size:0.7rem !important; }
+        }
+        
+        @media (max-width:360px) {
+            .container { padding-left:4px !important; padding-right:4px !important; }
+            .btn { padding:8px !important; font-size:0.8rem !important; }
+            .stat-card { padding:8px 4px !important; }
+            .stat-num { font-size:1rem !important; }
+            .stat-label { font-size:0.55rem !important; }
+        }
         .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:14px 10px; text-align:center; }
         .stat-num { font-size:var(--fs-xl); font-weight:800; display:block; }
         .stat-label { font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; margin-top:2px; display:block; }
