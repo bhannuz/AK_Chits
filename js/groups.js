@@ -151,6 +151,7 @@ async function renderCollectionsTab(){
     colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
     const gs = await getCollection('groups');
     const ps = await getCollection('payments');
+    const ms = await getCollection('members');
     const payouts = await _getPayouts();
     if(!gs.length){ colArea.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>'; return; }
 
@@ -159,16 +160,14 @@ async function renderCollectionsTab(){
         const allDD = getGroupDueDates(g);
         if(!allDD.length) return '';
         const gPays = ps.filter(p=>p.groupId===g.id);
+        const gMs = ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
+        const totalMembers = gMs.length;
         const totalMonths = parseInt(g.duration||g.gDuration)||21;
         const fixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt)||0 : 0;
         const totalReceived = gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
         const elapsed = allDD.filter(d=>d<=todayStr).length;
         const totalPayout = allDD.reduce((s,_,idx)=>s+(payouts[g.id+'_'+idx]||0),0);
         const totalBalance = totalReceived - totalPayout;
-        
-        // Get total unique members in this group
-        const uniqueMembers = new Set(gPays.map(p=>p.memberId)).size;
-        const totalMembers = uniqueMembers > 0 ? uniqueMembers : 0;
 
         const rows = allDD.map((dueDate, idx)=>{
             const slotPays = gPays.filter(p=>{
