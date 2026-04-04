@@ -161,7 +161,16 @@ async function renderCollectionsTab(){
         if(!allDD.length) return '';
         const gPays = ps.filter(p=>p.groupId===g.id);
         const gMs = ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
-        const totalMembers = gMs.length;
+        
+        // Calculate total slots (accounting for members with multiple chits)
+        const expandedSlots=[];
+        gMs.forEach(m=>{
+            const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
+            const qty=enr?parseInt(enr.qty||1):1;
+            for(let q=0;q<qty;q++) expandedSlots.push({m,slotNum:q+1,totalSlots:qty});
+        });
+        const totalSlots = expandedSlots.length;  // This is the correct denominator!
+        
         const totalMonths = parseInt(g.duration||g.gDuration)||21;
         const fixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt)||0 : 0;
         const totalReceived = gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
@@ -198,8 +207,8 @@ async function renderCollectionsTab(){
             const dateColor = isPast||isToday ? '#c7d2fe' : '#555f7a';
             const balColor  = balance<0?'#f87171':balance>0?'#34d399':'var(--text-dim)';
             const balDisp   = balance!==0 ? (balance>0?'+':'')+fmtAmt(balance) : '—';
-            const membersPaidBadge = totalMembers > 0 
-                ? `<span style="background:rgba(167,139,250,0.15);color:#a78bfa;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:5px;">${membersPaidThisMonth}/${totalMembers}</span>`
+            const membersPaidBadge = totalSlots > 0 
+                ? `<span style="background:rgba(167,139,250,0.15);color:#a78bfa;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:5px;">${membersPaidThisMonth}/${totalSlots}</span>`
                 : '—';
             return '<tr style="background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
                 +'<td style="text-align:center;color:var(--text-dim);font-size:0.68rem;padding:7px 4px;font-weight:700;">'+(idx+1)+'</td>'
