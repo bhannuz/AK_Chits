@@ -6,8 +6,17 @@
 function switchTab(t){
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+    document.querySelectorAll('.tab-nav-item-desktop').forEach(i=>i.classList.remove('active'));
+    
     document.getElementById(t+'Tab').classList.add('active');
-    document.getElementById('nav'+t.charAt(0).toUpperCase()+t.slice(1)).classList.add('active');
+    const mobNavId = 'nav'+t.charAt(0).toUpperCase()+t.slice(1);
+    const mobNav = document.getElementById(mobNavId);
+    if(mobNav) mobNav.classList.add('active');
+    
+    const desktopNavId = 'nav'+t.charAt(0).toUpperCase()+t.slice(1)+'Desktop';
+    const desktopNav = document.getElementById(desktopNavId);
+    if(desktopNav) desktopNav.classList.add('active');
+    
     updateUI();
 }
 
