@@ -29,7 +29,10 @@ async function migrateData(){
 async function updateUI(){
     const m=await getCollection('members');const g=await getCollection('groups');const p=await getCollection('payments');
     ALL_MEMBERS=m;
+    
+    // Set member-mode class based on user role
     if(CURRENT_USER && CURRENT_USER.role==='member'){
+        document.body.classList.add('member-mode');
         const myPays=p.filter(x=>x.memberId===CURRENT_USER.memberId);
         const myGroups=new Set(myPays.map(x=>x.groupId));
         document.getElementById('memberCount').innerText='—';
@@ -37,6 +40,8 @@ async function updateUI(){
         const today=new Date().toISOString().split('T')[0];
         document.getElementById('todayColl').innerText=fmtAmt(myPays.filter(x=>x.date===today).reduce((s,x)=>s+(parseFloat(x.paid)||0),0));
         return;
+    } else {
+        document.body.classList.remove('member-mode');
     }
     document.getElementById('memberCount').innerText=m.length;
     document.getElementById('groupCount').innerText=g.length;
