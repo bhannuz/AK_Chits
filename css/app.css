@@ -136,6 +136,13 @@
             .container { padding-bottom:20px !important; }
         }
         
+        /* ── MEMBER MODE: Hide all nav items except Home ── */
+        body.member-mode .nav-item:not(#navHome) { display:none !important; }
+        body.member-mode .tab-nav-item-desktop:not(#navHomeDesktop) { display:none !important; }
+        body.member-mode #navPlanner, body.member-mode #navGroups, body.member-mode #navBackup,
+        body.member-mode #navPlannerDesktop, body.member-mode #navGroupsDesktop, body.member-mode #navBackupDesktop { display:none !important; }
+        body.member-mode #plannerTab, body.member-mode #groupsTab, body.member-mode #backupTab { display:none !important; }
+        
         /* ── TABLET: Adjust nav bar spacing ── */
         @media (min-width:768px) and (max-width:1023px) {
             .nav-bar { padding:8px 0 calc(8px + env(safe-area-inset-bottom)); }
