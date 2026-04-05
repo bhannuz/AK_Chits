@@ -184,18 +184,18 @@ function applyUserSession(user){
         document.getElementById('adminActionBtns').style.display = 'none';
         document.getElementById('adminMemberSearch').style.display = 'none';
         document.getElementById('adminQuickBtns').style.display = 'none';
-        document.getElementById('navGroups').style.display = 'none';
-        document.getElementById('navBackup').style.display = 'none';
-        document.getElementById('navPlanner').style.display = 'none';
-        document.querySelector('.nav-bar').style.display = 'none';
-        document.getElementById('memberLedgerArea').style.display = 'block';
         document.getElementById('qrGeneratorSection').style.display = 'none';
         document.getElementById('waReminderSection').style.display = 'none';
-        document.getElementById('adminQuickBtns').style.display = 'none';
+        document.getElementById('memberLedgerArea').style.display = 'block';
         document.getElementById('memberQrArea').style.display = 'block';
         document.getElementById('summaryView').value = user.memberId;
+        
+        // Add member-mode class to hide tabs via CSS
+        document.body.classList.add('member-mode');
+        
         loadMemberLedger();
         if(typeof loadMemberQr === 'function') loadMemberQr(user.memberId);
+        updateUI();  // Call updateUI to set stats
     }
 }
 
