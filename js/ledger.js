@@ -96,148 +96,63 @@ async function loadMemberLedger(){
         });
 
         const mergedRows = allDueDates.map((dueDate, i)=>{
-            // Collect ALL payments that match this due date (simpler approach)
-            const slotMatchPays = slotPays.filter(p=>{
-                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
-                if(p.monthSlot!=null) return p.monthSlot===i;
-                // SIMPLIFIED: Just match by date directly
-                const pDate = p.date ? p.date.substring(0, 7) : ''; // YYYY-MM format
-                const dDate = dueDate.substring(0, 7); // YYYY-MM format
-                return pDate === dDate || getMonthSlot(allDueDates, p.date)===i;
-            });
-            const matchPay = slotMatchPays.length ? slotMatchPays[0] : null;
-            const hasInstallments = slotMatchPays.length > 1;
 
-            // Aggregate totals across all installments for this slot
-            const totalPaidForSlot = slotMatchPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-            const chitAmt          = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
-            const latestBal        = slotMatchPays.length ? (parseFloat(slotMatchPays[slotMatchPays.length-1].balance)||0) : 0;
-
-            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && totalPaidForSlot>=chitAmt;
-            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && totalPaidForSlot>0 && totalPaidForSlot<chitAmt;
-            const isAnyPaid     = paidSlotSet.has(i);
-            const isOverdue     = !isAnyPaid && dueDate < today;
-            const cp            = slotMatchPays.some(p=>p.chitPicked==='Yes');
-            const isMulti       = matchPay && matchPay.numMonths && matchPay.numMonths>1;
-
-            // For multi-month: only render payment detail cells on FIRST slot row
-            const isFirstOfMulti = isMulti && matchPay && payFirstSlot[matchPay.id]===i;
-            const isSubOfMulti   = isMulti && matchPay && payFirstSlot[matchPay.id]!==i;
-            const span           = isFirstOfMulti ? payRowSpan[matchPay.id] : 1;
-
-            // Row styling
-            const rowBg = isFullPaid    ? 'rgba(16,185,129,0.07)'
-                        : isPartialPaid ? 'rgba(245,158,11,0.07)'
-                        : cp            ? 'rgba(16,185,129,0.07)'
-                        : isMulti       ? 'rgba(99,102,241,0.07)'
-                        : isOverdue     ? 'rgba(239,68,68,0.05)'
-                        : '';
-            const rowBL = cp            ? 'border-left:3px solid #10b981;'
-                        : isMulti       ? 'border-left:3px solid #818cf8;'
-                        : isPartialPaid ? 'border-left:3px solid #f59e0b;'
-                        : '';
-
-            const dateColor = isFullPaid ? '#a5b4fc' : isPartialPaid ? '#fbbf24' : isOverdue ? '#f87171' : '#c7d2fe';
-            const dueDateCell = `<td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>`;
-
-            if(isSubOfMulti){
-                return `<tr style="background:${rowBg};${rowBL}">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
-                    ${dueDateCell}
-                    <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                </tr>`;
+        // ── SIMPLIFIED: Show each payment as a separate row with Edit button ──────
+        const mergedRows = slotPays.map((pay, payIdx)=>{
+            // Find which due date slot this payment belongs to
+            let slotIndex = -1;
+            if(pay.monthSlot != null) {
+                slotIndex = pay.monthSlot;
+            } else if(Array.isArray(pay.monthSlots) && pay.monthSlots.length > 0) {
+                slotIndex = pay.monthSlots[0];
+            } else {
+                slotIndex = getMonthSlot(allDueDates, pay.date);
             }
-
-            // Status badge based on aggregated totals
+            
+            if(slotIndex < 0 || slotIndex >= allDueDates.length) return '';
+            
+            const dueDate = allDueDates[slotIndex];
+            const iPaid = parseFloat(pay.paid)||0;
+            const iBal = parseFloat(pay.balance)||0;
+            const iMode = pay.paidBy||'—';
+            const iCp = pay.chitPicked==='Yes';
+            
+            // Styling
+            const isPaid = iPaid > 0;
+            const rowBg = isPaid ? 'rgba(16,185,129,0.07)' : '';
+            const rowBL = iCp ? 'border-left:3px solid #10b981;' : '';
+            
+            // Status badge
             let statusBadge;
-            if(isFullPaid || (isAnyPaid && chitAmt===0)){
+            if(isPaid) {
                 statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`;
-            } else if(isPartialPaid){
-                statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
-            } else if(isOverdue){
-                statusBadge = `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">🔴 Overdue</span>`;
             } else {
                 statusBadge = `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
             }
-
-            const rs = span > 1 ? ` rowspan="${span}"` : '';
-            const multiTag = isFirstOfMulti
-                ? `<span style="display:block;background:rgba(99,102,241,0.18);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-top:2px;">×${matchPay.numMonths} months bulk</span>`
-                : '';
-
-            // ── Single payment row (no installments) ──────────────────────────
-            if(!hasInstallments){
-                const payDateCell    = matchPay ? `<span style="color:var(--text-dim);font-size:0.72rem;">${fmtDate(matchPay.date)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-                const paidCell       = isAnyPaid && matchPay ? `<span style="color:${isPartialPaid?'#fbbf24':'#34d399'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-                const balCell        = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-                const modeCell       = matchPay && matchPay.paidBy ? `<span style="color:var(--text-dim);font-size:0.7rem;">${matchPay.paidBy}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-                const cpPay          = slotMatchPays.find(p=>p.chitPicked==='Yes');
-                const chitPickedCell = cpPay
-                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${cpPay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${cpPay.chitPickedBy}</div>`:''}`
-                    : `<span style="color:var(--text-dim);">—</span>`;
-                const editCell = !isMember && matchPay ? `<button class="btn-edit-sm" onclick="openEditPayment('${matchPay.id}')" style="font-size:0.62rem;padding:3px 7px;">Edit</button>` : '';
-                return `<tr style="background:${rowBg};${rowBL}">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
-                    ${dueDateCell}
-                    <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td${rs} style="vertical-align:middle;">${payDateCell}${multiTag}</td>
-                    <td${rs} style="vertical-align:middle;">${paidCell}</td>
-                    <td${rs} style="vertical-align:middle;">${balCell}</td>
-                    <td${rs} style="vertical-align:middle;">${statusBadge}</td>
-                    <td${rs} style="vertical-align:middle;">${modeCell}</td>
-                    <td${rs} style="vertical-align:middle;">${chitPickedCell}</td>
-                    <td${rs} style="vertical-align:middle;">${editCell}</td>
-                </tr>`;
-            }
-
-            // ── Multiple installments for this slot ───────────────────────────
-            const instGroupId = `inst_${sectionId}_${i}`;
             
-            // Generate installment rows - MUST be created even if hidden
-            let installmentSubRows = '';
-            if(slotMatchPays.length > 1) {
-                installmentSubRows = slotMatchPays.map((ip, idx)=>{
-                    const iPaid = parseFloat(ip.paid)||0;
-                    const iBal  = parseFloat(ip.balance)||0;
-                    const iMode = ip.paidBy||'—';
-                    const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
-                    const iCp   = ip.chitPicked==='Yes';
-                    
-                    return `<tr class="inst-row inst-${instGroupId}" style="background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
-                        <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
-                        <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
-                        <td style="padding:4px 6px;"></td>
-                        <td style="padding:4px 6px;font-size:0.7rem;color:var(--text-dim);">${fmtDate(ip.date)}</td>
-                        <td style="padding:4px 6px;font-size:0.78rem;font-weight:800;color:${idx===slotMatchPays.length-1&&isFullPaid?'#34d399':'#fbbf24'};">${fmtAmt(iPaid)}</td>
-                        <td style="padding:4px 6px;font-size:0.75rem;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
-                        <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iCp?'🏆':''}</td>
-                        <td style="padding:4px 6px;font-size:0.65rem;color:var(--text-dim);">${iMode}</td>
-                        <td style="padding:4px 6px;"></td>
-                        <td style="padding:4px 6px;">${iEdit}</td>
-                    </tr>`;
-                }).join('');
-            }
-
-            const totalPaidCell = `<span style="color:${isFullPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalPaidForSlot)}</span>`;
-            const instBadge     = slotMatchPays.length > 1 ? `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${slotMatchPays.length} inst.</span>` : '';
-            const finalBalCell  = latestBal>0 ? `<span style="color:#f59e0b;font-weight:700;">${fmtAmt(latestBal)}</span>` : `<span style="color:var(--text-dim);">—</span>`;
-            const cpPay2        = slotMatchPays.find(p=>p.chitPicked==='Yes');
-            const cpCell2       = cpPay2 ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : `<span style="color:var(--text-dim);">—</span>`;
-
-            // Main month row (clickable to toggle installments)
-            const payDateStr = slotMatchPays[0] ? fmtDate(slotMatchPays[0].date) : '—';
+            // Edit button (visible for ALL payments)
+            const editCell = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
+            
+            // Chit picked
+            const chitPickedCell = iCp
+                ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${pay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${pay.chitPickedBy}</div>`:''}`
+                : `<span style="color:var(--text-dim);">—</span>`;
+            
+            const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
+            
             return `<tr style="background:${rowBg};${rowBL}">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
-                    ${dueDateCell}
-                    <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;"><span id="arr_${instGroupId}" style="color:#818cf8;font-weight:700;">▼</span> ${payDateStr}</td>
-                    <td style="vertical-align:middle;">${totalPaidCell}${instBadge}</td>
-                    <td style="vertical-align:middle;">${finalBalCell}</td>
+                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
+                    <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
+                    <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(pay.date)}</td>
+                    <td style="vertical-align:middle;color:${isPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(iPaid)}</td>
+                    <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.65rem;">—</td>
-                    <td style="vertical-align:middle;">${cpCell2}</td>
-                    <td style="vertical-align:middle;"></td>
-                </tr>${installmentSubRows}`;
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
+                    <td style="vertical-align:middle;">${chitPickedCell}</td>
+                    <td style="vertical-align:middle;">${editCell}</td>
+                </tr>`;
+        }).filter(r => r !== '').join('');
         }).join('');
 
         // ── Count summary for schedule ────────────────────────────────────────
