@@ -1,6 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — MEMBER LEDGER
-// Edit only this file when changing loadMemberLedger — member payment display
+// AK Chit Funds — MEMBER LEDGER - SIMPLIFIED (EACH PAYMENT AS ROW)
 // ═══════════════════════════════════════════════════════════
 
 async function loadMemberLedger(){
@@ -25,84 +24,31 @@ async function loadMemberLedger(){
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
-        // Only count months that are FULLY paid (total paid >= chit amount for that slot)
-        const chitRef = slotPays.length ? (parseFloat(slotPays[slotPays.length-1].chit)||0) : 0;
-        const _allDD  = allDueDates; // reference for slot matching below
-        // Build per-slot paid totals to determine fully paid months
-        const _slotTotals = {};
-        slotPays.forEach(p=>{
-            const slots = Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
-            slots.forEach(s=>{ _slotTotals[s]=(_slotTotals[s]||0)+(parseFloat(p.paid)||0); });
-        });
-        
-        // Calculate fullyPaidSlotSet first (needed for monthsDone)
-        const _chitRef = slotPays.length?(parseFloat(slotPays[slotPays.length-1].chit)||0):0;
+        const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
+        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : 0;
+
+        // Calculate fully paid months
         const _perSlotTotals = {};
         slotPays.forEach(p=>{
             const slots=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
             slots.forEach(s=>{ _perSlotTotals[s]=(_perSlotTotals[s]||0)+(parseFloat(p.paid)||0); });
         });
-        const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals).filter(s=>_chitRef<=0||_perSlotTotals[s]>=_chitRef).map(Number));
-        
-        // Now calculate monthsDone using fullyPaidSlotSet
+        const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals).filter(s=>chitAmount<=0||_perSlotTotals[s]>=chitAmount).map(Number));
         const monthsDone   = fullyPaidSlotSet.size;
-        const left         = Math.max(0,totalMonths-monthsDone);
         const pct          = Math.min(100,Math.round(monthsDone/totalMonths*100));
         const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
         const tBal         = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const multiMonthCount = slotPays.filter(p=>p.numMonths&&p.numMonths>1).length;
-        const chitPickedPay   = slotPays.find(p=>p.chitPicked==='Yes');
-        const gStartDisplay   = fmtDate(grp.startDate||grp.gStart||'');
-        const gDueDayOrd      = grp.dueDay?`${grp.dueDay}${['st','nd','rd'][((grp.dueDay%100-11)%10)-1]||'th'}`:'--';
 
-        // Get fixed chit amount from last payment or first payment
-        const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
-        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : 0;
-
-        const chitSlotBadge = totalSlots>1
-            ? `<span style="background:rgba(245,158,11,0.25);border:1px solid rgba(245,158,11,0.5);color:#fbbf24;border-radius:5px;padding:2px 9px;font-size:0.75rem;font-weight:800;margin-left:6px;">Chit ${slotNum}</span>`
-            : '';
-        const labelBadge = enr.label
-            ? `<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>` : '';
-
-        // ── Build paid slot set for schedule ─────────────────────────────────
-        const paidSlotSet = new Set(); // any payment (including partial)
-        slotPays.forEach(p=>{
-            if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s=>paidSlotSet.add(s));
-            else if(p.monthSlot!=null) paidSlotSet.add(p.monthSlot);
-            else {
-                // fallback: derive from date
-                const si = getMonthSlot(allDueDates, p.date);
-                if(si>=0) paidSlotSet.add(si);
-            }
-        });
-        // paidSlotSet is already calculated above, skip duplicate fullyPaidSlotSet
-        
-        // ── Merged table: rowspan for multi-month payments ───────────────────
-        // Build a map: payId -> first slot index (to know where to render merged cell)
-        const payFirstSlot = {}; // payId -> first slot index
-        const payRowSpan   = {}; // payId -> rowspan count
-        allDueDates.forEach((d, i)=>{
-            const p = slotPays.find(pay=>{
-                if(Array.isArray(pay.monthSlots)) return pay.monthSlots.includes(i);
-                if(pay.monthSlot!=null) return pay.monthSlot===i;
-                return getMonthSlot(allDueDates, pay.date)===i;
-            });
-            if(!p) return;
-            if(p.numMonths && p.numMonths > 1){
-                if(payFirstSlot[p.id] === undefined) payFirstSlot[p.id] = i;
-                payRowSpan[p.id] = (payRowSpan[p.id]||0) + 1;
-            }
-        });
-
-        const mergedRows = allDueDates.map((dueDate, i)=>{
-
-        // Simple table: show each payment as its own row
-        const mergedRows = slotPays.map(pay => {
+        // Build table rows - each payment is its own row
+        const mergedRows = slotPays.map((pay) => {
             let slotIndex = -1;
-            if(pay.monthSlot != null) slotIndex = pay.monthSlot;
-            else if(Array.isArray(pay.monthSlots) && pay.monthSlots.length > 0) slotIndex = pay.monthSlots[0];
-            else slotIndex = getMonthSlot(allDueDates, pay.date);
+            if(pay.monthSlot != null) {
+                slotIndex = pay.monthSlot;
+            } else if(Array.isArray(pay.monthSlots) && pay.monthSlots.length > 0) {
+                slotIndex = pay.monthSlots[0];
+            } else {
+                slotIndex = getMonthSlot(allDueDates, pay.date);
+            }
             
             if(slotIndex < 0 || slotIndex >= allDueDates.length) return '';
             
@@ -112,6 +58,7 @@ async function loadMemberLedger(){
             const iMode = pay.paidBy||'—';
             const iCp = pay.chitPicked==='Yes';
             const isPaid = iPaid > 0;
+            
             const rowBg = isPaid ? 'rgba(16,185,129,0.07)' : '';
             const rowBL = iCp ? 'border-left:3px solid #10b981;' : '';
             
@@ -140,14 +87,20 @@ async function loadMemberLedger(){
                     <td style="vertical-align:middle;">${editCell}</td>
                 </tr>`;
         }).filter(r => r !== '').join('');
-        }).join('');
 
-        // ── Count summary for schedule ────────────────────────────────────────
-        const overdueCnt = allDueDates.filter((d,i)=>!paidSlotSet.has(i)&&d<today).length;
-        const pendingCnt = allDueDates.filter((d,i)=>!paidSlotSet.has(i)&&d>=today).length;
+        const overdueCnt = allDueDates.filter((d,i)=>!slotPays.find(p=>{
+            if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
+            if(p.monthSlot!=null) return p.monthSlot===i;
+            return getMonthSlot(allDueDates, p.date)===i;
+        })&&d<today).length;
+
+        const chitSlotBadge = totalSlots>1
+            ? `<span style="background:rgba(245,158,11,0.25);border:1px solid rgba(245,158,11,0.5);color:#fbbf24;border-radius:5px;padding:2px 9px;font-size:0.75rem;font-weight:800;margin-left:6px;">Chit ${slotNum}</span>`
+            : '';
+        const labelBadge = enr.label
+            ? `<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>` : '';
 
         return `<div style="margin-bottom:16px;page-break-inside:avoid;">
-            <!-- Group Header -->
             <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
                     <div>
@@ -155,51 +108,23 @@ async function loadMemberLedger(){
                             Group: ${grp.name}${labelBadge}${chitSlotBadge}
                         </div>
                         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                            <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${gStartDisplay}</span>
-                            ${chitPickedPay?`<span style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#34d399;">🏆 Chit Picked</span>`:''}
+                            <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${fmtDate(grp.startDate||grp.gStart||'')}</span>
                         </div>
                     </div>
-
                 </div>
-                <!-- Progress bar -->
                 <div style="margin-top:10px;">
                     <div style="background:#252f48;border-radius:5px;height:6px;overflow:hidden;">
                         <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%;"></div>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
                         <span style="font-size:0.65rem;color:var(--text-dim);">Month ${monthsDone}/${totalMonths} paid${overdueCnt>0?` · <span style="color:#f87171;">${overdueCnt} overdue</span>`:''}</span>
-                        ${(()=>{
-                            const s=grp.startDate||grp.gStart;
-                            if(!s||!totalMonths) return `<span style="font-size:0.65rem;color:var(--text-dim);">${pendingCnt} upcoming</span>`;
-                            const sd=new Date(s+'T00:00:00');
-                            sd.setMonth(sd.getMonth()+totalMonths);
-                            const pad=n=>String(n).padStart(2,'0');
-                            const endStr=`${pad(sd.getDate())}/${pad(sd.getMonth()+1)}/${sd.getFullYear()}`;
-                            return `<span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f87171;">🏁 Ends: ${endStr}</span>`;
-                        })()}
-                    </div>
-                </div>
-                <!-- Summary money chips -->
-                <div style="display:flex;gap:8px;margin-top:10px;">
-                    <div style="flex:1;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:10px;padding:8px;text-align:center;">
-                        <div style="font-size:0.85rem;font-weight:800;color:#34d399;">${fmtAmt(tPaid)}</div>
-                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Total Paid</div>
-                    </div>
-                    <div style="flex:1;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:8px;text-align:center;">
-                        <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${(()=>{const nd=allDueDates.find((d,i)=>!fullyPaidSlotSet.has(i));return nd?fmtDate(nd):'--';})()}</div>
-                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Next Due Date</div>
-                    </div>
-                    <div style="flex:1;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:8px;text-align:center;">
-                        <div style="font-size:0.85rem;font-weight:800;color:#f87171;">${left} <span style="font-size:0.65rem;font-weight:600;">/ ${totalMonths}</span></div>
-                        <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;margin-top:2px;">Pending</div>
                     </div>
                 </div>
             </div>
 
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;page-break-inside:avoid;">
-                <!-- ── MERGED SCHEDULE + HISTORY ── -->
                 <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);page-break-inside:avoid;">
-                    <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule &amp; Payments (${totalMonths} months)</span>
+                    <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule & Payments (${totalMonths} months)</span>
                     <div style="display:flex;align-items:center;gap:8px;">
                         <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)}</span>
                         ${tBal>0?`<span style="font-size:0.78rem;color:#f59e0b;font-weight:700;">${fmtAmt(tBal)} bal</span>`:''}
@@ -207,7 +132,7 @@ async function loadMemberLedger(){
                         <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
                     </div>
                 </div>
-                <div id="${sectionId}" style="display:none;page-break-inside:avoid;">
+                <div id="${sectionId}" style="display:block;page-break-inside:avoid;">
                     <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;page-break-inside:avoid;">
                         <table class="table-custom" style="table-layout:auto !important;width:100% !important;">
                             <thead><tr style="page-break-inside:avoid;">
@@ -241,34 +166,14 @@ async function loadMemberLedger(){
         </div>`;
     }
 
-    // ── Generate sections — one per chit slot ────────────────────────────────
-    let sectionIdx = 0;
-    const groupSections = enrollments.map((enr)=>{
+    const groupSections = enrollments.map((enr,idx)=>{
         const grp=gs.find(g=>g.id===enr.groupId); if(!grp) return '';
-        const qty=parseInt(enr.qty||1);
-        const allDueDates=getGroupDueDates(grp);
-
-        const enrPays=mPays.filter(p=>{
-            if(enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId;
-            return p.groupId===enr.groupId;
-        }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-
-        if(qty<=1){
-            const id=`ledger_${sectionIdx++}`;
-            return buildSection(grp, enr, enrPays, 1, 1, allDueDates, id);
-        } else {
-            return Array.from({length:qty},(_,i)=>{
-                const slotNum=i+1;
-                const slotPays=enrPays.filter(p=>{
-                    if(p.slotNum!=null) return p.slotNum===slotNum;
-                    return slotNum===1;
-                });
-                const id=`ledger_${sectionIdx++}`;
-                return buildSection(grp, enr, slotPays, slotNum, qty, allDueDates, id);
-            }).join('');
-        }
+        const ms_for_group=m.groupIds&&m.groupIds.includes(grp.id)?[m]:[];
+        const slotPays=ps.filter(p=>p.memberId===mid&&p.groupId===grp.id);
+        const allDueDates=buildDueDateList(grp);
+        const id=`ledger_${idx}`;
+        return buildSection(grp, enr, slotPays, (enr.slotNum||1), (enr.qty||1), allDueDates, id);
     }).join('');
-
 
     const ledgerHtml = `
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-top:6px;">
@@ -278,7 +183,7 @@ async function loadMemberLedger(){
                 <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${mPays.length} payment${mPays.length!==1?'s':''} · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
             </div>
             <div style="display:flex;gap:6px;">
-                ${!isMember?`<button class="btn-edit-sm" onclick="openEditMember('${mid}')">Edit</button>`:''}
+                ${!isMember?`<button class="btn-edit-sm" onclick="openEditMember('${mid}')">Edit</button>`:''} 
                 <button onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:8px 14px;font-size:0.8rem;font-weight:800;border:none;border-radius:9px;cursor:pointer;">Print</button>
             </div>
         </div>
@@ -295,71 +200,37 @@ async function loadMemberLedger(){
     }
 }
 
-function toggleInstRows(groupId){
-    console.log('=== TOGGLE DEBUG ===');
-    console.log('Toggling groupId:', groupId);
-    
-    // Try multiple selectors
-    let rows = document.querySelectorAll('.inst-'+groupId);
-    console.log('Selector .inst-'+groupId, '- Found:', rows.length, 'rows');
-    
-    if(rows.length === 0) {
-        // Try alternate selector
-        rows = document.querySelectorAll('[data-inst-group="'+groupId+'"]');
-        console.log('Alternate selector [data-inst-group], Found:', rows.length, 'rows');
+function toggleLedgerTable(id, el){
+    const table = document.getElementById(id);
+    if(table){
+        const isHidden = table.style.display === 'none';
+        table.style.display = isHidden ? 'block' : 'none';
+        const chevron = el.querySelector('.ledger-chevron');
+        if(chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
     }
-    
-    const arrow = document.getElementById('arr_'+groupId);
-    console.log('Arrow element found:', arrow ? 'Yes' : 'No');
-    
-    if(rows.length === 0) {
-        console.log('ERROR: No installment rows found!');
-        return;
-    }
-    
-    // Check current visibility
-    const firstRow = rows[0];
-    const computedStyle = window.getComputedStyle(firstRow);
-    const isCurrentlyHidden = firstRow.style.display === 'none' || computedStyle.display === 'none';
-    
-    console.log('First row display:', firstRow.style.display);
-    console.log('Computed display:', computedStyle.display);
-    console.log('Is currently hidden:', isCurrentlyHidden);
-    
-    // Toggle all rows
-    rows.forEach((r, idx) => {
-        if(isCurrentlyHidden) {
-            r.style.display = 'table-row';
-            r.style.removeProperty('display');  // Remove to let CSS rule work
-            setTimeout(() => {
-                r.style.display = 'table-row !important';
-            }, 0);
-        } else {
-            r.style.display = 'none';
-        }
-        console.log('Row', idx, '- Set to:', isCurrentlyHidden ? 'table-row' : 'none');
-    });
-    
-    // Update arrow
-    if(arrow) {
-        if(isCurrentlyHidden) {
-            arrow.textContent = '▼';
-            arrow.style.transform = 'rotate(90deg)';
-        } else {
-            arrow.textContent = '▶';
-            arrow.style.transform = 'rotate(0deg)';
-        }
-        console.log('Arrow updated to:', isCurrentlyHidden ? '▼' : '▶');
-    }
-    
-    console.log('=== END TOGGLE ===');
 }
 
-function toggleLedgerTable(id, header){
-    const el=document.getElementById(id);
-    if(!el) return;
-    const chevron=header.querySelector('.ledger-chevron');
-    const isOpen=el.style.display!=='none';
-    el.style.display=isOpen?'none':'block';
-    if(chevron) chevron.style.transform=isOpen?'rotate(0deg)':'rotate(90deg)';
+function getMonthSlot(dueDates, payDate){
+    if(!payDate) return -1;
+    const pDate = new Date(payDate+'T00:00:00');
+    for(let i=0; i<dueDates.length; i++){
+        const dDate = new Date(dueDates[i]+'T00:00:00');
+        const dNext = i<dueDates.length-1 ? new Date(dueDates[i+1]+'T00:00:00') : new Date(dDate.getFullYear(),dDate.getMonth()+2,1);
+        if(pDate >= dDate && pDate < dNext) return i;
+    }
+    return -1;
+}
+
+function buildDueDateList(grp){
+    const start = grp.startDate||grp.gStart||new Date().toISOString().split('T')[0];
+    const dur = parseInt(grp.duration||grp.gDuration||21);
+    const dueDay = parseInt(grp.dueDay||5);
+    const dates = [];
+    let d = new Date(start+'T00:00:00');
+    for(let i=0; i<dur; i++){
+        dates.push(d.toISOString().split('T')[0]);
+        d.setMonth(d.getMonth()+1);
+        d.setDate(dueDay);
+    }
+    return dates;
 }
