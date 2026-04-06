@@ -82,7 +82,7 @@ async function loadMemberLedger(){
                 const editCell = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
                 
                 const chitPickedCell = iCp
-                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>${pay.chitPickedBy?`<div style="font-size:0.6rem;color:var(--text-dim);margin-top:1px;">${pay.chitPickedBy}</div>`:''}`
+                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>`
                     : `<span style="color:var(--text-dim);">—</span>`;
                 
                 const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
@@ -113,6 +113,13 @@ async function loadMemberLedger(){
             : '';
         const labelBadge = enr.label
             ? `<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>` : '';
+        
+        // Calculate end date
+        const startDate = new Date((grp.startDate || grp.gStart || new Date().toISOString().split('T')[0]) + 'T00:00:00');
+        const endDate = new Date(startDate);
+        endDate.setMonth(endDate.getMonth() + totalMonths);
+        const pad = n => String(n).padStart(2, '0');
+        const endDateStr = `${pad(endDate.getDate())}/${pad(endDate.getMonth()+1)}/${endDate.getFullYear()}`;
 
         return `<div style="margin-bottom:16px;page-break-inside:avoid;">
             <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
@@ -132,6 +139,7 @@ async function loadMemberLedger(){
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
                         <span style="font-size:0.65rem;color:var(--text-dim);">Month ${monthsDone}/${totalMonths} paid${overdueCnt>0?` · <span style="color:#f87171;">${overdueCnt} overdue</span>`:''}</span>
+                        <span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f87171;">🏁 Ends: ${endDateStr}</span>
                     </div>
                 </div>
             </div>
