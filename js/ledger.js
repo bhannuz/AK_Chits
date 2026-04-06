@@ -182,11 +182,25 @@ async function loadMemberLedger(){
 
     const groupSections = enrollments.map((enr,idx)=>{
         const grp=gs.find(g=>g.id===enr.groupId); if(!grp) return '';
-        const ms_for_group=m.groupIds&&m.groupIds.includes(grp.id)?[m]:[];
-        const slotPays=ps.filter(p=>p.memberId===mid&&p.groupId===grp.id);
-        const allDueDates=buildDueDateList(grp);
-        const id=`ledger_${idx}`;
-        return buildSection(grp, enr, slotPays, (enr.slotNum||1), (enr.qty||1), allDueDates, id);
+        const totalSlots = enr.qty || 1;
+        
+        // Create a section for EACH slot
+        const slotSections = [];
+        for(let slotNum = 1; slotNum <= totalSlots; slotNum++) {
+            const slotPays = ps.filter(p => {
+                if(p.memberId !== mid || p.groupId !== grp.id) return false;
+                // Match payments by slotNum if it exists
+                if(p.slotNum != null) return p.slotNum === slotNum;
+                // Otherwise include all payments for this group
+                return true;
+            });
+            
+            const allDueDates = buildDueDateList(grp);
+            const id = `ledger_${idx}_${slotNum}`;
+            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id));
+        }
+        
+        return slotSections.join('');
     }).join('');
 
     const ledgerHtml = `
