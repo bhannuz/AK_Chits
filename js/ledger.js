@@ -203,7 +203,7 @@ async function loadMemberLedger(){
                     const iEdit = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${ip.id}')" style="font-size:0.58rem;padding:2px 6px;">Edit</button>` : '';
                     const iCp   = ip.chitPicked==='Yes';
                     
-                    return `<tr class="inst-row inst-${instGroupId}" style="display:none;background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
+                    return `<tr class="inst-row inst-${instGroupId}" style="background:rgba(99,102,241,0.06);border-left:3px solid #6366f1;page-break-inside:avoid;" data-inst-group="${instGroupId}">
                         <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx+1}</td>
                         <td style="font-size:0.65rem;color:#a5b4fc;padding:4px 6px;font-weight:700;">Installment ${idx+1}</td>
                         <td style="padding:4px 6px;"></td>
@@ -226,11 +226,11 @@ async function loadMemberLedger(){
 
             // Main month row (clickable to toggle installments)
             const payDateStr = slotMatchPays[0] ? fmtDate(slotMatchPays[0].date) : '—';
-            return `<tr style="background:${rowBg};${rowBL};cursor:pointer;" onclick="toggleInstRows('${instGroupId}')">
+            return `<tr style="background:${rowBg};${rowBL}">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${i+1}</td>
                     ${dueDateCell}
                     <td style="color:#c4b5fd;">${chitAmt>0?fmtAmt(chitAmt):'—'}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;"><span id="arr_${instGroupId}" style="color:#818cf8;font-weight:700;">▶</span> ${payDateStr}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;"><span id="arr_${instGroupId}" style="color:#818cf8;font-weight:700;">▼</span> ${payDateStr}</td>
                     <td style="vertical-align:middle;">${totalPaidCell}${instBadge}</td>
                     <td style="vertical-align:middle;">${finalBalCell}</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
