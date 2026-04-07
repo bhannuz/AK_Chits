@@ -1,6 +1,6 @@
-/// ═══════════════════════════════════════════════════════════
-// AK Chit Funds — MEMBER LEDGER - FIXED HIERARCHICAL TOGGLE
-/// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// AK Chit Funds — MEMBER LEDGER - FIXED SYNTAX & HIERARCHY
+// ═══════════════════════════════════════════════════════════
 
 async function loadMemberLedger() {
     const mid = CURRENT_USER && CURRENT_USER.role === 'member'
@@ -26,7 +26,7 @@ async function loadMemberLedger() {
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId) {
         const totalMonths = parseInt(grp.duration || grp.gDuration) || 21;
         
-        // --- CHIT AMOUNT FALLBACK LOGIC ---
+        // CHIT/MO linked to Fixed Monthly Amount
         let chitAmount = parseFloat(grp.fixedMonthlyAmount) 
             || parseFloat(grp.fixedAmount) 
             || parseFloat(grp.monthlyAmount) 
@@ -51,7 +51,6 @@ async function loadMemberLedger() {
             const monthPayments = slotPays.filter(p => {
                 if (p.monthSlot != null) return p.monthSlot === slotIndex;
                 if (Array.isArray(p.monthSlots)) return p.monthSlots.includes(slotIndex);
-                // Fallback: match by Month/Year string
                 return (p.date ? p.date.substring(0, 7) : '') === dueDate.substring(0, 7);
             });
 
@@ -69,7 +68,7 @@ async function loadMemberLedger() {
 
             const totalForSlot = monthPayments.reduce((s, p) => s + (parseFloat(p.paid || p.amountPaid) || 0), 0);
             const hasMultiple = monthPayments.length > 1;
-            const detailClass = `details-${sectionId}-${slotIndex}`; // Unique class for this month's sub-rows
+            const detailClass = `details-${sectionId}-${slotIndex}`;
             const mainPay = monthPayments[0];
 
             return `
@@ -142,18 +141,10 @@ async function loadMemberLedger() {
 
 function togglePaymentDetails(row, detailClass) {
     const detailRows = document.querySelectorAll('.' + detailClass);
-    // Use the first row's display status to determine if we show or hide
     const isHidden = detailRows.length > 0 && detailRows[0].style.display === 'none';
-    
-    detailRows.forEach(r => {
-        r.style.display = isHidden ? 'table-row' : 'none';
-    });
-    
-    // Toggle arrow in the first cell
+    detailRows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
     const arrow = row.querySelector('.arrow-icon');
-    if (arrow) {
-        arrow.textContent = isHidden ? '▼' : '▶';
-    }
+    if (arrow) arrow.textContent = isHidden ? '▼' : '▶';
 }
 
 function toggleLedgerTable(id, el) {
