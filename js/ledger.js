@@ -24,15 +24,30 @@ async function loadMemberLedger(){
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
-        // Get chit amount from group's FIXED MONTHLY AMOUNT - try all possible field names
-        let chitAmount = parseFloat(grp.fixedMonthlyAmount) 
-            || parseFloat(grp.fixedAmount) 
-            || parseFloat(grp.monthlyAmount) 
-            || parseFloat(grp.amount) 
-            || parseFloat(grp.chitAmount)
-            || 0;
         
-        // Last fallback: get from last payment
+        // Get chit amount based on Amount Type
+        let chitAmount = 0;
+        
+        // If Amount Type = Fixed Amount, use fixedMonthlyAmount
+        if(grp.amountType === 'fixed' || grp.amountType === 'Fixed Amount') {
+            chitAmount = parseFloat(grp.fixedMonthlyAmount) || 0;
+        }
+        
+        // If Amount Type = Variable Amount, we'll use per-payment value (but still try fixed first if available)
+        if(!chitAmount || chitAmount === 0) {
+            chitAmount = parseFloat(grp.fixedMonthlyAmount) || 0;
+        }
+        
+        // Fallback: try other variations
+        if(!chitAmount || chitAmount === 0) {
+            chitAmount = parseFloat(grp.fixedAmount) 
+                || parseFloat(grp.monthlyAmount) 
+                || parseFloat(grp.amount) 
+                || parseFloat(grp.chitAmount)
+                || 0;
+        }
+        
+        // Last resort: get from last payment
         if(!chitAmount || chitAmount === 0) {
             const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
             if(lastPay) chitAmount = parseFloat(lastPay.chit)||0;
