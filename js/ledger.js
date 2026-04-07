@@ -324,7 +324,7 @@ async function loadMemberLedger(){
 }
 
 function togglePaymentDetails(row, detailClass){
-    const detailRows = document.querySelectorAll('.' + detailClass);
+    const detailRows = document.querySelectorAll('.payment-detail-' + detailClass);
     const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
     
     detailRows.forEach(r => {
