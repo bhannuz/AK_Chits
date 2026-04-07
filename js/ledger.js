@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — MEMBER LEDGER - HIERARCHICAL PAYMENTS
+// AK Chit Funds — MEMBER LEDGER - WITH DIAGNOSTIC LOGGING
 // ═══════════════════════════════════════════════════════════
 
 async function loadMemberLedger(){
@@ -25,12 +25,26 @@ async function loadMemberLedger(){
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         
-        // DEBUG: Log group object to find correct field for fixed monthly amount
-        console.log('📊 GROUP DEBUG:', {
-            groupName: grp.name,
-            allFields: Object.keys(grp),
-            grp: grp
-        });
+        // DIAGNOSTIC: Log ALL group fields to find correct field name
+        console.log('═══════════════════════════════════════════════════');
+        console.log('📊 GROUP DIAGNOSTIC LOG');
+        console.log('═══════════════════════════════════════════════════');
+        console.log('Group Name:', grp.name);
+        console.log('Group ID:', grp.id);
+        console.log('Full Group Object:', JSON.stringify(grp, null, 2));
+        console.log('═══════════════════════════════════════════════════');
+        
+        // List ALL field values that might be the fixed amount
+        console.log('Checking all potential amount fields:');
+        console.log('grp.fixedMonthlyAmount =', grp.fixedMonthlyAmount);
+        console.log('grp.monthlyChitAmount =', grp.monthlyChitAmount);
+        console.log('grp.fixedAmount =', grp.fixedAmount);
+        console.log('grp.monthlyAmount =', grp.monthlyAmount);
+        console.log('grp.monthlyPayment =', grp.monthlyPayment);
+        console.log('grp.chitValue =', grp.chitValue);
+        console.log('grp.amount =', grp.amount);
+        console.log('grp.chitAmount =', grp.chitAmount);
+        console.log('═══════════════════════════════════════════════════');
         
         // Get chit amount - try ALL possible field names
         let chitAmount = 0;
@@ -49,7 +63,7 @@ async function loadMemberLedger(){
         for(let field of fieldNames) {
             const val = parseFloat(grp[field]);
             if(val && val > 0) {
-                console.log(`✅ Found chitAmount in grp.${field} = ${val}`);
+                console.log(`✅✅✅ FOUND! grp.${field} = ${val}`);
                 chitAmount = val;
                 break;
             }
@@ -60,12 +74,12 @@ async function loadMemberLedger(){
             const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
             if(lastPay) {
                 chitAmount = parseFloat(lastPay.chit)||0;
-                console.log(`✅ Found chitAmount from last payment.chit = ${chitAmount}`);
+                console.log(`✅ Found from lastPayment.chit = ${chitAmount}`);
             }
         }
         
         if(!chitAmount || chitAmount === 0) {
-            console.warn('⚠️ NO CHIT AMOUNT FOUND for group:', grp.name);
+            console.warn('⚠️⚠️⚠️ NO CHIT AMOUNT FOUND - Check group fields above ⚠️⚠️⚠️');
         }
 
         // Calculate fully paid months
