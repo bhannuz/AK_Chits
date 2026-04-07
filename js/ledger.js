@@ -25,32 +25,47 @@ async function loadMemberLedger(){
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         
-        // Get chit amount based on Amount Type
+        // DEBUG: Log group object to find correct field for fixed monthly amount
+        console.log('📊 GROUP DEBUG:', {
+            groupName: grp.name,
+            allFields: Object.keys(grp),
+            grp: grp
+        });
+        
+        // Get chit amount - try ALL possible field names
         let chitAmount = 0;
+        const fieldNames = [
+            'fixedMonthlyAmount',
+            'monthlyChitAmount', 
+            'chitValue',
+            'paymentAmount',
+            'monthlyAmount',
+            'fixedAmount',
+            'amount',
+            'chitAmount',
+            'monthlyPayment'
+        ];
         
-        // If Amount Type = Fixed Amount, use fixedMonthlyAmount
-        if(grp.amountType === 'fixed' || grp.amountType === 'Fixed Amount') {
-            chitAmount = parseFloat(grp.fixedMonthlyAmount) || 0;
-        }
-        
-        // If Amount Type = Variable Amount, we'll use per-payment value (but still try fixed first if available)
-        if(!chitAmount || chitAmount === 0) {
-            chitAmount = parseFloat(grp.fixedMonthlyAmount) || 0;
-        }
-        
-        // Fallback: try other variations
-        if(!chitAmount || chitAmount === 0) {
-            chitAmount = parseFloat(grp.fixedAmount) 
-                || parseFloat(grp.monthlyAmount) 
-                || parseFloat(grp.amount) 
-                || parseFloat(grp.chitAmount)
-                || 0;
+        for(let field of fieldNames) {
+            const val = parseFloat(grp[field]);
+            if(val && val > 0) {
+                console.log(`✅ Found chitAmount in grp.${field} = ${val}`);
+                chitAmount = val;
+                break;
+            }
         }
         
         // Last resort: get from last payment
         if(!chitAmount || chitAmount === 0) {
             const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
-            if(lastPay) chitAmount = parseFloat(lastPay.chit)||0;
+            if(lastPay) {
+                chitAmount = parseFloat(lastPay.chit)||0;
+                console.log(`✅ Found chitAmount from last payment.chit = ${chitAmount}`);
+            }
+        }
+        
+        if(!chitAmount || chitAmount === 0) {
+            console.warn('⚠️ NO CHIT AMOUNT FOUND for group:', grp.name);
         }
 
         // Calculate fully paid months
@@ -324,7 +339,7 @@ async function loadMemberLedger(){
 }
 
 function togglePaymentDetails(row, detailClass){
-    const detailRows = document.querySelectorAll('.payment-detail-' + detailClass);
+    const detailRows = document.querySelectorAll('.' + detailClass);
     const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
     
     detailRows.forEach(r => {
