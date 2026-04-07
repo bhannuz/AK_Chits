@@ -24,15 +24,18 @@ async function loadMemberLedger(){
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
-        const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
-        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : (parseFloat(grp.chitAmount||0)||0);
+        // Get chit amount from group's FIXED MONTHLY AMOUNT - try all possible field names
+        let chitAmount = parseFloat(grp.fixedMonthlyAmount) 
+            || parseFloat(grp.fixedAmount) 
+            || parseFloat(grp.monthlyAmount) 
+            || parseFloat(grp.amount) 
+            || parseFloat(grp.chitAmount)
+            || 0;
         
-        // If still no chit amount, try to get from group config
+        // Last fallback: get from last payment
         if(!chitAmount || chitAmount === 0) {
-            const totalPayablePerMember = parseFloat(grp.totalPayable || grp.gTotalPayable || 0);
-            const numMembers = parseInt(grp.numMembers || grp.members || 1);
-            const calcChit = numMembers > 0 ? (totalPayablePerMember / numMembers) : 0;
-            if(calcChit > 0) chitAmount = calcChit;
+            const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
+            if(lastPay) chitAmount = parseFloat(lastPay.chit)||0;
         }
 
         // Calculate fully paid months
@@ -307,14 +310,18 @@ async function loadMemberLedger(){
 
 function togglePaymentDetails(row, detailClass){
     const detailRows = document.querySelectorAll('.' + detailClass);
-    const isHidden = detailRows[0] && detailRows[0].style.display === 'none';
-    detailRows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+    const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
     
-    const arrow = row.querySelector('td:first-child');
-    if(arrow) {
-        const text = arrow.textContent;
-        arrow.textContent = isHidden ? '▼' : '▶';
-        arrow.textContent += text.replace('▶', '').replace('▼', '');
+    detailRows.forEach(r => {
+        r.style.display = isHidden ? 'table-row' : 'none';
+    });
+    
+    // Toggle arrow in first cell
+    const firstCell = row.querySelector('td:first-child');
+    if(firstCell) {
+        const currentText = firstCell.textContent.trim();
+        const num = currentText.replace('▶', '').replace('▼', '').trim();
+        firstCell.textContent = (isHidden ? '▼' : '▶') + ' ' + num;
     }
 }
 
