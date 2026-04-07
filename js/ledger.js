@@ -25,7 +25,15 @@ async function loadMemberLedger(){
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
-        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : 0;
+        const chitAmount = lastPay ? (parseFloat(lastPay.chit)||0) : (parseFloat(grp.chitAmount||0)||0);
+        
+        // If still no chit amount, try to get from group config
+        if(!chitAmount || chitAmount === 0) {
+            const totalPayablePerMember = parseFloat(grp.totalPayable || grp.gTotalPayable || 0);
+            const numMembers = parseInt(grp.numMembers || grp.members || 1);
+            const calcChit = numMembers > 0 ? (totalPayablePerMember / numMembers) : 0;
+            if(calcChit > 0) chitAmount = calcChit;
+        }
 
         // Calculate fully paid months
         const _perSlotTotals = {};
@@ -48,16 +56,21 @@ async function loadMemberLedger(){
                 return getMonthSlot(allDueDates, p.date) === slotIndex;
             });
             
-            // If no payments for this month, show one pending row
+            // If no payments for this month, show one pending row (or overdue if past due date)
             if(monthPayments.length === 0) {
+                const isOverdue = dueDate < today;
+                const statusBadge = isOverdue 
+                    ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">🔴 Overdue</span>`
+                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
+                
                 return `<tr style="">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
-                    <td style="color:#c7d2fe;font-weight:600;">${fmtDate(dueDate)}</td>
+                    <td style="color:${isOverdue?'#f87171':'#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
                     <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-weight:700;">—</td>
                     <td style="vertical-align:middle;color:var(--text-dim);">—</td>
-                    <td style="vertical-align:middle;"><span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span></td>
+                    <td style="vertical-align:middle;">${statusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
                     <td style="vertical-align:middle;"><span style="color:var(--text-dim);">—</span></td>
                     <td style="vertical-align:middle;"></td>
