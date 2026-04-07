@@ -1,226 +1,178 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — MEMBER LEDGER - CORRECTED HIERARCHY LOGIC
+// AK Chit Funds — MEMBER LEDGER (FIXED HIERARCHY & SCOPE)
 // ═══════════════════════════════════════════════════════════
+
+/**
+ * Helper: Builds list of due dates for the group
+ * Fixed scope to resolve ReferenceError
+ */
+function buildDueDateList(grp) {
+    const start = grp.startDate || grp.gStart || new Date().toISOString().split('T')[0];
+    const dur = parseInt(grp.duration || grp.gDuration || 21);
+    const dueDay = parseInt(grp.dueDay || 5);
+    const dates = [];
+    let d = new Date(start + 'T00:00:00');
+    for (let i = 0; i < dur; i++) {
+        dates.push(d.toISOString().split('T')[0]);
+        d.setMonth(d.getMonth() + 1);
+        d.setDate(dueDay);
+    }
+    return dates;
+}
 
 async function loadMemberLedger() {
     const mid = CURRENT_USER && CURRENT_USER.role === 'member'
         ? CURRENT_USER.memberId
         : document.getElementById('summaryView').value;
+    
     if (!mid) return;
 
     const ms = await getCollection('members');
     const gs = await getCollection('groups');
     const ps = await getCollection('payments');
-    const m = ms.find(x => x.id === mid); if (!m) return;
+    
+    const m = ms.find(x => x.id === mid); 
+    if (!m) return;
+
     const mPays = ps.filter(p => p.memberId === mid);
-    const totalPaid = mPays.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
-    const totalBal = mPays.reduce((s, p) => s + (parseFloat(p.balance) || 0), 0);
-    let enrollments = m.enrollments;
-    if (!enrollments || !enrollments.length)
-        enrollments = (m.groupIds || []).map(gid => ({ enrollmentId: '', groupId: gid, label: '', qty: 1 }));
-    const memberGroups = gs.filter(g => m.groupIds && m.groupIds.includes(g.id));
-    const isMember = CURRENT_USER && CURRENT_USER.role === 'member';
+    const gsList = gs.filter(g => (m.groupIds || []).includes(g.id));
     const today = new Date().toISOString().split('T')[0];
+
+    let enrollments = m.enrollments || (m.groupIds || []).map(gid => ({ enrollmentId: '', groupId: gid, label: '', qty: 1 }));
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId) {
         const totalMonths = parseInt(grp.duration || grp.gDuration) || 21;
-
-        // Get chit amount - prioritizing Fixed Monthly Amount fields
-        let chitAmount = parseFloat(grp.fixedMonthlyAmount)
-            || parseFloat(grp.monthlyChitAmount)
-            || parseFloat(grp.fixedAmount)
-            || parseFloat(grp.monthlyAmount)
+        
+        // CHIT/MO linked to Fixed Monthly Amount from Firebase
+        let chitAmount = parseFloat(grp.fixedMonthlyAmount) 
+            || parseFloat(grp.fixedAmount) 
+            || parseFloat(grp.monthlyAmount) 
             || parseFloat(grp.amount)
             || parseFloat(grp.chitAmount)
             || 0;
 
-        if (!chitAmount || chitAmount === 0) {
-            const lastPay = slotPays.length ? slotPays[slotPays.length - 1] : null;
-            if (lastPay) chitAmount = parseFloat(lastPay.chit) || 0;
-        }
-
-        // Calculate stats for header
         const _perSlotTotals = {};
         slotPays.forEach(p => {
             const slots = Array.isArray(p.monthSlots) ? p.monthSlots : (p.monthSlot != null ? [p.monthSlot] : []);
-            slots.forEach(s => { _perSlotTotals[s] = (_perSlotTotals[s] || 0) + (parseFloat(p.paid) || 0); });
+            slots.forEach(s => { 
+                _perSlotTotals[s] = (_perSlotTotals[s] || 0) + (parseFloat(p.paid || p.amountPaid) || 0); 
+            });
         });
+        
         const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals).filter(s => chitAmount <= 0 || _perSlotTotals[s] >= chitAmount).map(Number));
         const monthsDone = fullyPaidSlotSet.size;
         const pct = Math.min(100, Math.round(monthsDone / totalMonths * 100));
-        const tPaid = slotPays.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
-        const tBal = slotPays.reduce((s, p) => s + (parseFloat(p.balance) || 0), 0);
+        const tPaid = slotPays.reduce((s, p) => s + (parseFloat(p.paid || p.amountPaid) || 0), 0);
 
-        // Build table rows with corrected hierarchy logic
         const mergedRows = allDueDates.map((dueDate, slotIndex) => {
             const monthPayments = slotPays.filter(p => {
                 if (p.monthSlot != null) return p.monthSlot === slotIndex;
                 if (Array.isArray(p.monthSlots)) return p.monthSlots.includes(slotIndex);
-                return getMonthSlot(allDueDates, p.date) === slotIndex;
+                return (p.date ? p.date.substring(0, 7) : '') === dueDate.substring(0, 7);
             });
 
             if (monthPayments.length === 0) {
                 const isOverdue = dueDate < today;
-                const statusBadge = isOverdue
-                    ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">🔴 Overdue</span>`
-                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
-
-                return `<tr>
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex + 1}</td>
-                    <td style="color:${isOverdue ? '#f87171' : '#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
-                    <td style="color:#c4b5fd;">${chitAmount > 0 ? fmtAmt(chitAmount) : '—'}</td>
-                    <td colspan="3" style="text-align:center;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td>${statusBadge}</td>
-                    <td colspan="3"></td>
-                </tr>`;
+                return `
+                    <tr>
+                        <td style="text-align:center; color:var(--text-dim); font-size:0.75rem;">${slotIndex + 1}</td>
+                        <td style="color:${isOverdue ? '#f87171' : '#a5b4fc'}; font-weight:600;">${fmtDate(dueDate)}</td>
+                        <td style="color:#c4b5fd; font-weight:600;">${fmtAmt(chitAmount)}</td>
+                        <td style="color:var(--text-dim);">—</td>
+                        <td style="color:var(--text-dim);">—</td>
+                        <td style="color:var(--text-dim); font-weight:bold;">—</td>
+                        <td><span class="badge-status ${isOverdue ? 'status-overdue' : 'status-pending'}">${isOverdue ? '🔴 Overdue' : '⏳ Pending'}</span></td>
+                        <td style="color:var(--text-dim);">—</td>
+                        <td style="color:var(--text-dim);">—</td>
+                    </tr>`;
             }
 
-            const totalForSlot = monthPayments.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
+            const totalForSlot = monthPayments.reduce((s, p) => s + (parseFloat(p.paid || p.amountPaid) || 0), 0);
             const hasMultiple = monthPayments.length > 1;
-            const isFullPaid = chitAmount > 0 && totalForSlot >= chitAmount;
-            const isPartial = totalForSlot > 0 && totalForSlot < chitAmount;
-            const detailClass = `payment-detail-${sectionId}_${slotIndex}`; // Fixed ID reference
+            const detailClass = `details-${sectionId}-${slotIndex}`;
             const mainPay = monthPayments[0];
-            const chitPickedPay = monthPayments.find(p => p.chitPicked === 'Yes');
+            const balAmt = parseFloat(mainPay.balance) || 0;
 
-            // Status Badge Logic
-            let statusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`;
-            if (isPartial) {
-                statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
-            }
-
-            const instBadge = hasMultiple ? `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${monthPayments.length} inst.</span>` : '';
-
-            // Render Main Row
-            const mainRowHtml = `
+            return `
                 <tr style="cursor:${hasMultiple ? 'pointer' : 'default'};" onclick="${hasMultiple ? `togglePaymentDetails(this,'${detailClass}')` : ''}">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${hasMultiple ? '▶ ' : ''}${slotIndex + 1}</td>
-                    <td style="color:#a5b4fc;font-weight:600;">${fmtDate(dueDate)}</td>
-                    <td style="color:#c4b5fd;">${fmtAmt(chitAmount)}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(mainPay.date)}</td>
-                    <td style="vertical-align:middle;color:${isFullPaid ? '#34d399' : '#fbbf24'};font-weight:700;">${fmtAmt(totalForSlot)}${instBadge}</td>
-                    <td style="vertical-align:middle;color:#f59e0b;">${mainPay.balance > 0 ? fmtAmt(mainPay.balance) : '—'}</td>
-                    <td style="vertical-align:middle;">${statusBadge}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${hasMultiple ? 'Multiple' : (mainPay.paidBy || '—')}</td>
-                    <td style="vertical-align:middle;">${chitPickedPay ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 Picked</span>` : '—'}</td>
-                    <td style="vertical-align:middle;">${!hasMultiple && !isMember ? `<button class="btn-edit-sm" onclick="event.stopPropagation(); openEditPayment('${mainPay.id}')">Edit</button>` : ''}</td>
-                </tr>`;
-
-            // Render Detail Rows for Partial/Hierarchical Payments
-            const detailRows = hasMultiple ? monthPayments.map((pay, idx) => `
-                <tr class="${detailClass}" style="display:none;background:rgba(99,102,241,0.04);border-left:3px solid #6366f1;">
-                    <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">↳${idx + 1}</td>
-                    <td colspan="2" style="font-size:0.65rem;color:var(--text-dim);">Installment Entry</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(pay.date)}</td>
-                    <td style="vertical-align:middle;color:#fbbf24;font-weight:700;">${fmtAmt(pay.paid)}</td>
-                    <td style="vertical-align:middle;color:#f59e0b;">${pay.balance > 0 ? fmtAmt(pay.balance) : '—'}</td>
-                    <td style="vertical-align:middle;"><span style="color:var(--text-dim);font-size:0.62rem;">—</span></td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${pay.paidBy || '—'}</td>
-                    <td style="vertical-align:middle;">${pay.chitPicked === 'Yes' ? '🏆' : '—'}</td>
-                    <td style="vertical-align:middle;">${!isMember ? `<button class="btn-edit-sm" onclick="event.stopPropagation(); openEditPayment('${pay.id}')">Edit</button>` : ''}</td>
-                </tr>`).join('') : '';
-
-            return mainRowHtml + detailRows;
+                    <td style="text-align:center; color:var(--text-dim); font-size:0.75rem;">
+                        ${hasMultiple ? '<span class="arrow-icon">▶</span> ' : ''}${slotIndex + 1}
+                    </td>
+                    <td style="color:#a5b4fc; font-weight:600;">${fmtDate(dueDate)}</td>
+                    <td style="color:#c4b5fd; font-weight:600;">${fmtAmt(chitAmount)}</td>
+                    <td style="color:var(--text-dim); font-size:0.75rem;">${fmtDate(mainPay.date)}</td>
+                    <td>
+                        <span style="color:#34d399; font-weight:bold;">${fmtAmt(totalForSlot)}</span>
+                        ${hasMultiple ? `<span class="badge-inst">${monthPayments.length} inst.</span>` : ''}
+                    </td>
+                    <td style="color:#f59e0b; font-weight:bold;">${balAmt > 0 ? fmtAmt(balAmt) : '—'}</td>
+                    <td><span class="badge-status status-paid">✅ Paid</span></td>
+                    <td style="color:var(--text-dim); font-size:0.75rem;">${mainPay.paidBy || mainPay.mode || '—'}</td>
+                    <td style="color:var(--text-dim);">—</td>
+                </tr>
+                ${hasMultiple ? monthPayments.map((p, idx) => `
+                    <tr class="${detailClass}" style="display:none; background:rgba(99,102,241,0.03); border-left:3px solid #6366f1;">
+                        <td style="text-align:right; color:#818cf8; font-size:0.65rem; font-weight:bold; padding-right:15px;">↳${idx + 1}</td>
+                        <td colspan="2" style="font-size:0.7rem; color:var(--text-dim);">Installment Entry</td>
+                        <td style="font-size:0.75rem; color:var(--text-dim);">${fmtDate(p.date)}</td>
+                        <td style="font-weight:bold; color:#fbbf24;">${fmtAmt(parseFloat(p.paid || p.amountPaid) || 0)}</td>
+                        <td style="color:#f59e0b;">${fmtAmt(parseFloat(p.balance) || 0)}</td>
+                        <td colspan="3"></td>
+                    </tr>
+                `).join('') : ''}
+            `;
         }).join('');
 
-        const overdueCnt = allDueDates.filter((d, i) => !fullyPaidSlotSet.has(i) && d < today).length;
-
-        // Progress and header format preservation
-        return `<div style="margin-bottom:16px;page-break-inside:avoid;">
-            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
-                    <div>
-                        <div style="font-size:1rem;font-weight:900;color:#f39c12;margin-bottom:6px;">
-                            Group: ${grp.name}${labelBadge}${chitSlotBadge}
-                        </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                            <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${fmtDate(grp.startDate || grp.gStart || '')}</span>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top:10px;">
-                    <div style="background:#252f48;border-radius:5px;height:6px;overflow:hidden;">
-                        <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%;"></div>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
-                        <span style="font-size:0.65rem;color:var(--text-dim);">Month ${monthsDone}/${totalMonths} paid${overdueCnt > 0 ? ` · <span style="color:#f87171;">${overdueCnt} overdue</span>` : ''}</span>
-                        <span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f87171;">🏁 Ends: ${endDateStr}</span>
-                    </div>
+        return `
+        <div class="member-card">
+            <div style="padding:15px; background:rgba(28,37,59,0.5); border-radius:12px 12px 0 0;">
+                <h5 style="color:var(--gold); font-weight:900;">Group: ${grp.name || 'Untitled Group'}</h5>
+                <div class="progress-container"><div class="progress-fill" style="width:${pct}%"></div></div>
+                <div class="d-flex justify-content-between small text-dim mt-1">
+                    <span>Month ${monthsDone}/${totalMonths} paid</span>
                 </div>
             </div>
-
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;page-break-inside:avoid;">
-                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);page-break-inside:avoid;">
-                    <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule & Payments (${totalMonths} months)</span>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)}</span>
-                        <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
-                    </div>
+            <div class="history-summary-bar" onclick="toggleLedgerTable('${sectionId}', this)">
+                <span class="fw-bold small">📋 SCHEDULE & PAYMENTS</span>
+                <div class="d-flex gap-3 align-items-center">
+                    <span class="text-success fw-bold">${fmtAmt(tPaid)}</span>
+                    <span class="ledger-chevron">▶</span>
                 </div>
-                <div id="${sectionId}" style="display:block;page-break-inside:avoid;">
-                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;page-break-inside:avoid;">
-                        <table class="table-custom" style="table-layout:auto !important;width:100% !important;">
-                            <thead><tr>
-                                <th style="text-align:center;">#</th>
-                                <th>Due Date</th>
-                                <th>Chit/Mo</th>
-                                <th>Pay Date</th>
-                                <th>Paid</th>
-                                <th>Balance</th>
-                                <th>Status</th>
-                                <th>Mode</th>
-                                <th>Chit Picked</th>
-                                <th></th>
-                            </tr></thead>
-                            <tbody>
-                                ${mergedRows}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            </div>
+            <div id="${sectionId}" style="display:none;">
+                <table class="table-history">
+                    <thead><tr><th>#</th><th>DUE</th><th>CHIT/MO</th><th>PAY DATE</th><th>PAID</th><th>BAL</th><th>STATUS</th><th>MODE</th><th>PICKED</th></tr></thead>
+                    <tbody>${mergedRows}</tbody>
+                </table>
             </div>
         </div>`;
     }
 
-    // --- Rest of your logic (Enrollment mapping, user identification, etc.) stays exactly the same ---
-    const groupSections = enrollments.map((enr, idx) => {
-        const grp = gs.find(g => g.id === enr.groupId); if (!grp) return '';
-        const totalSlots = enr.qty || 1;
-        const slotSections = [];
-        for (let slotNum = 1; slotNum <= totalSlots; slotNum++) {
-            const slotPays = ps.filter(p => {
-                if (p.memberId !== mid || p.groupId !== grp.id) return false;
-                if (p.slotNum != null) return p.slotNum === slotNum;
-                return true;
-            });
-            const allDueDates = buildDueDateList(grp);
-            const id = `ledger_${idx}_${slotNum}`;
-            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id));
-        }
-        return slotSections.join('');
+    const html = enrollments.map((enr, idx) => {
+        const grp = gsList.find(g => g.id === enr.groupId);
+        if (!grp) return '';
+        const allDueDates = buildDueDateList(grp);
+        const slotPays = mPays.filter(p => p.groupId === enr.groupId);
+        return buildSection(grp, enr, slotPays, 1, 1, allDueDates, `tbl_${idx}`);
     }).join('');
 
-    const ledgerHtml = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-top:6px;">
-            <div style="width:46px;height:46px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;">${ini(m.name)}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:1rem;font-weight:900;">${m.name}</div>
-                <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${mPays.length} payment${mPays.length !== 1 ? 's' : ''} · ${memberGroups.length} group${memberGroups.length !== 1 ? 's' : ''}</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-                ${!isMember ? `<button class="btn-edit-sm" onclick="openEditMember('${mid}')">Edit</button>` : ''} 
-                <button onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:8px 14px;font-size:0.8rem;font-weight:800;border:none;border-radius:9px;cursor:pointer;">Print</button>
-            </div>
-        </div>
-        ${groupSections || '<div style="text-align:center;color:var(--text-dim);padding:30px;">No group enrollments found</div>'}
-    `;
+    document.getElementById('ledgerData').innerHTML = html || '<div class="text-center p-5 text-dim">No group enrollments found.</div>';
+}
 
-    if (isMember) {
-        document.getElementById('memberLedgerData').innerHTML = ledgerHtml;
-        document.getElementById('mhGroups').textContent = memberGroups.length;
-        document.getElementById('mhTotalPaid').textContent = fmtAmt(totalPaid);
-        document.getElementById('mhBalance').textContent = fmtAmt(totalBal);
-    } else {
-        document.getElementById('ledgerData').innerHTML = ledgerHtml;
+function togglePaymentDetails(row, detailClass) {
+    const detailRows = document.querySelectorAll('.' + detailClass);
+    const isHidden = detailRows.length > 0 && detailRows[0].style.display === 'none';
+    detailRows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+    const arrow = row.querySelector('.arrow-icon');
+    if (arrow) arrow.textContent = isHidden ? '▼' : '▶';
+}
+
+function toggleLedgerTable(id, el) {
+    const table = document.getElementById(id);
+    if (table) {
+        const isHidden = table.style.display === 'none';
+        table.style.display = isHidden ? 'block' : 'none';
+        const chevron = el.querySelector('.ledger-chevron');
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
     }
 }
