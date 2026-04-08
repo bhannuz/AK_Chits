@@ -131,11 +131,11 @@ function toggleCollectionCard(gid){
 // ══════════════════════════════════════════
 let _activeGroupsSubTab = 'groups';
 
-function switchGroupsSubTab(tab){
+async function switchGroupsSubTab(tab){
     _activeGroupsSubTab = tab;
     _applyGroupsSubTabStyles();
-    if(tab === 'collections') renderCollectionsTab();
-    if(tab === 'groups') renderGroupsTab();
+    if(tab === 'collections') await renderCollectionsTab();
+    if(tab === 'groups') await renderGroupsTab();
 }
 
 function _applyGroupsSubTabStyles(){
@@ -175,14 +175,15 @@ function getGroupDueDates(g){
 
 // RENDER COLLECTIONS TAB
 async function renderCollectionsTab(){
-    const colArea = document.getElementById('collectionsArea');
-    if(!colArea) return;
-    colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
-    const gs = await getCollection('groups');
-    const ps = await getCollection('payments');
-    const ms = await getCollection('members');
-    const payouts = await _getPayouts();
-    if(!gs.length){ colArea.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>'; return; }
+    try {
+        const colArea = document.getElementById('collectionsArea');
+        if(!colArea) return;
+        colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
+        const gs = await getCollection('groups');
+        const ps = await getCollection('payments');
+        const ms = await getCollection('members');
+        const payouts = await _getPayouts();
+        if(!gs.length){ colArea.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>'; return; }
 
     const todayStr = new Date().toISOString().split('T')[0];
     const html = gs.map((g,gi)=>{
@@ -306,15 +307,20 @@ async function renderCollectionsTab(){
     }).join('');
 
     colArea.innerHTML = html || '<div style="text-align:center;color:var(--text-dim);padding:40px;">No data.</div>';
+    } catch(err) {
+        console.error('Error rendering collections tab:', err);
+        document.getElementById('collectionsArea').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Error loading collections. Check console.</div>';
+    }
 }
 
 // RENDER GROUPS TAB
 async function renderGroupsTab(){
-    _applyGroupsSubTabStyles();
-    const gs = await getCollection('groups');
-    const ms = await getCollection('members');
-    const ps = await getCollection('payments');
-    const cs = await getCollection('memberCommitments');
+    try {
+        _applyGroupsSubTabStyles();
+        const gs = await getCollection('groups');
+        const ms = await getCollection('members');
+        const ps = await getCollection('payments');
+        const cs = await getCollection('memberCommitments');
     
     if(!gs.length){
         document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';
@@ -433,6 +439,10 @@ async function renderGroupsTab(){
             </div>
         </div>`;
     }).join('');
+    } catch(err) {
+        console.error('Error rendering groups tab:', err);
+        document.getElementById('groupListArea').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Error loading groups. Check console.</div>';
+    }
 }
 
 function toggleGroupCard(bodyId, header){
