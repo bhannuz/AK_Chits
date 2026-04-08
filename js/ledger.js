@@ -135,14 +135,14 @@ async function loadMemberLedger(){
             
             const mainDateColor = mainIsPaid ? '#a5b4fc' : '#c7d2fe';
             
-            // Main row (clickable if multiple payments)
+            // Main row (always shown, clickable if multiple payments)
             const mainRowHtml = hasMultiple
                 ? `<tr style="background:${mainRowBg};${mainRowBL};cursor:pointer;" onclick="togglePaymentDetails(this,'${sectionId}_${slotIndex}')">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">▶ ${slotIndex+1}</td>
                     <td style="color:${mainDateColor};font-weight:600;">${fmtDate(dueDate)}</td>
                     <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(mainPay.date)}</td>
-                    <td style="vertical-align:middle;color:${mainIsPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}${instBadge}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
+                    <td style="vertical-align:middle;color:${mainIsPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}<span style="display:inline-block;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">Partial</span></td>
                     <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
                     <td style="vertical-align:middle;">${mainStatusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
@@ -162,7 +162,7 @@ async function loadMemberLedger(){
                     <td style="vertical-align:middle;"><button class="btn-edit-sm" onclick="openEditPayment('${mainPay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button></td>
                 </tr>`;
             
-            // If multiple payments, add detail rows (hidden by default)
+            // If multiple payments, add detail rows (hidden by default) - these are the partial payments
             const detailRows = hasMultiple
                 ? monthPayments.map((pay, idx) => {
                     const iPaid = parseFloat(pay.paid)||0;
@@ -178,8 +178,12 @@ async function loadMemberLedger(){
                     
                     const editBtn = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
                     
-                    return `<tr class="payment-detail-${sectionId}_${slotIndex}" style="display:none;background:rgba(99,102,241,0.04);border-left:3px solid #6366f1;">
-                        <td style="text-align:center;color:#818cf8;font-size:0.6rem;padding:4px 6px;font-weight:800;">  ↳${idx+1}</td>
+                    const iChitPickedCell = iCp 
+                        ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
+                        : `<span style="color:var(--text-dim);">—</span>`;
+                    
+                    return `<tr class="payment-detail-${sectionId}_${slotIndex}" style="display:none;background:rgba(245,158,11,0.05);border-left:3px solid #f59e0b;">
+                        <td style="text-align:center;color:#f59e0b;font-size:0.6rem;padding:4px 6px;font-weight:800;">  ↳${idx+1}</td>
                         <td style="color:${dateColor};font-weight:600;font-size:0.85rem;"></td>
                         <td style="color:#c4b5fd;"></td>
                         <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(pay.date)}</td>
@@ -187,7 +191,7 @@ async function loadMemberLedger(){
                         <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
                         <td style="vertical-align:middle;">${iStatusBadge}</td>
                         <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
-                        <td style="vertical-align:middle;"><span style="color:var(--text-dim);">—</span></td>
+                        <td style="vertical-align:middle;">${iChitPickedCell}</td>
                         <td style="vertical-align:middle;">${editBtn}</td>
                     </tr>`;
                 }).join('')
@@ -254,7 +258,7 @@ async function loadMemberLedger(){
                             <thead><tr style="page-break-inside:avoid;">
                                 <th style="text-align:center;">#</th>
                                 <th>Due Date</th>
-                                <th>Monthly Fixed Amount</th>
+                                <th>Monthly Pay</th>
                                 <th>Pay Date</th>
                                 <th>Paid</th>
                                 <th>Balance</th>
