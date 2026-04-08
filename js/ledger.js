@@ -66,7 +66,7 @@ async function loadMemberLedger(){
         const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
         const tBal         = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
 
-        // Build table rows - FLAT LIST (no hierarchy, all payments visible)
+        // Build table rows - FLAT LIST with visual grouping for partials
         const mergedRows = allDueDates.map((dueDate, slotIndex) => {
             // Find all payments for this month/slot
             const monthPayments = slotPays.filter(p => {
@@ -96,8 +96,9 @@ async function loadMemberLedger(){
                 </tr>`;
             }
             
-            // Show each payment as separate flat row
-            return monthPayments.map((pay, payIdx) => {
+            // If only ONE payment, show normally
+            if(monthPayments.length === 1) {
+                const pay = monthPayments[0];
                 const iPaid = parseFloat(pay.paid)||0;
                 const iBal = parseFloat(pay.balance)||0;
                 const iMode = pay.paidBy||'—';
@@ -131,7 +132,61 @@ async function loadMemberLedger(){
                         <td style="vertical-align:middle;">${chitPickedCell}</td>
                         <td style="vertical-align:middle;">${editCell}</td>
                     </tr>`;
+            }
+            
+            // MULTIPLE PAYMENTS (Partial) - Show main row FIRST, then detail rows
+            const totalMonthPayments = monthPayments.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
+            const mainIBal = parseFloat(monthPayments[monthPayments.length-1].balance)||0;
+            
+            let mainRows = '';
+            
+            // Main summary row for this month (shows total of all partials)
+            mainRows += `<tr style="background:rgba(245,158,11,0.12);border-left:3px solid #f59e0b;font-weight:600;">
+                    <td style="text-align:center;color:#f59e0b;font-weight:800;font-size:0.8rem;">${slotIndex+1}</td>
+                    <td style="color:#fbbf24;font-weight:700;">${fmtDate(dueDate)}</td>
+                    <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
+                    <td style="vertical-align:middle;color:#f59e0b;font-weight:700;">Multiple Payments</td>
+                    <td style="vertical-align:middle;color:#fbbf24;font-weight:700;">${fmtAmt(totalMonthPayments)}</td>
+                    <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
+                    <td style="vertical-align:middle;"><span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span></td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
+                    <td style="vertical-align:middle;"><span style="color:var(--text-dim);">—</span></td>
+                    <td style="vertical-align:middle;"></td>
+                </tr>`;
+            
+            // Detail rows for each partial payment
+            mainRows += monthPayments.map((pay, payIdx) => {
+                const iPaid = parseFloat(pay.paid)||0;
+                const iBal = parseFloat(pay.balance)||0;
+                const iMode = pay.paidBy||'—';
+                const iCp = pay.chitPicked==='Yes';
+                const isPaid = iPaid > 0;
+                
+                let iStatusBadge = isPaid 
+                    ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
+                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
+                
+                const editBtn = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
+                
+                const iChitPickedCell = iCp 
+                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
+                    : `<span style="color:var(--text-dim);">—</span>`;
+                
+                return `<tr style="background:rgba(245,158,11,0.04);border-left:2px solid #f59e0b;">
+                    <td style="text-align:center;color:#f59e0b;font-size:0.6rem;padding:4px 6px;font-weight:800;">  ↳${payIdx+1}</td>
+                    <td style="color:#fbbf24;font-weight:600;font-size:0.85rem;"></td>
+                    <td style="color:#c4b5fd;"></td>
+                    <td style="vertical-align:middle;color:#f59e0b;font-size:0.75rem;font-weight:700;">${fmtDate(pay.date)}</td>
+                    <td style="vertical-align:middle;color:#34d399;font-weight:700;">${fmtAmt(iPaid)}</td>
+                    <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
+                    <td style="vertical-align:middle;">${iStatusBadge}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
+                    <td style="vertical-align:middle;">${iChitPickedCell}</td>
+                    <td style="vertical-align:middle;">${editBtn}</td>
+                </tr>`;
             }).join('');
+            
+            return mainRows;
         }).join('');
 
         const overdueCnt = allDueDates.filter((d,i)=>!slotPays.find(p=>{
