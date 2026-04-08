@@ -2,6 +2,16 @@
 // AK Chit Funds — MEMBER LEDGER - FLAT PAYMENT LIST
 // ═══════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════
+// HELPER FUNCTION - Get ordinal text (1st, 2nd, 3rd, 5th, etc.)
+// ═══════════════════════════════════════════════════════════
+function getOrdinal(n) {
+    if(!n) return '';
+    const s = ['th','st','nd','rd'];
+    const v = n%100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+}
+
 async function loadMemberLedger(){
     const mid = CURRENT_USER && CURRENT_USER.role === 'member'
         ? CURRENT_USER.memberId
@@ -11,8 +21,10 @@ async function loadMemberLedger(){
     const ms=await getCollection('members');
     const gs=await getCollection('groups');
     const ps=await getCollection('payments');
+    const cs=await getCollection('memberCommitments');
     const m=ms.find(x=>x.id===mid); if(!m) return;
     const mPays=ps.filter(p=>p.memberId===mid);
+    const mComms=cs.filter(c=>c.memberId===mid);
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
     const totalBal =mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
     let enrollments = m.enrollments;
@@ -82,6 +94,12 @@ async function loadMemberLedger(){
                     ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">🔴 Overdue</span>`
                     : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
                 
+                // Check for commitment on this month
+                const commitment = mComms.find(c => c.groupId === grp.id && c.targetMonth === slotIndex + 1);
+                const commitmentBadge = commitment 
+                    ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">✨ CHIT TARGET</span>`
+                    : `<span style="color:var(--text-dim);">—</span>`;
+                
                 return `<tr style="">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
                     <td style="color:${isOverdue?'#f87171':'#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
@@ -91,7 +109,7 @@ async function loadMemberLedger(){
                     <td style="vertical-align:middle;color:var(--text-dim);">—</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td style="vertical-align:middle;"><span style="color:var(--text-dim);">—</span></td>
+                    <td style="vertical-align:middle;">${commitmentBadge}</td>
                     <td style="vertical-align:middle;"></td>
                 </tr>`;
             }
@@ -114,9 +132,13 @@ async function loadMemberLedger(){
                 
                 const editCell = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
                 
-                const chitPickedCell = iCp
-                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
-                    : `<span style="color:var(--text-dim);">—</span>`;
+                // Check for commitment on this month
+                const commitment = mComms.find(c => c.groupId === grp.id && c.targetMonth === slotIndex + 1);
+                const chitPickedCell = commitment
+                    ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">✨ CHIT TARGET</span>`
+                    : (iCp
+                        ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
+                        : `<span style="color:var(--text-dim);">—</span>`);
                 
                 const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
                 
@@ -143,8 +165,6 @@ async function loadMemberLedger(){
             const statusForPartial = isPartialFullyPaid
                 ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
                 : `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
-            
-            const badgeForPartial = isPartialFullyPaid ? '✅ Paid' : '⚡ Partial';
             
             let mainRows = '';
             
@@ -304,11 +324,16 @@ async function loadMemberLedger(){
         return slotSections.join('');
     }).join('');
 
+    // Build commitment chip
+    const commitmentChip = mComms.length > 0 
+        ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:2px 8px;font-size:0.75rem;font-weight:800;margin-left:8px;vertical-align:middle;">🎯 ${getOrdinal(mComms[0].targetMonth)} Month Commitment</span>`
+        : '';
+
     const ledgerHtml = `
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-top:6px;">
             <div style="width:46px;height:46px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;">${ini(m.name)}</div>
             <div style="flex:1;min-width:0;">
-                <div style="font-size:1rem;font-weight:900;">${m.name}</div>
+                <div style="font-size:1rem;font-weight:900;">${m.name}${commitmentChip}</div>
                 <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${mPays.length} payment${mPays.length!==1?'s':''} · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
             </div>
             <div style="display:flex;gap:6px;">
@@ -329,6 +354,16 @@ async function loadMemberLedger(){
     }
 }
 
+function toggleLedgerTable(id, el){
+    const table = document.getElementById(id);
+    if(table){
+        const isHidden = table.style.display === 'none';
+        table.style.display = isHidden ? 'block' : 'none';
+        const chevron = el.querySelector('.ledger-chevron');
+        if(chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
+    }
+}
+
 function togglePaymentDetails(row, detailClass){
     const detailRows = document.querySelectorAll('.' + detailClass);
     const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
@@ -343,16 +378,6 @@ function togglePaymentDetails(row, detailClass){
         const currentText = firstCell.textContent.trim();
         const num = currentText.replace('▶', '').replace('▼', '').trim();
         firstCell.textContent = (isHidden ? '▼' : '▶') + ' ' + num;
-    }
-}
-
-function toggleLedgerTable(id, el){
-    const table = document.getElementById(id);
-    if(table){
-        const isHidden = table.style.display === 'none';
-        table.style.display = isHidden ? 'block' : 'none';
-        const chevron = el.querySelector('.ledger-chevron');
-        if(chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
     }
 }
 
