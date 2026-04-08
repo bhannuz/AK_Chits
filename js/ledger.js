@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════
-// HELPER FUNCTION - Get ordinal text (1st, 2nd, 3rd, 5th, etc.)
+// HELPER FUNCTION -  Get ordinal text (1st, 2nd, 3rd, 5th, etc.)
 // ═══════════════════════════════════════════════════════════
 function getOrdinal(n) {
     if(!n) return '';
