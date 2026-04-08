@@ -23,63 +23,33 @@ async function loadMemberLedger(){
     const today = new Date().toISOString().split('T')[0];
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
-        const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
+        // Get chit amount from Firebase field: fixedAmt
+        let chitAmount = parseFloat(grp.fixedAmt) || 0;
         
-        // DIAGNOSTIC: Log ALL group fields to find correct field name
-        console.log('═══════════════════════════════════════════════════');
-        console.log('📊 GROUP DIAGNOSTIC LOG');
-        console.log('═══════════════════════════════════════════════════');
-        console.log('Group Name:', grp.name);
-        console.log('Group ID:', grp.id);
-        console.log('Full Group Object:', JSON.stringify(grp, null, 2));
-        console.log('═══════════════════════════════════════════════════');
-        
-        // List ALL field values that might be the fixed amount
-        console.log('Checking all potential amount fields:');
-        console.log('grp.fixedMonthlyAmount =', grp.fixedMonthlyAmount);
-        console.log('grp.monthlyChitAmount =', grp.monthlyChitAmount);
-        console.log('grp.fixedAmount =', grp.fixedAmount);
-        console.log('grp.monthlyAmount =', grp.monthlyAmount);
-        console.log('grp.monthlyPayment =', grp.monthlyPayment);
-        console.log('grp.chitValue =', grp.chitValue);
-        console.log('grp.amount =', grp.amount);
-        console.log('grp.chitAmount =', grp.chitAmount);
-        console.log('═══════════════════════════════════════════════════');
-        
-        // Get chit amount - try ALL possible field names
-        let chitAmount = 0;
-        const fieldNames = [
-            'fixedMonthlyAmount',
-            'monthlyChitAmount', 
-            'chitValue',
-            'paymentAmount',
-            'monthlyAmount',
-            'fixedAmount',
-            'amount',
-            'chitAmount',
-            'monthlyPayment'
-        ];
-        
-        for(let field of fieldNames) {
-            const val = parseFloat(grp[field]);
-            if(val && val > 0) {
-                console.log(`✅✅✅ FOUND! grp.${field} = ${val}`);
-                chitAmount = val;
-                break;
+        // Fallback: try other variations
+        if(!chitAmount || chitAmount === 0) {
+            const fieldNames = [
+                'fixedMonthlyAmount',
+                'monthlyChitAmount', 
+                'monthlyAmount',
+                'fixedAmount',
+                'amount',
+                'chitAmount'
+            ];
+            
+            for(let field of fieldNames) {
+                const val = parseFloat(grp[field]);
+                if(val && val > 0) {
+                    chitAmount = val;
+                    break;
+                }
             }
         }
         
         // Last resort: get from last payment
         if(!chitAmount || chitAmount === 0) {
             const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
-            if(lastPay) {
-                chitAmount = parseFloat(lastPay.chit)||0;
-                console.log(`✅ Found from lastPayment.chit = ${chitAmount}`);
-            }
-        }
-        
-        if(!chitAmount || chitAmount === 0) {
-            console.warn('⚠️⚠️⚠️ NO CHIT AMOUNT FOUND - Check group fields above ⚠️⚠️⚠️');
+            if(lastPay) chitAmount = parseFloat(lastPay.chit)||0;
         }
 
         // Calculate fully paid months
@@ -282,7 +252,7 @@ async function loadMemberLedger(){
                             <thead><tr style="page-break-inside:avoid;">
                                 <th style="text-align:center;">#</th>
                                 <th>Due Date</th>
-                                <th>Chit/Mo</th>
+                                <th>Monthly Fixed Amount</th>
                                 <th>Pay Date</th>
                                 <th>Paid</th>
                                 <th>Balance</th>
