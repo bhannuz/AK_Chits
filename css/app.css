@@ -102,36 +102,13 @@
         @media (min-width:1024px) {
             .nav-bar { display:none; }
             /* Create top tab menu for desktop */
-            .tab-nav-desktop {
-                display:flex;
-                justify-content:flex-start;
-                gap:20px;
-                padding:12px 20px;
-                background:var(--card-bg);
-                border-bottom:1px solid var(--border);
-                margin-bottom:12px;
-                margin-left:-12px;
-                margin-right:-12px;
-                margin-top:-12px;
-                padding-left:20px;
-            }
-            .tab-nav-item-desktop {
-                cursor:pointer;
-                font-size:0.95rem;
-                color:var(--text-dim);
-                padding:8px 12px;
-                border-bottom:3px solid transparent;
-                transition:all 0.2s;
-                white-space:nowrap;
-                user-select:none;
-            }
-            .tab-nav-item-desktop:hover {
-                color:#f39c12;
-            }
-            .tab-nav-item-desktop.active {
-                color:#f39c12;
-                border-bottom-color:#f39c12;
-            }
+        /* ── DESKTOP NAVIGATION: HIDE TOP TABS COMPLETELY ── */
+        .tab-nav-desktop {
+            display:none !important;
+        }
+        .tab-nav-item-desktop {
+            display:none !important;
+        }
             .tab-content { margin-bottom:0 !important; }
             .container { padding-bottom:20px !important; }
         }
