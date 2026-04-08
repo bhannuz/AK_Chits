@@ -138,23 +138,31 @@ async function loadMemberLedger(){
             const totalMonthPayments = monthPayments.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
             const mainIBal = parseFloat(monthPayments[monthPayments.length-1].balance)||0;
             
+            // Determine if partial is actually fully paid
+            const isPartialFullyPaid = totalMonthPayments >= chitAmount;
+            const statusForPartial = isPartialFullyPaid
+                ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
+                : `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
+            
+            const badgeForPartial = isPartialFullyPaid ? '✅ Paid' : '⚡ Partial';
+            
             let mainRows = '';
             
-            // Main summary row for this month (shows total of all partials)
-            mainRows += `<tr style="background:rgba(245,158,11,0.12);border-left:3px solid #f59e0b;font-weight:600;">
-                    <td style="text-align:center;color:#f59e0b;font-weight:800;font-size:0.8rem;">${slotIndex+1}</td>
-                    <td style="color:#fbbf24;font-weight:700;">${fmtDate(dueDate)}</td>
+            // Main summary row for this month (shows total of all partials) - CLICKABLE to toggle
+            mainRows += `<tr style="background:${isPartialFullyPaid ? 'rgba(16,185,129,0.07)' : 'rgba(245,158,11,0.12)'};border-left:3px solid ${isPartialFullyPaid ? '#10b981' : '#f59e0b'};font-weight:600;cursor:pointer;" onclick="togglePaymentDetails(this,'partial_${sectionId}_${slotIndex}')">
+                    <td style="text-align:center;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:800;font-size:0.8rem;">▶ ${slotIndex+1}</td>
+                    <td style="color:${isPartialFullyPaid ? '#a5b4fc' : '#fbbf24'};font-weight:700;">${fmtDate(dueDate)}</td>
                     <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:#f59e0b;font-weight:700;">Multiple Payments</td>
-                    <td style="vertical-align:middle;color:#fbbf24;font-weight:700;">${fmtAmt(totalMonthPayments)}</td>
+                    <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:700;">Multiple Payments</td>
+                    <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}</td>
                     <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
-                    <td style="vertical-align:middle;"><span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span></td>
+                    <td style="vertical-align:middle;">${statusForPartial}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
                     <td style="vertical-align:middle;"><span style="color:var(--text-dim);">—</span></td>
                     <td style="vertical-align:middle;"></td>
                 </tr>`;
             
-            // Detail rows for each partial payment
+            // Detail rows for each partial payment (hidden by default)
             mainRows += monthPayments.map((pay, payIdx) => {
                 const iPaid = parseFloat(pay.paid)||0;
                 const iBal = parseFloat(pay.balance)||0;
@@ -172,7 +180,7 @@ async function loadMemberLedger(){
                     ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
                     : `<span style="color:var(--text-dim);">—</span>`;
                 
-                return `<tr style="background:rgba(245,158,11,0.04);border-left:2px solid #f59e0b;">
+                return `<tr class="partial_${sectionId}_${slotIndex}" style="display:none;background:rgba(245,158,11,0.04);border-left:2px solid #f59e0b;">
                     <td style="text-align:center;color:#f59e0b;font-size:0.6rem;padding:4px 6px;font-weight:800;">  ↳${payIdx+1}</td>
                     <td style="color:#fbbf24;font-weight:600;font-size:0.85rem;"></td>
                     <td style="color:#c4b5fd;"></td>
@@ -318,6 +326,23 @@ async function loadMemberLedger(){
         document.getElementById('mhBalance').textContent = fmtAmt(totalBal);
     } else {
         document.getElementById('ledgerData').innerHTML = ledgerHtml;
+    }
+}
+
+function togglePaymentDetails(row, detailClass){
+    const detailRows = document.querySelectorAll('.' + detailClass);
+    const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
+    
+    detailRows.forEach(r => {
+        r.style.display = isHidden ? 'table-row' : 'none';
+    });
+    
+    // Toggle arrow in first cell
+    const firstCell = row.querySelector('td:first-child');
+    if(firstCell) {
+        const currentText = firstCell.textContent.trim();
+        const num = currentText.replace('▶', '').replace('▼', '').trim();
+        firstCell.textContent = (isHidden ? '▼' : '▶') + ' ' + num;
     }
 }
 
