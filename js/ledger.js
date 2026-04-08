@@ -23,6 +23,8 @@ async function loadMemberLedger(){
     const today = new Date().toISOString().split('T')[0];
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
+        const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
+        
         // Get chit amount from Firebase field: fixedAmt
         let chitAmount = parseFloat(grp.fixedAmt) || 0;
         
