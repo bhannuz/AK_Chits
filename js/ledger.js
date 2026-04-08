@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — MEMBER LEDGER - WITH DIAGNOSTIC LOGGING
+// AK Chit Funds — MEMBER LEDGER - FLAT PAYMENT LIST
 // ═══════════════════════════════════════════════════════════
 
 async function loadMemberLedger(){
@@ -66,7 +66,7 @@ async function loadMemberLedger(){
         const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
         const tBal         = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
 
-        // Build table rows - main rows clickable with expandable details
+        // Build table rows - FLAT LIST (no hierarchy, all payments visible)
         const mergedRows = allDueDates.map((dueDate, slotIndex) => {
             // Find all payments for this month/slot
             const monthPayments = slotPays.filter(p => {
@@ -75,7 +75,7 @@ async function loadMemberLedger(){
                 return getMonthSlot(allDueDates, p.date) === slotIndex;
             });
             
-            // If no payments for this month, show one pending row (or overdue if past due date)
+            // If no payments for this month, show one pending row
             if(monthPayments.length === 0) {
                 const isOverdue = dueDate < today;
                 const statusBadge = isOverdue 
@@ -96,108 +96,42 @@ async function loadMemberLedger(){
                 </tr>`;
             }
             
-            // Calculate total for this month
-            const totalMonthPayments = monthPayments.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
-            const isPartial = monthPayments.length > 1 && totalMonthPayments < chitAmount && totalMonthPayments > 0;
-            const hasMultiple = monthPayments.length > 1;
-            
-            // Get chit picked info
-            const chitPickedPay = monthPayments.find(p => p.chitPicked === 'Yes');
-            const chitPickedValue = chitPickedPay ? (chitPickedPay.chitPickedBy || 'Chit Picked') : '—';
-            
-            // Main row (summary or first payment if single)
-            const mainPay = monthPayments[0];
-            const mainIPaid = parseFloat(mainPay.paid)||0;
-            const mainIBal = parseFloat(mainPay.balance)||0;
-            const mainIMode = mainPay.paidBy||'—';
-            const mainIsCp = mainPay.chitPicked==='Yes';
-            const mainIsPaid = mainIPaid > 0;
-            
-            const mainRowBg = isPartial ? 'rgba(245,158,11,0.07)' : (mainIsPaid ? 'rgba(16,185,129,0.07)' : '');
-            const mainRowBL = mainIsCp ? 'border-left:3px solid #10b981;' : (isPartial ? 'border-left:3px solid #f59e0b;' : '');
-            
-            let mainStatusBadge;
-            if(isPartial) {
-                mainStatusBadge = `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
-            } else if(mainIsPaid) {
-                mainStatusBadge = `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`;
-            } else {
-                mainStatusBadge = `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
-            }
-            
-            const instBadge = hasMultiple 
-                ? `<span style="display:inline-block;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">${monthPayments.length} inst.</span>` 
-                : '';
-            
-            const chitPickedCell = chitPickedPay 
-                ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${chitPickedValue}</span>`
-                : `<span style="color:var(--text-dim);">—</span>`;
-            
-            const mainDateColor = mainIsPaid ? '#a5b4fc' : '#c7d2fe';
-            
-            // Main row (always shown, clickable if multiple payments)
-            const mainRowHtml = hasMultiple
-                ? `<tr style="background:${mainRowBg};${mainRowBL};cursor:pointer;" onclick="togglePaymentDetails(this,'${sectionId}_${slotIndex}')">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">▶ ${slotIndex+1}</td>
-                    <td style="color:${mainDateColor};font-weight:600;">${fmtDate(dueDate)}</td>
-                    <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td style="vertical-align:middle;color:${mainIsPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}<span style="display:inline-block;background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:4px;padding:1px 5px;font-size:0.58rem;font-weight:800;margin-left:4px;vertical-align:middle;">Partial</span></td>
-                    <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
-                    <td style="vertical-align:middle;">${mainStatusBadge}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td style="vertical-align:middle;">${chitPickedCell}</td>
-                    <td style="vertical-align:middle;"></td>
-                </tr>`
-                : `<tr style="background:${mainRowBg};${mainRowBL}">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
-                    <td style="color:${mainDateColor};font-weight:600;">${fmtDate(dueDate)}</td>
-                    <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(mainPay.date)}</td>
-                    <td style="vertical-align:middle;color:${mainIsPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(mainIPaid)}</td>
-                    <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
-                    <td style="vertical-align:middle;">${mainStatusBadge}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${mainIMode}</td>
-                    <td style="vertical-align:middle;">${chitPickedCell}</td>
-                    <td style="vertical-align:middle;"><button class="btn-edit-sm" onclick="openEditPayment('${mainPay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button></td>
-                </tr>`;
-            
-            // If multiple payments, add detail rows (hidden by default) - these are the partial payments
-            const detailRows = hasMultiple
-                ? monthPayments.map((pay, idx) => {
-                    const iPaid = parseFloat(pay.paid)||0;
-                    const iBal = parseFloat(pay.balance)||0;
-                    const iMode = pay.paidBy||'—';
-                    const iCp = pay.chitPicked==='Yes';
-                    const isPaid = iPaid > 0;
-                    const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
-                    
-                    let iStatusBadge = isPaid 
-                        ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
-                        : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
-                    
-                    const editBtn = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
-                    
-                    const iChitPickedCell = iCp 
-                        ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
-                        : `<span style="color:var(--text-dim);">—</span>`;
-                    
-                    return `<tr class="payment-detail-${sectionId}_${slotIndex}" style="display:none;background:rgba(245,158,11,0.05);border-left:3px solid #f59e0b;">
-                        <td style="text-align:center;color:#f59e0b;font-size:0.6rem;padding:4px 6px;font-weight:800;">  ↳${idx+1}</td>
-                        <td style="color:${dateColor};font-weight:600;font-size:0.85rem;"></td>
-                        <td style="color:#c4b5fd;"></td>
+            // Show each payment as separate flat row
+            return monthPayments.map((pay, payIdx) => {
+                const iPaid = parseFloat(pay.paid)||0;
+                const iBal = parseFloat(pay.balance)||0;
+                const iMode = pay.paidBy||'—';
+                const iCp = pay.chitPicked==='Yes';
+                const isPaid = iPaid > 0;
+                
+                const rowBg = isPaid ? 'rgba(16,185,129,0.07)' : '';
+                const rowBL = iCp ? 'border-left:3px solid #10b981;' : '';
+                
+                let statusBadge = isPaid 
+                    ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
+                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
+                
+                const editCell = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
+                
+                const chitPickedCell = iCp
+                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
+                    : `<span style="color:var(--text-dim);">—</span>`;
+                
+                const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
+                
+                return `<tr style="background:${rowBg};${rowBL}">
+                        <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
+                        <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
+                        <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
                         <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(pay.date)}</td>
                         <td style="vertical-align:middle;color:${isPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(iPaid)}</td>
                         <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
-                        <td style="vertical-align:middle;">${iStatusBadge}</td>
+                        <td style="vertical-align:middle;">${statusBadge}</td>
                         <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
-                        <td style="vertical-align:middle;">${iChitPickedCell}</td>
-                        <td style="vertical-align:middle;">${editBtn}</td>
+                        <td style="vertical-align:middle;">${chitPickedCell}</td>
+                        <td style="vertical-align:middle;">${editCell}</td>
                     </tr>`;
-                }).join('')
-                : '';
-            
-            return mainRowHtml + detailRows;
+            }).join('');
         }).join('');
 
         const overdueCnt = allDueDates.filter((d,i)=>!slotPays.find(p=>{
@@ -329,23 +263,6 @@ async function loadMemberLedger(){
         document.getElementById('mhBalance').textContent = fmtAmt(totalBal);
     } else {
         document.getElementById('ledgerData').innerHTML = ledgerHtml;
-    }
-}
-
-function togglePaymentDetails(row, detailClass){
-    const detailRows = document.querySelectorAll('.' + detailClass);
-    const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
-    
-    detailRows.forEach(r => {
-        r.style.display = isHidden ? 'table-row' : 'none';
-    });
-    
-    // Toggle arrow in first cell
-    const firstCell = row.querySelector('td:first-child');
-    if(firstCell) {
-        const currentText = firstCell.textContent.trim();
-        const num = currentText.replace('▶', '').replace('▼', '').trim();
-        firstCell.textContent = (isHidden ? '▼' : '▶') + ' ' + num;
     }
 }
 
