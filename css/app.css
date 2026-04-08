@@ -4,7 +4,6 @@
    ═══════════════════════════════════════════════════════════ */
 
 /* ══ HIDE ALL TOP NAVIGATION ══ */
-.nav-item { display:none !important; }
 .tab-nav-desktop { display:none !important; }
 .tab-nav-item-desktop { display:none !important; }
 #desktopTabNav { display:none !important; }
@@ -104,20 +103,8 @@
         .nav-item { cursor:pointer; text-align:center; font-size:0.68rem; color:var(--text-dim); padding:4px 2px; flex:1; min-width:0; }
         .nav-item.active { color:#f39c12; }
         
-        /* ── DESKTOP: Hide bottom nav bar, use top menu instead ── */
-        @media (min-width:1024px) {
-            .nav-bar { display:none; }
-            /* Create top tab menu for desktop */
-        /* ── DESKTOP NAVIGATION: HIDE TOP TABS COMPLETELY ── */
-        .tab-nav-desktop {
-            display:none !important;
-        }
-        .tab-nav-item-desktop {
-            display:none !important;
-        }
-            .tab-content { margin-bottom:0 !important; }
-            .container { padding-bottom:20px !important; }
-        }
+        /* ── BOTTOM NAV BAR: Show on ALL devices (mobile, tablet, desktop) ── */
+        .nav-bar { position:fixed; bottom:0; width:100%; background:#070b14; display:flex; justify-content:stretch; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--border); z-index:1000; overflow:hidden; }
         
         /* ── MEMBER MODE: Hide all nav items except Home ── */
         body.member-mode .nav-item:not(#navHome) { display:none !important; }
@@ -132,9 +119,15 @@
             .nav-item { font-size:0.72rem; padding:6px 2px; }
         }
         
-        /* ── MOBILE: Keep nav bar as is ── */
+        /* ── DESKTOP: Keep nav bar visible at bottom ── */
+        @media (min-width:1024px) {
+            .nav-bar { padding:12px 0 calc(12px + env(safe-area-inset-bottom)); }
+            .nav-item { font-size:0.8rem; padding:8px 4px; }
+            .container { padding-bottom:20px !important; }
+        }
+        
+        /* ── MOBILE: Adjust nav bar ── */
         @media (max-width:767px) {
-            .tab-nav-desktop { display:none !important; }
             .container { padding-bottom:70px; }
         }
         .tab-content { display:none; }
