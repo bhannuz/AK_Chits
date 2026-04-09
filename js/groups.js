@@ -1,7 +1,17 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — GROUPS CRUD & TAB
+// AK Chit Funds — GROUPS CRUD & TAB - COMPLETE VERSION
 // Edit only this file when changing create / edit / delete groups, groups tab rendering
 // ═══════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════
+// HELPER FUNCTION - Get ordinal text (1st, 2nd, 3rd, 5th, etc.)
+// ═══════════════════════════════════════════════════════════
+function getOrdinal(n) {
+    if(!n) return '—';
+    const s = ['th','st','nd','rd'];
+    const v = n%100;
+    return n + (s[(v-20)%10] || s[v] || s[0]);
+}
 
 // GROUP CRUD
 // ══════════════════════════════════════════
@@ -75,14 +85,57 @@ function deleteGroupFromModal(){
 
 // ══════════════════════════════════════════
 
+// COLLECTION PAYOUT HELPERS
+// ══════════════════════════════════════════
+async function _getPayouts(){
+    try{
+        const doc = await db.collection('settings').doc('collectionPayouts').get();
+        return doc.exists ? (doc.data().payouts||{}) : {};
+    }catch(e){ return {}; }
+}
+async function _savePayouts(payouts){
+    try{ await db.collection('settings').doc('collectionPayouts').set({payouts}); }catch(e){}
+}
+
+async function updateCollectionPayout(el){
+    const gid = el.dataset.gid;
+    const idx = parseInt(el.dataset.idx);
+    const val = el.value;
+    const payouts = await _getPayouts();
+    const key = gid+'_'+idx;
+    payouts[key] = parseFloat(val)||0;
+    await _savePayouts(payouts);
+    const balEl = document.getElementById('colbal_'+gid+'_'+idx);
+    const recEl = document.getElementById('colrec_'+gid+'_'+idx);
+    if(balEl && recEl){
+        const received = parseFloat(recEl.dataset.received)||0;
+        const payout   = parseFloat(val)||0;
+        const balance  = received - payout;
+        balEl.textContent = balance !== 0 ? (balance > 0 ? '+' : '') + '₹' + Math.abs(balance).toLocaleString('en-IN') : '—';
+        balEl.style.color = balance < 0 ? '#f87171' : balance > 0 ? '#34d399' : 'var(--text-dim)';
+    }
+}
+
+function toggleCollectionCard(gid){
+    const body = document.getElementById('colbody_'+gid);
+    const chevron = document.getElementById('colchev_'+gid);
+    if(!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
+// ══════════════════════════════════════════
+
 // GROUPS TAB
 // ══════════════════════════════════════════
 let _activeGroupsSubTab = 'groups';
 
-function switchGroupsSubTab(tab){
+async function switchGroupsSubTab(tab){
     _activeGroupsSubTab = tab;
     _applyGroupsSubTabStyles();
-    if(tab === 'collections') renderCollectionsTab();
+    if(tab === 'collections') await renderCollectionsTab();
+    if(tab === 'groups') await renderGroupsTab();
 }
 
 function _applyGroupsSubTabStyles(){
@@ -104,56 +157,33 @@ function _applyGroupsSubTabStyles(){
     }
 }
 
-// ── Payout storage helpers (shared across devices via Firestore) ─────────────
-async function _getPayouts(){
-    try{
-        const doc = await db.collection('settings').doc('collectionPayouts').get();
-        return doc.exists ? (doc.data().payouts||{}) : {};
-    }catch(e){ return {}; }
-}
-async function _savePayouts(payouts){
-    try{ await db.collection('settings').doc('collectionPayouts').set({payouts}); }catch(e){}
-}
-
-// Called when admin edits a payout cell
-async function updateCollectionPayout(el){
-    const gid = el.dataset.gid;
-    const idx = parseInt(el.dataset.idx);
-    const val = el.value;
-    const payouts = await _getPayouts();
-    const key = gid+'_'+idx;
-    payouts[key] = parseFloat(val)||0;
-    await _savePayouts(payouts);
-    // Update balance cell live
-    const balEl = document.getElementById('colbal_'+gid+'_'+idx);
-    const recEl = document.getElementById('colrec_'+gid+'_'+idx);
-    if(balEl && recEl){
-        const received = parseFloat(recEl.dataset.received)||0;
-        const payout   = parseFloat(val)||0;
-        const balance  = received - payout;
-        balEl.textContent = balance !== 0 ? (balance > 0 ? '+' : '') + '₹' + Math.abs(balance).toLocaleString('en-IN') : '—';
-        balEl.style.color = balance < 0 ? '#f87171' : balance > 0 ? '#34d399' : 'var(--text-dim)';
+// GET GROUP DUE DATES
+function getGroupDueDates(g){
+    const start = g.startDate||g.gStart;
+    if(!start) return [];
+    const dur = parseInt(g.duration||g.gDuration||21);
+    const dueDay = parseInt(g.dueDay||5);
+    const dates = [];
+    let d = new Date(start+'T00:00:00');
+    for(let i=0; i<dur; i++){
+        dates.push(d.toISOString().split('T')[0]);
+        d.setMonth(d.getMonth()+1);
+        d.setDate(dueDay);
     }
+    return dates;
 }
 
-function toggleCollectionCard(gid){
-    const body = document.getElementById('colbody_'+gid);
-    const chevron = document.getElementById('colchev_'+gid);
-    if(!body) return;
-    const isOpen = body.style.display !== 'none';
-    body.style.display = isOpen ? 'none' : 'block';
-    if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
-}
-
+// RENDER COLLECTIONS TAB
 async function renderCollectionsTab(){
-    const colArea = document.getElementById('collectionsArea');
-    if(!colArea) return;
-    colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
-    const gs = await getCollection('groups');
-    const ps = await getCollection('payments');
-    const ms = await getCollection('members');
-    const payouts = await _getPayouts();
-    if(!gs.length){ colArea.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>'; return; }
+    try {
+        const colArea = document.getElementById('collectionsArea');
+        if(!colArea) return;
+        colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
+        const gs = await getCollection('groups');
+        const ps = await getCollection('payments');
+        const ms = await getCollection('members');
+        const payouts = await _getPayouts();
+        if(!gs.length){ colArea.innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>'; return; }
 
     const todayStr = new Date().toISOString().split('T')[0];
     const html = gs.map((g,gi)=>{
@@ -162,14 +192,13 @@ async function renderCollectionsTab(){
         const gPays = ps.filter(p=>p.groupId===g.id);
         const gMs = ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
         
-        // Calculate total slots (accounting for members with multiple chits)
         const expandedSlots=[];
         gMs.forEach(m=>{
             const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
             const qty=enr?parseInt(enr.qty||1):1;
             for(let q=0;q<qty;q++) expandedSlots.push({m,slotNum:q+1,totalSlots:qty});
         });
-        const totalSlots = expandedSlots.length;  // This is the correct denominator!
+        const totalSlots = expandedSlots.length;
         
         const totalMonths = parseInt(g.duration||g.gDuration)||21;
         const fixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt)||0 : 0;
@@ -185,14 +214,10 @@ async function renderCollectionsTab(){
                 return false;
             });
             
-            // Count PAID SLOTS (not unique members)
-            // If member with 3 chits pays, count as 3 payments
             let membersPaidThisMonth = 0;
             expandedSlots.forEach(({m, slotNum, totalSlots}) => {
-                // Find if this member paid for this month
                 const hasPaid = slotPays.some(p => {
                     if(p.memberId !== m.id) return false;
-                    // Check if payment matches this slot
                     if(m.enrollments && m.enrollments.length > 0) {
                         const enr = m.enrollments.find(e => e.groupId === g.id);
                         if(enr && enr.enrollmentId && p.enrollmentId) {
@@ -200,7 +225,7 @@ async function renderCollectionsTab(){
                         }
                     }
                     if(p.slotNum != null) return p.slotNum === slotNum;
-                    return slotNum === 1;  // Default to first slot if no slot info
+                    return slotNum === 1;
                 });
                 if(hasPaid) membersPaidThisMonth++;
             });
@@ -252,7 +277,7 @@ async function renderCollectionsTab(){
         return `<div style="background:#1c253b;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
             <div onclick="toggleCollectionCard('${gid}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
                 <div>
-                    <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">&#128194; ${g.name}</div>
+                    <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">💼 ${g.name}</div>
                     <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
                         <span style="font-size:0.68rem;color:#34d399;">Rcvd: ${fmtAmt(totalReceived)}</span>
                         <span style="font-size:0.68rem;color:#a5b4fc;">Paid out: ${fmtAmt(totalPayout)}</span>
@@ -260,7 +285,7 @@ async function renderCollectionsTab(){
                         <span style="font-size:0.68rem;color:var(--text-dim);">${elapsed}/${totalMonths} mo</span>
                     </div>
                 </div>
-                <span id="colchev_${gid}" style="font-size:0.85rem;color:var(--text-dim);transition:transform .2s;transform:rotate(0deg);">&#9654;</span>
+                <span id="colchev_${gid}" style="font-size:0.85rem;color:var(--text-dim);transition:transform .2s;transform:rotate(0deg);">▶</span>
             </div>
             <div id="colbody_${gid}" style="display:none;border-top:1px solid var(--border);">
                 <div style="overflow-x:auto;">
@@ -270,7 +295,7 @@ async function renderCollectionsTab(){
                             <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;">Due Date</th>
                             <th style="font-size:0.6rem;color:#34d399;padding:6px 8px;font-weight:500;">Received</th>
                             <th style="font-size:0.6rem;color:#a78bfa;padding:6px 8px;font-weight:500;text-align:center;">Members Paid</th>
-                            <th style="font-size:0.6rem;color:#a5b4fc;padding:6px 8px;font-weight:500;">Chit Payout &#9999;</th>
+                            <th style="font-size:0.6rem;color:#a5b4fc;padding:6px 8px;font-weight:500;">Chit Payout ✏️</th>
                             <th style="font-size:0.6rem;color:#f59e0b;padding:6px 8px;font-weight:500;">Balance</th>
                             <th style="font-size:0.6rem;color:var(--text-dim);padding:6px 8px;font-weight:500;text-align:center;">Status</th>
                         </tr></thead>
@@ -282,19 +307,33 @@ async function renderCollectionsTab(){
     }).join('');
 
     colArea.innerHTML = html || '<div style="text-align:center;color:var(--text-dim);padding:40px;">No data.</div>';
+    } catch(err) {
+        console.error('Error rendering collections tab:', err);
+        document.getElementById('collectionsArea').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Error loading collections. Check console.</div>';
+    }
 }
 
+// RENDER GROUPS TAB
 async function renderGroupsTab(){
-    _applyGroupsSubTabStyles();
-    const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');
-    if(!gs.length){document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';return;}
-    document.getElementById('groupListArea').innerHTML=gs.map((g,gIdx)=>{
-        const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
-        const gPays=ps.filter(p=>p.groupId===g.id);
-        const tPaid=gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal=gPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const picked=gPays.filter(p=>p.chitPicked==='Yes').length;
-        const totalMonths=parseInt(g.duration||g.gDuration)||21;
+    try {
+        _applyGroupsSubTabStyles();
+        const gs = await getCollection('groups');
+        const ms = await getCollection('members');
+        const ps = await getCollection('payments');
+        const cs = await getCollection('memberCommitments');
+    
+    if(!gs.length){
+        document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';
+        return;
+    }
+    
+    document.getElementById('groupListArea').innerHTML = gs.map((g,gIdx)=>{
+        const gMs = ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
+        const gPays = ps.filter(p=>p.groupId===g.id);
+        const tPaid = gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+        const tBal = gPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+        const picked = gPays.filter(p=>p.chitPicked==='Yes').length;
+        const totalMonths = parseInt(g.duration||g.gDuration)||21;
         let elapsed=0;
         if(g.startDate||g.gStart){const _s=new Date(g.startDate||g.gStart),_n=new Date();elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));}
         const left=Math.max(0,totalMonths-elapsed);const pct=Math.min(100,Math.round(elapsed/totalMonths*100));
@@ -308,7 +347,7 @@ async function renderGroupsTab(){
         const totalSlots=expandedSlots.length;
         const memberRows=expandedSlots.map(({m,slotNum,totalSlots},i)=>{
             const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
-            const memberQty=enr?parseInt(enr.qty||1):1; // per-member chit count
+            const memberQty=enr?parseInt(enr.qty||1):1;
             const allMp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
             const mp=memberQty>1
                 ?allMp.filter(p=>{
@@ -319,7 +358,6 @@ async function renderGroupsTab(){
                 :allMp;
             const paid=mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
             const rawBal=mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-            // For fixed-amount groups: compute outstanding balance = (overdue unpaid months * fixedAmt) + any recorded balance
             const fixedAmt=g.amtType!=='variable'&&g.fixedAmt?parseFloat(g.fixedAmt):0;
             const allDD=getGroupDueDates(g);
             const paidSlotNums=new Set();
@@ -333,7 +371,6 @@ async function renderGroupsTab(){
             const pickedPay=mp.find(p=>p.chitPicked==='Yes');
             const pickedAmt=pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
             const pickedBy=pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
-            // Count unique paid slots (not sum of numMonths) to avoid double-counting installments
             const _paidSlots=new Set();
             mp.forEach(p=>{
                 if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>_paidSlots.add(s));
@@ -341,8 +378,14 @@ async function renderGroupsTab(){
                 else _paidSlots.add('pay_'+p.id);
             });
             const monthsCovered=_paidSlots.size;
-            const multiChitBadge=totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">×${totalSlots} chits</span>`:'';
-            const slotLabel=totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
+            
+            // GET COMMITMENT FOR THIS MEMBER IN THIS GROUP
+            const memberComm = cs.find(c => c.memberId===m.id && c.groupId===g.id);
+            const commitmentCell = memberComm 
+                ? `<td style="text-align:center;color:#bb86fc;font-weight:700;font-size:0.85rem;">${getOrdinal(memberComm.targetMonth)}</td>`
+                : `<td style="text-align:center;color:var(--text-dim);">—</td>`;
+            
+            const multiChitBadge=totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">×${totalSlots} chits</span>`:'';\n            const slotLabel=totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
             return [
                 `<tr${pickedPay?' class="chit-picked"':''}>`,
                 `<td>${i+1}</td>`,
@@ -353,6 +396,7 @@ async function renderGroupsTab(){
                 `<td>${pickedPay
                     ?`<div><span class="chit-yes-badge">✅ Picked</span><div style="color:#34d399;font-weight:800;font-size:0.92rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
                     :'<span class="chit-no">—</span>'}</td>`,
+                commitmentCell,
                 `<td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button></td>`,
                 `</tr>`
             ].join('');
@@ -369,7 +413,7 @@ async function renderGroupsTab(){
                         <div style="font-size:0.98rem;color:var(--text-dim);">${(()=>{const slots=gMs.reduce((s,m)=>{const e=(m.enrollments||[]).find(x=>x.groupId===g.id);return s+(e?parseInt(e.qty||1):1);},0);const uniq=gMs.length;return slots===uniq?slots+' members':slots+' chit slots ('+uniq+' members)';})()}  · ${gPays.length} payment entries</div>
                         <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
                             <span style="font-size:0.92rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:2px 7px;color:#a5b4fc;">🗓 Started: ${gStartDisp}</span>
-                            ${g.dueDay?`<span style="font-size:0.92rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:2px 7px;color:#f39c12;">📅 Due: ${gDueDayDisp}</span>`:''}
+                            ${g.dueDay?`<span style="font-size:0.92rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:2px 7px;color:#f39c12;">📅 Due: ${gDueDayDisp}</span>`:''}</div>
                         </div>
                     </div>
                     <div style="display:flex;gap:6px;align-items:center;">
@@ -388,16 +432,18 @@ async function renderGroupsTab(){
                 <div class="prog-label" style="margin-top:3px;"><span>Month ${elapsed}/${totalMonths}</span><span>${left}/${totalMonths} months pending</span></div>
             </div>
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
-
                 ${gMs.length?`<div class="table-wrap"><table class="table-custom">
-                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Chit Picked Amt</th><th></th></tr></thead>
+                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Chit Picked Amt</th><th style="text-align:center;color:#bb86fc;">Commitment</th><th></th></tr></thead>
                     <tbody>${memberRows}</tbody>
                 </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:1rem;padding:10px;">No members yet</div>'}
             </div>
         </div>`;
     }).join('');
+    } catch(err) {
+        console.error('Error rendering groups tab:', err);
+        document.getElementById('groupListArea').innerHTML = '<div style="text-align:center;color:#f87171;padding:40px;">Error loading groups. Check console.</div>';
+    }
 }
-
 
 function toggleGroupCard(bodyId, header){
     const body=document.getElementById(bodyId);
@@ -421,5 +467,3 @@ function toggleLedgerTable(id, header){
     el.style.display=isOpen?'none':'block';
     if(chevron)chevron.style.transform=isOpen?'rotate(0deg)':'rotate(90deg)';
 }
-
-// ══════════════════════════════════════════
