@@ -89,11 +89,13 @@ async function saveMember(){
     if(!valid || enrollments.length===0) return showToast('❌ Select a group for each enrollment row',false);
 
     const data = {name:n, phone:p, enrollments, groupIds};
+    let memberId = eid;
     if(eid) await db.collection('members').doc(eid).update(data);
-    else await db.collection('members').add(data);
+    else { const ref = await db.collection('members').add(data); memberId = ref.id; }
     bustCache('members');
+
     closeModal('memberModal');
-    showToast(`✅ Member "${n}" saved with ${enrollments.length} enrollment${enrollments.length!==1?'s':''}!`);
+    showToast('✅ Member "' + n + '" saved with ' + enrollments.length + ' enrollment' + (enrollments.length!==1?'s':'') + '!');
     updateUI();
 }
 
