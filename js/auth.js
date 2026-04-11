@@ -157,6 +157,8 @@ function applyUserSession(user){
     document.getElementById('logoutBtn').style.display = 'block';
 
     if(user.role === 'admin'){
+        document.body.classList.add('admin-mode');
+        document.documentElement.classList.add('admin-mode-early');
         document.getElementById('adminHeader').style.display = 'flex';
         document.getElementById('memberHeader').style.display = 'none';
         document.getElementById('headerRoleBadge').textContent = 'ADMIN';
@@ -190,8 +192,10 @@ function applyUserSession(user){
         document.getElementById('memberQrArea').style.display = 'block';
         document.getElementById('summaryView').value = user.memberId;
         
-        // Add member-mode class to hide tabs via CSS
-        document.body.classList.add('member-mode');
+        // Remove admin-mode so tabs are hidden (CSS-driven)
+        document.body.classList.remove('admin-mode');
+    document.documentElement.classList.remove('admin-mode-early');
+        document.documentElement.classList.remove('admin-mode-early');
         
         loadMemberLedger();
         if(typeof loadMemberQr === 'function') loadMemberQr(user.memberId);
@@ -205,10 +209,8 @@ function handleLogout(){
     CURRENT_USER = null;
     document.getElementById('adminHeader').style.display = 'flex';
     document.getElementById('memberHeader').style.display = 'none';
-    document.getElementById('navGroups').style.display = '';
-    document.getElementById('navBackup').style.display = '';
-    document.getElementById('navPlanner').style.display = '';
-    document.querySelector('.nav-bar').style.display = '';
+    document.body.classList.remove('admin-mode');
+    document.documentElement.classList.remove('admin-mode-early');
     document.getElementById('adminStatCards').style.display = '';
     document.getElementById('adminActionBtns').style.display = 'flex';
     document.getElementById('adminMemberSearch').style.display = '';
@@ -262,7 +264,7 @@ async function renderAccessRequests(){
     }
 
     list.innerHTML = filtered.map(function(r){
-        var dateStr = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('en-IN') : '—';
+        var dateStr = r.requestedAt ? fmtDateObj(new Date(r.requestedAt)) : '—';
         var actions = '';
         if(r.status === 'pending'){
             actions = '<button class="btn-approve" onclick="handleApprove(\'' + r.id + '\',\'' + r.phone + '\')">✅ Approve</button>' +
