@@ -286,7 +286,7 @@ async function renderCollectionsTab(){
 
 async function renderGroupsTab(){
     _applyGroupsSubTabStyles();
-    const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');
+    const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');const cs=await getCollection('memberCommitments');
     if(!gs.length){document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';return;}
     document.getElementById('groupListArea').innerHTML=gs.map((g,gIdx)=>{
         const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
@@ -350,6 +350,7 @@ async function renderGroupsTab(){
                 `<td style="color:#34d399;">${fmtAmt(paid)}</td>`,
                 `<td style="color:#f59e0b;">${fmtAmt(bal)}</td>`,
                 `<td style="color:#a5b4fc;font-size:1.05rem;">${monthsCovered}/${totalMonths}</td>`,
+(()=>{ const mComm=cs.find(c=>c.memberId===m.id&&c.groupId===g.id); const commVal=mComm?mComm.targetMonth:0; const commId=mComm?mComm.id:''; return '<td><input type="number" min="0" max="'+totalMonths+'" value="'+(commVal||'')+'" placeholder="—" data-mid="'+m.id+'" data-gid="'+g.id+'" data-commid="'+commId+'" onchange="updateGroupCommitment(this)" style="width:60px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#bb86fc;border-radius:7px;padding:4px 6px;font-size:0.78rem;font-weight:800;text-align:center;outline:none;" title="Commitment month for this member"></td>'; })(),
                 `<td>${pickedPay
                     ?`<div><span class="chit-yes-badge">✅ Picked</span><div style="color:#34d399;font-weight:800;font-size:0.92rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
                     :'<span class="chit-no">—</span>'}</td>`,
@@ -390,7 +391,7 @@ async function renderGroupsTab(){
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
 
                 ${gMs.length?`<div class="table-wrap"><table class="table-custom">
-                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Chit Picked Amt</th><th></th></tr></thead>
+                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Commitment</th><th>Chit Picked Amt</th><th></th></tr></thead>
                     <tbody>${memberRows}</tbody>
                 </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:1rem;padding:10px;">No members yet</div>'}
             </div>
@@ -398,6 +399,35 @@ async function renderGroupsTab(){
     }).join('');
 }
 
+
+// Inline commitment edit from groups tab
+async function updateGroupCommitment(input){
+    const mid = input.dataset.mid;
+    const gid = input.dataset.gid;
+    const commId = input.dataset.commid;
+    const val = parseInt(input.value)||0;
+    try {
+        if(val > 0){
+            if(commId){
+                await db.collection('memberCommitments').doc(commId).update({targetMonth: val});
+            } else {
+                const ref = await db.collection('memberCommitments').add({
+                    memberId: mid, groupId: gid, targetMonth: val,
+                    createdAt: new Date().toISOString()
+                });
+                input.dataset.commid = ref.id;
+            }
+        } else if(commId) {
+            await db.collection('memberCommitments').doc(commId).delete();
+            input.dataset.commid = '';
+        }
+        bustCache('memberCommitments');
+        input.style.borderColor = '#34d399';
+        setTimeout(()=>{ input.style.borderColor = 'rgba(155,89,182,0.3)'; }, 1200);
+    } catch(e) {
+        showToast('❌ Failed to save commitment', false);
+    }
+}
 
 function toggleGroupCard(bodyId, header){
     const body=document.getElementById(bodyId);
