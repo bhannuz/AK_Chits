@@ -22,6 +22,8 @@ async function loadMemberLedger(){
     const gs=await getCollection('groups');
     const ps=await getCollection('payments');
     const cs=await getCollection('memberCommitments');
+    const payoutsDoc = await db.collection('settings').doc('collectionPayouts').get().catch(()=>null);
+    const _payoutsMap = payoutsDoc && payoutsDoc.exists ? (payoutsDoc.data().payouts||{}) : {};
     const m=ms.find(x=>x.id===mid); if(!m) return;
     const mPays=ps.filter(p=>p.memberId===mid);
     const mComms=cs.filter(c=>c.memberId===mid);
@@ -34,7 +36,7 @@ async function loadMemberLedger(){
     const isMember = CURRENT_USER && CURRENT_USER.role==='member';
     const today = new Date().toISOString().split('T')[0];
 
-    function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
+    function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId, mComms){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         
         // Get chit amount from Firebase field: fixedAmt
@@ -100,12 +102,18 @@ async function loadMemberLedger(){
                     ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">✨ CHIT TARGET</span>`
                     : `<span style="color:var(--text-dim);">—</span>`;
                 
+                const _poPending = _payoutsMap[grp.id+'_'+slotIndex]||0;
+                const _poKeyPending = grp.id+'_'+slotIndex;
+                const _poCellPending = !isMember
+                    ? `<input type="number" value="${_poPending||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
+                    : `<span style="color:var(--text-dim);">—</span>`;
                 return `<tr style="">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
                     <td style="color:${isOverdue?'#f87171':'#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
                     <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-weight:700;">—</td>
+                    <td style="vertical-align:middle;">${_poCellPending}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);">—</td>
                     <td style="vertical-align:middle;">${statusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
@@ -142,12 +150,17 @@ async function loadMemberLedger(){
                 
                 const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
                 
+                const _poSingle = _payoutsMap[grp.id+'_'+slotIndex]||0;
+                const _poCellSingle = !isMember
+                    ? `<input type="number" value="${_poSingle||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
+                    : (_poSingle>0 ? `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poSingle)}</span>` : `<span style="color:var(--text-dim);">—</span>`);
                 return `<tr style="background:${rowBg};${rowBL}">
                         <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
                         <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
                         <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
                         <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(pay.date)}</td>
                         <td style="vertical-align:middle;color:${isPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(iPaid)}</td>
+                        <td style="vertical-align:middle;">${_poCellSingle}</td>
                         <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
                         <td style="vertical-align:middle;">${statusBadge}</td>
                         <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
@@ -169,12 +182,17 @@ async function loadMemberLedger(){
             let mainRows = '';
             
             // Main summary row for this month (shows total of all partials) - CLICKABLE to toggle
+            const _poMulti = _payoutsMap[grp.id+'_'+slotIndex]||0;
+            const _poCellMulti = !isMember
+                ? `<input type="number" value="${_poMulti||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
+                : (_poMulti>0 ? `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poMulti)}</span>` : `<span style="color:var(--text-dim);">—</span>`);
             mainRows += `<tr style="background:${isPartialFullyPaid ? 'rgba(16,185,129,0.07)' : 'rgba(245,158,11,0.12)'};border-left:3px solid ${isPartialFullyPaid ? '#10b981' : '#f59e0b'};font-weight:600;cursor:pointer;" onclick="togglePaymentDetails(this,'partial_${sectionId}_${slotIndex}')">
                     <td style="text-align:center;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:800;font-size:0.8rem;">▶ ${slotIndex+1}</td>
                     <td style="color:${isPartialFullyPaid ? '#a5b4fc' : '#fbbf24'};font-weight:700;">${fmtDate(dueDate)}</td>
                     <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
                     <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:700;">Multiple Payments</td>
                     <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}</td>
+                    <td style="vertical-align:middle;">${_poCellMulti}</td>
                     <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
                     <td style="vertical-align:middle;">${statusForPartial}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
@@ -206,6 +224,7 @@ async function loadMemberLedger(){
                     <td style="color:#c4b5fd;"></td>
                     <td style="vertical-align:middle;color:#f59e0b;font-size:0.75rem;font-weight:700;">${fmtDate(pay.date)}</td>
                     <td style="vertical-align:middle;color:#34d399;font-weight:700;">${fmtAmt(iPaid)}</td>
+                    <td style="vertical-align:middle;color:var(--text-dim);">—</td>
                     <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
                     <td style="vertical-align:middle;">${iStatusBadge}</td>
                     <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
@@ -234,29 +253,64 @@ async function loadMemberLedger(){
         const endDate = new Date(startDate);
         endDate.setMonth(endDate.getMonth() + totalMonths);
         const pad = n => String(n).padStart(2, '0');
-        const endDateStr = `${pad(endDate.getDate())}/${pad(endDate.getMonth()+1)}/${endDate.getFullYear()}`;
+        const _edMonths=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];const endDateStr=`${pad(endDate.getDate())}.${_edMonths[endDate.getMonth()]}.${endDate.getFullYear()}`;
+
+        // ── Next due date (first unpaid future slot) ──
+        const _today = new Date().toISOString().split('T')[0];
+        const nextDueDate = allDueDates.find((d,i) => {
+            const isPaid = slotPays.some(p =>
+                (Array.isArray(p.monthSlots) && p.monthSlots.includes(i)) ||
+                p.monthSlot === i
+            );
+            return !isPaid && d >= _today;
+        }) || null;
+
+        // ── Chit picked info ──
+        const chitPickedPay = slotPays.find(p => p.chitPicked === 'Yes');
+        const chitPickedAmt = chitPickedPay ? (parseFloat(chitPickedPay.chit)||0) : 0;
+
+        // ── Commitment chip ──
+        const commObj = mComms.find(c => c.groupId === grp.id);
+        const commChip = commObj && commObj.targetMonth
+            ? '<span style="background:rgba(155,89,182,0.2);border:1px solid rgba(155,89,182,0.45);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#bb86fc;font-weight:800;">🎯 ' + getOrdinal(commObj.targetMonth) + ' Month</span>'
+            : '';
 
         return `<div style="margin-bottom:16px;page-break-inside:avoid;">
             <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
-                    <div>
-                        <div style="font-size:1rem;font-weight:900;color:#f39c12;margin-bottom:6px;">
-                            Group: ${grp.name}${labelBadge}${chitSlotBadge}
-                        </div>
-                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                            <span style="background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#a5b4fc;">📅 Started: ${fmtDate(grp.startDate||grp.gStart||'')}</span>
-                        </div>
+
+                <!-- Stat chips — 6 chips, group name replaces overdue -->
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
+                    <div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.25);border-top:2px solid #f39c12;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">GROUP</div>
+                        <div style="font-size:0.82rem;font-weight:900;color:#f39c12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${grp.name}${chitSlotBadge}</div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:2px solid #34d399;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">START DATE</div>
+                        <div style="font-size:0.78rem;font-weight:900;color:#34d399;">${fmtDate(grp.startDate||grp.gStart||'')}</div>
+                    </div>
+                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-top:2px solid #ef4444;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">END DATE</div>
+                        <div style="font-size:0.78rem;font-weight:900;color:#f87171;">${endDateStr}</div>
+                    </div>
+                    <div style="background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.25);border-top:2px solid #bb86fc;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">COMMITMENT</div>
+                        <div style="font-size:0.82rem;font-weight:900;color:#bb86fc;">${commObj&&commObj.targetMonth?getOrdinal(commObj.targetMonth)+' Month':'—'}</div>
+                    </div>
+                    <div style="background:rgba(165,180,252,0.08);border:1px solid rgba(165,180,252,0.25);border-top:2px solid #a5b4fc;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">PENDING</div>
+                        <div style="font-size:0.92rem;font-weight:900;color:#a5b4fc;">${monthsDone}/${totalMonths}</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-top:2px solid #6366f1;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">NEXT DUE</div>
+                        <div style="font-size:0.78rem;font-weight:900;color:#818cf8;">${nextDueDate?fmtDate(nextDueDate):'—'}</div>
                     </div>
                 </div>
-                <div style="margin-top:10px;">
-                    <div style="background:#252f48;border-radius:5px;height:6px;overflow:hidden;">
-                        <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%;"></div>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;flex-wrap:wrap;gap:4px;">
-                        <span style="font-size:0.65rem;color:var(--text-dim);">Month ${monthsDone}/${totalMonths} paid${overdueCnt>0?` · <span style="color:#f87171;">${overdueCnt} overdue</span>`:''}</span>
-                        <span style="background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#f87171;">🏁 Ends: ${endDateStr}</span>
-                    </div>
+
+                <!-- Progress bar -->
+                <div style="background:#252f48;border-radius:5px;height:6px;overflow:hidden;">
+                    <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%;"></div>
                 </div>
+                <div style="font-size:0.62rem;color:var(--text-dim);margin-top:4px;">Month ${monthsDone}/${totalMonths} paid${overdueCnt>0?' · <span style="color:#f87171;">'+overdueCnt+' overdue</span>':''}</div>
             </div>
 
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;page-break-inside:avoid;">
@@ -278,6 +332,7 @@ async function loadMemberLedger(){
                                 <th>Monthly Pay</th>
                                 <th>Pay Date</th>
                                 <th>Paid</th>
+                                <th style="color:#a78bfa;">Payout</th>
                                 <th>Balance</th>
                                 <th>Status</th>
                                 <th>Mode</th>
@@ -318,22 +373,17 @@ async function loadMemberLedger(){
             
             const allDueDates = buildDueDateList(grp);
             const id = `ledger_${idx}_${slotNum}`;
-            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id));
+            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id, mComms));
         }
         
         return slotSections.join('');
     }).join('');
 
-    // Build commitment chip
-    const commitmentChip = mComms.length > 0 
-        ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:2px 8px;font-size:0.75rem;font-weight:800;margin-left:8px;vertical-align:middle;">🎯 ${getOrdinal(mComms[0].targetMonth)} Month Commitment</span>`
-        : '';
-
     const ledgerHtml = `
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-top:6px;">
             <div style="width:46px;height:46px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;">${ini(m.name)}</div>
             <div style="flex:1;min-width:0;">
-                <div style="font-size:1rem;font-weight:900;">${m.name}${commitmentChip}</div>
+                <div style="font-size:1rem;font-weight:900;">${m.name}</div>
                 <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${mPays.length} payment${mPays.length!==1?'s':''} · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
             </div>
             <div style="display:flex;gap:6px;">
@@ -351,6 +401,26 @@ async function loadMemberLedger(){
         document.getElementById('mhBalance').textContent = fmtAmt(totalBal);
     } else {
         document.getElementById('ledgerData').innerHTML = ledgerHtml;
+    }
+}
+
+// Save payout from ledger (admin only — input is not rendered for members)
+async function updateLedgerPayout(input){
+    if(!isAdmin()){ showToast('🚫 Access denied', false); return; }
+    const gid = input.dataset.gid;
+    const idx = parseInt(input.dataset.idx);
+    const val = parseFloat(input.value)||0;
+    try {
+        const doc = await db.collection('settings').doc('collectionPayouts').get();
+        const payouts = doc.exists ? (doc.data().payouts||{}) : {};
+        const key = gid + '_' + idx;
+        if(val > 0) payouts[key] = val;
+        else delete payouts[key];
+        await db.collection('settings').doc('collectionPayouts').set({ payouts }, { merge: false });
+        input.style.borderColor = '#34d399';
+        setTimeout(() => { input.style.borderColor = 'rgba(167,139,250,0.3)'; }, 1200);
+    } catch(e) {
+        showToast('❌ Failed to save payout', false);
     }
 }
 
