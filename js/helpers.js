@@ -21,7 +21,8 @@ async function getCollection(col, forceRefresh=false){
 }
 
 function bustCache(col){ delete _dbCache[col]; delete _cacheTs[col]; }
-function fmtDate(d){if(!d)return"—";const[y,m,day]=d.split("-");return`${day}/${m}/${y}`;}
+function fmtDate(d){if(!d)return"—";const[y,m,day]=d.split("-");const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];const mName=months[parseInt(m,10)-1]||m;return`${day}.${mName}.${y}`;}
+function fmtDateObj(d){if(!d)return"—";const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];const dd=String(d.getDate()).padStart(2,"0");return`${dd}.${months[d.getMonth()]}.${d.getFullYear()}`; }
 function fmtAmt(v){return'₹'+(parseFloat(v)||0).toLocaleString('en-IN');}
 function ini(n){return(n||'?').split(' ').map(x=>x[0]||'').join('').toUpperCase().slice(0,2)||'??';}
 function isAdmin(){ return CURRENT_USER && CURRENT_USER.role === 'admin'; }
