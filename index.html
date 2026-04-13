@@ -13,6 +13,15 @@
     <link rel="stylesheet" href="css/app.css">
 
     <!-- ── CDN Libraries (load before app.js) ── -->
+    <!-- Early admin-mode detection — runs before CSS renders to avoid nav flash -->
+    <script>
+        (function(){
+            try {
+                var s = sessionStorage.getItem('akdf_session');
+                if(s){ var u=JSON.parse(s); if(u&&u.role==='admin') document.documentElement.classList.add('admin-mode-early'); }
+            }catch(e){}
+        })();
+    </script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -45,13 +54,7 @@
         </div>
     </div>
 
-    <!-- DESKTOP TAB NAVIGATION (Shown on screens ≥1024px) -->
-    <div class="tab-nav-desktop" id="desktopTabNav">
-        <div class="tab-nav-item-desktop active" id="navHomeDesktop" onclick="switchTab('home')">🏠 Home</div>
-        <div class="tab-nav-item-desktop" id="navPlannerDesktop" onclick="switchTab('planner')">📋 Planner</div>
-        <div class="tab-nav-item-desktop" id="navGroupsDesktop" onclick="switchTab('groups')">📁 Groups</div>
-        <div class="tab-nav-item-desktop" id="navBackupDesktop" onclick="switchTab('backup')">💾 Backup</div>
-    </div>
+    <!-- Desktop tab nav removed — bottom nav bar used for all screen sizes -->
 
     <!-- MEMBER PROFILE HEADER -->
     <div id="memberHeader" style="display:none;padding:16px 4px 0;">
@@ -200,19 +203,32 @@
             <div id="waSectionBody" style="display:none;border-top:1px solid var(--border);">
                 <div style="padding:14px 16px;">
 
+                    <!-- Version save/load bar -->
+                    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;padding:10px 12px;background:rgba(37,211,102,0.05);border:1px solid rgba(37,211,102,0.2);border-radius:12px;">
+                        <input type="text" id="wa_version_name" class="form-input" style="flex:1;margin-bottom:0;font-size:0.8rem;padding:8px 10px;" placeholder="Version name (e.g. April Reminder, Group A)">
+                        <button onclick="waSaveVersion()" style="background:linear-gradient(135deg,#25D366,#128C7E);color:white;border:none;padding:8px 14px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">💾 Save</button>
+                        <button onclick="waNewVersion()" style="background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.3);color:#34d399;padding:8px 12px;border-radius:9px;font-size:0.75rem;font-weight:800;cursor:pointer;white-space:nowrap;">＋ New</button>
+                    </div>
+
+                    <!-- Saved versions list -->
+                    <div id="wa_versions_bar" style="display:none;margin-bottom:12px;">
+                        <div style="font-size:0.6rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📁 Saved Versions</div>
+                        <div id="wa_versions_list" style="display:flex;flex-direction:column;gap:5px;"></div>
+                    </div>
+
                     <!-- Contact number -->
                     <div style="margin-bottom:12px;">
                         <label class="form-label-small">Your Contact Number (appears in message)</label>
-                        <input type="text" id="wa_contact" class="form-input" style="margin-bottom:0;" placeholder="e.g. 9876543210">
+                        <input type="text" id="wa_contact" class="form-input" style="margin-bottom:0;" placeholder="e.g. 9876543210" oninput="waAutoSave()">
                     </div>
 
                     <!-- Custom template (optional) -->
                     <div style="margin-bottom:12px;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
                             <label class="form-label-small" style="margin-bottom:0;">Custom Template <span style="color:var(--text-dim);font-weight:400;">(optional)</span></label>
-                            <button onclick="document.getElementById('wa_template').value=''" style="background:none;border:none;color:var(--text-dim);font-size:0.65rem;cursor:pointer;padding:0;">Clear</button>
+                            <button onclick="document.getElementById('wa_template').value='';waAutoSave();" style="background:none;border:none;color:var(--text-dim);font-size:0.65rem;cursor:pointer;padding:0;">Clear</button>
                         </div>
-                        <textarea id="wa_template" class="form-input" rows="5" style="margin-bottom:4px;font-size:0.75rem;font-family:monospace;resize:vertical;" placeholder="Leave blank for default message. Use [Name] [Balance] [Groups] [Contact] as placeholders."></textarea>
+                        <textarea id="wa_template" class="form-input" rows="5" style="margin-bottom:4px;font-size:0.75rem;font-family:monospace;resize:vertical;" placeholder="Leave blank for default message. Use [Name] [Balance] [Groups] [Contact] as placeholders." oninput="waAutoSave()"></textarea>
                         <div style="font-size:0.62rem;color:var(--text-dim);">Placeholders: [Name] [Balance] [Groups] [Contact]</div>
                     </div>
 
@@ -661,8 +677,8 @@
 <!-- BOTTOM NAV -->
 <div class="nav-bar">
     <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
-    <div class="nav-item" id="navPlanner" onclick="switchTab('planner')">📋<br>Planner</div>
     <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
+    <div class="nav-item" id="navPlanner" onclick="switchTab('planner')">📋<br>Planner</div>
     <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
 </div>
     <script>
@@ -695,6 +711,7 @@
             body.style.display      = open ? 'none'         : 'block';
             chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
             if(!open && typeof waRenderMemberGrid === 'function') waRenderMemberGrid();
+            if(!open && typeof waRenderVersions === 'function') waRenderVersions();
         }
     </script>
     <script src="app.js"></script>
