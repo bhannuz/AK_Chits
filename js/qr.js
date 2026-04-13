@@ -348,6 +348,140 @@ function toggleWaSection(){
 }
 
 // Render all members as a selectable grid
+// ═══════════════════════════════════════════════════════════
+// WHATSAPP VERSION SYSTEM
+// ═══════════════════════════════════════════════════════════
+var _waActiveVersion = null;
+var _waSaveTimer = null;
+
+async function _waFetchVersions(){
+    try {
+        var doc = await db.collection('settings').doc('waVersions').get();
+        return doc.exists ? (doc.data().list || []) : [];
+    } catch(e){ return []; }
+}
+
+async function _waWriteVersions(list){
+    var clean = list.map(function(v){
+        return { name: v.name, contact: v.contact||'', template: v.template||'', savedAt: v.savedAt||'' };
+    });
+    await db.collection('settings').doc('waVersions').set({ list: clean });
+}
+
+function _waReadForm(){
+    return {
+        contact:  (document.getElementById('wa_contact')  ? document.getElementById('wa_contact').value  : ''),
+        template: (document.getElementById('wa_template') ? document.getElementById('wa_template').value : ''),
+    };
+}
+
+function _waFillForm(data){
+    if(document.getElementById('wa_contact'))  document.getElementById('wa_contact').value  = data.contact  || '';
+    if(document.getElementById('wa_template')) document.getElementById('wa_template').value = data.template || '';
+}
+
+async function waSaveVersion(){
+    var nameEl = document.getElementById('wa_version_name');
+    var name = (nameEl ? nameEl.value : '').trim();
+    if(!name){ showToast('❌ Enter a version name first', false); return; }
+    showToast('⏳ Saving…', true);
+    try {
+        var list = await _waFetchVersions();
+        var form = _waReadForm();
+        var existing = list.findIndex(function(v){ return v.name === name; });
+        var entry = { name: name, contact: form.contact, template: form.template, savedAt: new Date().toLocaleString('en-IN') };
+        if(existing >= 0) list[existing] = entry;
+        else list.push(entry);
+        await _waWriteVersions(list);
+        _waActiveVersion = name;
+        await waRenderVersions();
+        showToast('✅ Saved "' + name + '"', true);
+    } catch(e){ showToast('❌ Save failed', false); }
+}
+
+async function waLoadVersion(name){
+    try {
+        var list = await _waFetchVersions();
+        var ver = list.find(function(v){ return v.name === name; });
+        if(!ver) return;
+        _waActiveVersion = name;
+        var nameEl = document.getElementById('wa_version_name');
+        if(nameEl) nameEl.value = name;
+        _waFillForm(ver);
+        await waRenderVersions();
+        showToast('📂 Loaded "' + name + '"', true);
+        if(typeof waRenderMemberGrid === 'function') waRenderMemberGrid();
+    } catch(e){ showToast('❌ Load failed', false); }
+}
+
+async function waDeleteVersion(name){
+    if(!confirm('Delete version "' + name + '"?')) return;
+    try {
+        var list = await _waFetchVersions();
+        list = list.filter(function(v){ return v.name !== name; });
+        await _waWriteVersions(list);
+        if(_waActiveVersion === name){ _waActiveVersion = null; waNewVersion(); }
+        else await waRenderVersions();
+        showToast('🗑️ Deleted "' + name + '"', false);
+    } catch(e){ showToast('❌ Delete failed', false); }
+}
+
+function waNewVersion(){
+    _waActiveVersion = null;
+    var nameEl = document.getElementById('wa_version_name');
+    if(nameEl) nameEl.value = '';
+    if(document.getElementById('wa_contact'))  document.getElementById('wa_contact').value  = '';
+    if(document.getElementById('wa_template')) document.getElementById('wa_template').value = '';
+    waRenderVersions();
+    showToast('📋 New blank version ready', true);
+}
+
+function waAutoSave(){
+    if(!_waActiveVersion) return;
+    clearTimeout(_waSaveTimer);
+    _waSaveTimer = setTimeout(async function(){
+        var list = await _waFetchVersions();
+        var idx = list.findIndex(function(v){ return v.name === _waActiveVersion; });
+        if(idx < 0) return;
+        var form = _waReadForm();
+        list[idx].contact  = form.contact;
+        list[idx].template = form.template;
+        list[idx].savedAt  = new Date().toLocaleString('en-IN');
+        await _waWriteVersions(list);
+    }, 1500);
+}
+
+async function waRenderVersions(){
+    var bar  = document.getElementById('wa_versions_bar');
+    var list = document.getElementById('wa_versions_list');
+    if(!bar || !list) return;
+    var vers = await _waFetchVersions();
+    if(!vers.length){ bar.style.display = 'none'; return; }
+    bar.style.display = 'block';
+    list.innerHTML = '';
+    vers.forEach(function(ver){
+        var isActive = ver.name === _waActiveVersion;
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;background:' + (isActive ? 'rgba(37,211,102,0.12)' : 'var(--card-bg)') + ';border:1px solid ' + (isActive ? 'rgba(37,211,102,0.4)' : 'var(--border)') + ';border-radius:10px;padding:8px 12px;';
+        row.innerHTML =
+            '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:0.8rem;font-weight:800;color:' + (isActive ? '#34d399' : 'white') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (isActive ? '✏️ ' : '') + ver.name + '</div>' +
+                '<div style="font-size:0.58rem;color:var(--text-dim);margin-top:1px;">💾 ' + (ver.savedAt || '—') + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:5px;flex-shrink:0;">' +
+                (!isActive
+                    ? '<button class="wa-ver-load" style="background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.35);color:#34d399;padding:5px 10px;border-radius:7px;font-size:0.7rem;font-weight:800;cursor:pointer;">📂 Load</button>'
+                    : '<button onclick="waSaveVersion()" style="background:rgba(37,211,102,0.15);border:1px solid rgba(37,211,102,0.35);color:#34d399;padding:5px 10px;border-radius:7px;font-size:0.7rem;font-weight:800;cursor:pointer;">💾 Update</button>') +
+                '<button class="wa-ver-del" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:5px 9px;border-radius:7px;font-size:0.7rem;font-weight:800;cursor:pointer;">🗑️</button>' +
+            '</div>';
+        list.appendChild(row);
+        var loadBtn = row.querySelector('.wa-ver-load');
+        var delBtn  = row.querySelector('.wa-ver-del');
+        if(loadBtn){ (function(n){ loadBtn.onclick = function(){ waLoadVersion(n); }; })(ver.name); }
+        if(delBtn){  (function(n){ delBtn.onclick  = function(){ if(confirm('Delete version "'+n+'"?')) waDeleteVersion(n); }; })(ver.name); }
+    });
+}
+
 async function waRenderMemberGrid(){
     var grid = document.getElementById('waMemberGrid');
     if(!grid) return;
@@ -447,7 +581,7 @@ async function generateWaReminders(){
             if(g.dueDay){
                 var d = new Date(); d.setDate(parseInt(g.dueDay));
                 if(d < new Date()) d.setMonth(d.getMonth()+1);
-                nextDue = d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+                nextDue = fmtDateObj(d);
             }
             return { name: g.name, pending, monthly, nextDue };
         }).filter(function(x){ return x.pending > 0; });
