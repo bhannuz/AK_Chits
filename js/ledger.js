@@ -21,6 +21,7 @@ async function loadMemberLedger(){
     const ms=await getCollection('members');
     const gs=await getCollection('groups');
     const ps=await getCollection('payments');
+    bustCache('memberCommitments');  // always fresh for commitment display
     const cs=await getCollection('memberCommitments');
     const payoutsDoc = await db.collection('settings').doc('collectionPayouts').get().catch(()=>null);
     const _payoutsMap = payoutsDoc && payoutsDoc.exists ? (payoutsDoc.data().payouts||{}) : {};
@@ -39,17 +40,10 @@ async function loadMemberLedger(){
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId, mComms){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         
-        // Get chit amount from Firebase field: fixedAmt (PRIORITY 1)
-        let chitAmount = 0;
-        if(grp.fixedAmt && parseFloat(grp.fixedAmt) > 0) {
-            chitAmount = parseFloat(grp.fixedAmt);
-        } else if(grp.amtType === 'fixed' && grp.fixedAmt) {
-            // Second check - ensure it's not 0 or null
-            const val = parseFloat(grp.fixedAmt);
-            if(val > 0) chitAmount = val;
-        }
+        // Get chit amount from Firebase field: fixedAmt
+        let chitAmount = parseFloat(grp.fixedAmt) || 0;
         
-        // Fallback: try other variations (PRIORITY 2)
+        // Fallback: try other variations
         if(!chitAmount || chitAmount === 0) {
             const fieldNames = [
                 'fixedMonthlyAmount',
@@ -69,20 +63,10 @@ async function loadMemberLedger(){
             }
         }
         
-        // Last resort: get from payments (PRIORITY 3)
+        // Last resort: get from last payment
         if(!chitAmount || chitAmount === 0) {
-            // Try first payment first (newer data)
-            if(slotPays.length > 0) {
-                const firstPay = slotPays[0];
-                if(firstPay.chit && parseFloat(firstPay.chit) > 0) {
-                    chitAmount = parseFloat(firstPay.chit);
-                }
-            }
-            // If still not found, try last payment
-            if(!chitAmount || chitAmount === 0) {
-                const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
-                if(lastPay && lastPay.chit) chitAmount = parseFloat(lastPay.chit)||0;
-            }
+            const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
+            if(lastPay) chitAmount = parseFloat(lastPay.chit)||0;
         }
 
         // Calculate fully paid months
@@ -114,7 +98,7 @@ async function loadMemberLedger(){
                     : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
                 
                 // Check for commitment on this month
-                const commitment = mComms.find(c => c.groupId === grp.id && c.targetMonth === slotIndex + 1);
+                const commitment = mComms.find(c => c.groupId === grp.id && (c.slotNum==null?1:c.slotNum) === slotNum && c.targetMonth === slotIndex + 1);
                 const commitmentBadge = commitment 
                     ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">✨ CHIT TARGET</span>`
                     : `<span style="color:var(--text-dim);">—</span>`;
@@ -122,8 +106,8 @@ async function loadMemberLedger(){
                 const _poPending = _payoutsMap[grp.id+'_'+slotIndex]||0;
                 const _poKeyPending = grp.id+'_'+slotIndex;
                 const _poCellPending = !isMember
-                    ? `<input type="number" value="${_poPending||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:80px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:4px 8px;font-size:0.75rem;font-weight:700;text-align:center;outline:none;">`
-                    : `<span style="color:#a78bfa;font-weight:700;text-align:center;display:inline-block;width:80px;">${_poPending>0?fmtAmt(_poPending):'—'}</span>`;
+                    ? `<input type="number" value="${_poPending||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
+                    : `<span style="color:var(--text-dim);">—</span>`;
                 return `<tr style="">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
                     <td style="color:${isOverdue?'#f87171':'#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
@@ -158,7 +142,7 @@ async function loadMemberLedger(){
                 const editCell = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
                 
                 // Check for commitment on this month
-                const commitment = mComms.find(c => c.groupId === grp.id && c.targetMonth === slotIndex + 1);
+                const commitment = mComms.find(c => c.groupId === grp.id && (c.slotNum==null?1:c.slotNum) === slotNum && c.targetMonth === slotIndex + 1);
                 const chitPickedCell = commitment
                     ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">✨ CHIT TARGET</span>`
                     : (iCp
@@ -169,8 +153,8 @@ async function loadMemberLedger(){
                 
                 const _poSingle = _payoutsMap[grp.id+'_'+slotIndex]||0;
                 const _poCellSingle = !isMember
-                    ? `<input type="number" value="${_poSingle||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:80px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:4px 8px;font-size:0.75rem;font-weight:700;text-align:center;outline:none;">`
-                    : (_poSingle>0 ? `<span style="color:#a78bfa;font-weight:700;text-align:center;display:inline-block;width:80px;">${fmtAmt(_poSingle)}</span>` : `<span style="color:var(--text-dim);text-align:center;display:inline-block;width:80px;">—</span>`);
+                    ? `<input type="number" value="${_poSingle||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
+                    : (_poSingle>0 ? `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poSingle)}</span>` : `<span style="color:var(--text-dim);">—</span>`);
                 return `<tr style="background:${rowBg};${rowBL}">
                         <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
                         <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
@@ -201,13 +185,13 @@ async function loadMemberLedger(){
             // Main summary row for this month (shows total of all partials) - CLICKABLE to toggle
             const _poMulti = _payoutsMap[grp.id+'_'+slotIndex]||0;
             const _poCellMulti = !isMember
-                ? `<input type="number" value="${_poMulti||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:80px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:4px 8px;font-size:0.75rem;font-weight:700;text-align:center;outline:none;">`
-                : (_poMulti>0 ? `<span style="color:#a78bfa;font-weight:700;text-align:center;display:inline-block;width:80px;">${fmtAmt(_poMulti)}</span>` : `<span style="color:var(--text-dim);text-align:center;display:inline-block;width:80px;">—</span>`);
+                ? `<input type="number" value="${_poMulti||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
+                : (_poMulti>0 ? `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poMulti)}</span>` : `<span style="color:var(--text-dim);">—</span>`);
             mainRows += `<tr style="background:${isPartialFullyPaid ? 'rgba(16,185,129,0.07)' : 'rgba(245,158,11,0.12)'};border-left:3px solid ${isPartialFullyPaid ? '#10b981' : '#f59e0b'};font-weight:600;cursor:pointer;" onclick="togglePaymentDetails(this,'partial_${sectionId}_${slotIndex}')">
                     <td style="text-align:center;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:800;font-size:0.8rem;">▶ ${slotIndex+1}</td>
                     <td style="color:${isPartialFullyPaid ? '#a5b4fc' : '#fbbf24'};font-weight:700;">${fmtDate(dueDate)}</td>
                     <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:700;">Multiple Pays</td>
+                    <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:700;">Multiple Payments</td>
                     <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}</td>
                     <td style="vertical-align:middle;">${_poCellMulti}</td>
                     <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
@@ -286,29 +270,21 @@ async function loadMemberLedger(){
         const chitPickedPay = slotPays.find(p => p.chitPicked === 'Yes');
         const chitPickedAmt = chitPickedPay ? (parseFloat(chitPickedPay.chit)||0) : 0;
 
-        // ── Commitment info ──
-        const commObj = mComms.find(c => c.groupId === grp.id);
+        // ── Commitment chip ──
+        const commObj = mComms.find(c => c.groupId === grp.id && (c.slotNum==null?1:c.slotNum) === slotNum);
+        const commChip = commObj && commObj.targetMonth
+            ? '<span style="background:rgba(155,89,182,0.2);border:1px solid rgba(155,89,182,0.45);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#bb86fc;font-weight:800;">🎯 ' + getOrdinal(commObj.targetMonth) + ' Month</span>'
+            : '';
 
         return `<div style="margin-bottom:16px;page-break-inside:avoid;">
             <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
 
-                <!-- Stat chips — 6 chips in 2 rows: GROUP|NEXT DUE|PENDING / START DATE|END DATE|COMMITMENT -->
+                <!-- Stat chips — 6 chips, group name replaces overdue -->
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-                    <!-- ROW 1 -->
                     <div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.25);border-top:2px solid #f39c12;border-radius:10px;padding:8px 10px;text-align:center;">
                         <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">GROUP</div>
                         <div style="font-size:0.82rem;font-weight:900;color:#f39c12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${grp.name}${chitSlotBadge}</div>
                     </div>
-                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-top:2px solid #6366f1;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">NEXT DUE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#818cf8;">${nextDueDate?fmtDate(nextDueDate):'—'}</div>
-                    </div>
-                    <div style="background:rgba(165,180,252,0.08);border:1px solid rgba(165,180,252,0.25);border-top:2px solid #a5b4fc;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">PENDING</div>
-                        <div style="font-size:0.92rem;font-weight:900;color:#a5b4fc;">${monthsDone}/${totalMonths}</div>
-                    </div>
-                    
-                    <!-- ROW 2 -->
                     <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:2px solid #34d399;border-radius:10px;padding:8px 10px;text-align:center;">
                         <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">START DATE</div>
                         <div style="font-size:0.78rem;font-weight:900;color:#34d399;">${fmtDate(grp.startDate||grp.gStart||'')}</div>
@@ -320,6 +296,14 @@ async function loadMemberLedger(){
                     <div style="background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.25);border-top:2px solid #bb86fc;border-radius:10px;padding:8px 10px;text-align:center;">
                         <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">COMMITMENT</div>
                         <div style="font-size:0.82rem;font-weight:900;color:#bb86fc;">${commObj&&commObj.targetMonth?getOrdinal(commObj.targetMonth)+' Month':'—'}</div>
+                    </div>
+                    <div style="background:rgba(165,180,252,0.08);border:1px solid rgba(165,180,252,0.25);border-top:2px solid #a5b4fc;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">PENDING</div>
+                        <div style="font-size:0.92rem;font-weight:900;color:#a5b4fc;">${monthsDone}/${totalMonths}</div>
+                    </div>
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-top:2px solid #6366f1;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">NEXT DUE</div>
+                        <div style="font-size:0.78rem;font-weight:900;color:#818cf8;">${nextDueDate?fmtDate(nextDueDate):'—'}</div>
                     </div>
                 </div>
 
