@@ -595,11 +595,41 @@ async function generateWaReminders(){
 
         var message;
         if(template){
+            // Build per-group values for single-group placeholders (first pending group)
+            var firstGroup = pendingLines[0] || {};
+            var allGroupNames = pendingLines.map(function(g){ return g.name; }).join(', ');
+            var totalInstCompleted = mGroups.reduce(function(s,g){
+                var gPays = mPays.filter(function(p){ return p.groupId===g.id; });
+                return s + gPays.reduce(function(ss,p){ return ss+(p.numMonths||1); }, 0);
+            }, 0);
+            var totalMonthsAll = mGroups.reduce(function(s,g){
+                return s + (parseInt(g.duration||g.gDuration)||21);
+            }, 0);
+            var totalPendingAll = Math.max(0, totalMonthsAll - totalInstCompleted);
+            var completionPct = totalMonthsAll > 0 ? Math.round(totalInstCompleted/totalMonthsAll*100) : 0;
+
             message = template
-                .replace(/\[Name\]/g, member.name)
-                .replace(/\[Balance\]/g, '₹' + totalBal.toLocaleString('en-IN'))
-                .replace(/\[Groups\]/g, groupLines)
-                .replace(/\[Contact\]/g, contact||'Admin');
+                // ── Member placeholders ──
+                .replace(/\[memberName\]/gi,             member.name)
+                .replace(/\[Name\]/gi,                   member.name)
+                .replace(/\[memberPhone\]/gi,            member.phone||'—')
+                .replace(/\[balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
+                .replace(/\[Balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
+                .replace(/\[totalPaid\]/gi,              '₹' + totalPaid.toLocaleString('en-IN'))
+                .replace(/\[contact\]/gi,                contact||'Admin')
+                .replace(/\[Contact\]/gi,                contact||'Admin')
+                // ── Group placeholders ──
+                .replace(/\[groupName\]/gi,              firstGroup.name||allGroupNames||'—')
+                .replace(/\[allGroups\]/gi,              allGroupNames||'—')
+                .replace(/\[Groups\]/gi,                 groupLines)
+                .replace(/\[groupLines\]/gi,             groupLines)
+                .replace(/\[monthlyAmount\]/gi,          firstGroup.monthly ? '₹'+firstGroup.monthly.toLocaleString('en-IN') : '—')
+                .replace(/\[nextDueDate\]/gi,            firstGroup.nextDue||'—')
+                // ── Progress placeholders ──
+                .replace(/\[installmentsCompleted\]/gi,  String(totalInstCompleted))
+                .replace(/\[totalMonths\]/gi,            String(totalMonthsAll))
+                .replace(/\[monthsRemaining\]/gi,        String(totalPendingAll))
+                .replace(/\[completionPercentage\]/gi,   completionPct + '%');
         } else {
             message =
                 'Dear ' + member.name + ',\n\n' +
