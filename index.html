@@ -228,8 +228,26 @@
                             <label class="form-label-small" style="margin-bottom:0;">Custom Template <span style="color:var(--text-dim);font-weight:400;">(optional)</span></label>
                             <button onclick="document.getElementById('wa_template').value='';waAutoSave();" style="background:none;border:none;color:var(--text-dim);font-size:0.65rem;cursor:pointer;padding:0;">Clear</button>
                         </div>
-                        <textarea id="wa_template" class="form-input" rows="5" style="margin-bottom:4px;font-size:0.75rem;font-family:monospace;resize:vertical;" placeholder="Leave blank for default message. Use [Name] [Balance] [Groups] [Contact] as placeholders." oninput="waAutoSave()"></textarea>
-                        <div style="font-size:0.62rem;color:var(--text-dim);">Placeholders: [Name] [Balance] [Groups] [Contact]</div>
+                        <textarea id="wa_template" class="form-input" rows="5" style="margin-bottom:4px;font-size:0.75rem;font-family:monospace;resize:vertical;" placeholder="Leave blank for default message. Use [memberName], [groupName], [balance] etc." oninput="waAutoSave()"></textarea>
+                        <div style="font-size:0.6rem;color:var(--text-dim);line-height:1.8;">
+                            <span style="color:#a5b4fc;font-weight:700;">Member:</span>
+                            <span style="background:rgba(165,180,252,0.1);border:1px solid rgba(165,180,252,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[memberName]</span>
+                            <span style="background:rgba(165,180,252,0.1);border:1px solid rgba(165,180,252,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[memberPhone]</span>
+                            <span style="background:rgba(165,180,252,0.1);border:1px solid rgba(165,180,252,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[balance]</span>
+                            <span style="background:rgba(165,180,252,0.1);border:1px solid rgba(165,180,252,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[totalPaid]</span>
+                            <span style="background:rgba(165,180,252,0.1);border:1px solid rgba(165,180,252,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[contact]</span><br>
+                            <span style="color:#34d399;font-weight:700;">Group:</span>
+                            <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[groupName]</span>
+                            <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[allGroups]</span>
+                            <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[groupLines]</span>
+                            <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[monthlyAmount]</span>
+                            <span style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[nextDueDate]</span><br>
+                            <span style="color:#f59e0b;font-weight:700;">Progress:</span>
+                            <span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[installmentsCompleted]</span>
+                            <span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[totalMonths]</span>
+                            <span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[monthsRemaining]</span>
+                            <span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:4px;padding:1px 5px;margin:0 2px;font-family:monospace;">[completionPercentage]</span>
+                        </div>
                     </div>
 
                     <!-- Member selection -->
