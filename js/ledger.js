@@ -107,7 +107,7 @@ async function loadMemberLedger(){
                 const _poKeyPending = grp.id+'_'+slotIndex;
                 const _poCellPending = !isMember
                     ? `<input type="number" value="${_poPending||''}" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                    : `<span style="color:var(--text-dim);">—</span>`;
+                    : (_poPending>0 ? `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poPending)}</span>` : `<span style="color:var(--text-dim);">—</span>`);
                 return `<tr style="">
                     <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
                     <td style="color:${isOverdue?'#f87171':'#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
@@ -281,9 +281,17 @@ async function loadMemberLedger(){
 
                 <!-- Stat chips — 6 chips, group name replaces overdue -->
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-                    <div style="background:rgba(243,156,18,0.08);border:1px solid rgba(243,156,18,0.25);border-top:2px solid #f39c12;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">GROUP</div>
-                        <div style="font-size:0.82rem;font-weight:900;color:#f39c12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${grp.name}${chitSlotBadge}</div>
+                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-top:2px solid #6366f1;border-radius:10px;padding:8px 10px;text-align:center;">
+                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">COMMIT AVAILABLE</div>
+                        <div style="font-size:0.78rem;font-weight:900;color:#a5b4fc;">${(()=>{
+                            const takenMonths = new Set(mComms.filter(c=>c.groupId===grp.id).map(c=>c.targetMonth));
+                            const free = [];
+                            for(let m=1;m<=totalMonths;m++){ if(!takenMonths.has(m)) free.push(m); }
+                            if(!free.length) return '<span style="color:#f87171;font-size:0.7rem;">All taken</span>';
+                            if(free.length === totalMonths) return '<span style="color:#34d399;font-size:0.7rem;">All free</span>';
+                            const disp = free.slice(0,4).map(n=>getOrdinal(n)).join(', ');
+                            return disp + (free.length>4 ? ' +' + (free.length-4) + ' more' : '');
+                        })()}</div>
                     </div>
                     <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:2px solid #34d399;border-radius:10px;padding:8px 10px;text-align:center;">
                         <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">START DATE</div>
@@ -385,7 +393,7 @@ async function loadMemberLedger(){
             <div style="width:46px;height:46px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;">${ini(m.name)}</div>
             <div style="flex:1;min-width:0;">
                 <div style="font-size:1rem;font-weight:900;">${m.name}</div>
-                <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${mPays.length} payment${mPays.length!==1?'s':''} · ${memberGroups.length} group${memberGroups.length!==1?'s':''}</div>
+                <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);return g?g.name:'';}).filter(Boolean).join(' · ')}</div>
             </div>
             <div style="display:flex;gap:6px;">
                 ${!isMember?`<button class="btn-edit-sm" onclick="openEditMember('${mid}')">Edit</button>`:''} 
@@ -464,15 +472,24 @@ function getMonthSlot(dueDates, payDate){
 }
 
 function buildDueDateList(grp){
-    const start = grp.startDate||grp.gStart||new Date().toISOString().split('T')[0];
-    const dur = parseInt(grp.duration||grp.gDuration||21);
-    const dueDay = parseInt(grp.dueDay||5);
+    const start  = grp.startDate||grp.gStart||new Date().toISOString().split('T')[0];
+    const dur    = parseInt(grp.duration||grp.gDuration)||21;
+    const s      = new Date(start+'T00:00:00');
+
+    // ALWAYS use the group's dueDay field — never fall back to start date's day
+    // This ensures due dates always land on the configured day (e.g. 5th of each month)
+    const dueDay = parseInt(grp.dueDay) || parseInt(grp.monthlyDueDay) || s.getDate();
+
+    const baseYear  = s.getFullYear();
+    const baseMonth = s.getMonth(); // 0-indexed
+    const pad = n => String(n).padStart(2,'0');
     const dates = [];
-    let d = new Date(start+'T00:00:00');
     for(let i=0; i<dur; i++){
-        dates.push(d.toISOString().split('T')[0]);
-        d.setMonth(d.getMonth()+1);
-        d.setDate(dueDay);
+        const yr     = baseYear + Math.floor((baseMonth + i) / 12);
+        const mo     = (baseMonth + i) % 12;
+        const maxDay = new Date(yr, mo+1, 0).getDate(); // last day of month
+        const day    = Math.min(dueDay, maxDay);
+        dates.push(yr + '-' + pad(mo+1) + '-' + pad(day));
     }
     return dates;
 }
