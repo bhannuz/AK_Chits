@@ -1,503 +1,425 @@
 // ═══════════════════════════════════════════════════════════
-// AK Chit Funds — MEMBER LEDGER - FLAT PAYMENT LIST
+// AK Chit Funds — AUTH & ACCESS CONTROL
 // ═══════════════════════════════════════════════════════════
 
-// ═══════════════════════════════════════════════════════════
-// HELPER FUNCTION - Get ordinal text (1st, 2nd, 3rd, 5th, etc.)
-// ═══════════════════════════════════════════════════════════
-function getOrdinal(n) {
-    if(!n) return '';
-    const s = ['th','st','nd','rd'];
-    const v = n%100;
-    return n + (s[(v-20)%10] || s[v] || s[0]);
+const ADMIN_PHONE = '9876543210';
+
+function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
+function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
+function clearSession(){ sessionStorage.removeItem('akdf_session'); }
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function initAuth(){
+    const saved = sessionStorage.getItem('akdf_session');
+    if(saved){
+        try{
+            const u = JSON.parse(saved);
+            CURRENT_USER = u;
+            applyUserSession(u);
+            return;
+        }catch(e){}
+    }
+    document.getElementById('loginScreen').style.display = 'flex';
 }
 
-async function loadMemberLedger(){
-    const mid = CURRENT_USER && CURRENT_USER.role === 'member'
-        ? CURRENT_USER.memberId
-        : document.getElementById('summaryView').value;
-    if(!mid) return;
+// ── Login ─────────────────────────────────────────────────────────────────────
+async function handleLoginSubmit(){
+    const phone = document.getElementById('loginPhone').value.trim();
+    if(phone.length !== 10){ showToast('❌ Enter valid 10-digit number', false); return; }
+    showToast('⏳ Checking access…', true);
 
-    const ms=await getCollection('members');
-    const gs=await getCollection('groups');
-    const ps=await getCollection('payments');
-    bustCache('memberCommitments');
-    const cs=await getCollection('memberCommitments');
-    const payoutsDoc = await db.collection('settings').doc('collectionPayouts').get().catch(()=>null);
-    const _payoutsMap = payoutsDoc && payoutsDoc.exists ? (payoutsDoc.data().payouts||{}) : {};
-    const m=ms.find(x=>x.id===mid); if(!m) return;
-    const mPays=ps.filter(p=>p.memberId===mid);
-    const mComms=cs.filter(c=>c.memberId===mid);
-    const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-    const totalBal =mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-    let enrollments = m.enrollments;
-    if(!enrollments||!enrollments.length)
-        enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
-    const memberGroups=gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id));
-    const isMember = CURRENT_USER && CURRENT_USER.role==='member';
-    const today = new Date().toISOString().split('T')[0];
-
-    function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
-        const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
-        
-        // Get chit amount from Firebase field: fixedAmt
-        let chitAmount = parseFloat(grp.fixedAmt) || 0;
-        
-        // Fallback: try other variations
-        if(!chitAmount || chitAmount === 0) {
-            const fieldNames = [
-                'fixedMonthlyAmount',
-                'monthlyChitAmount', 
-                'monthlyAmount',
-                'fixedAmount',
-                'amount',
-                'chitAmount'
-            ];
-            
-            for(let field of fieldNames) {
-                const val = parseFloat(grp[field]);
-                if(val && val > 0) {
-                    chitAmount = val;
-                    break;
-                }
-            }
-        }
-        
-        // Last resort: get from last payment
-        if(!chitAmount || chitAmount === 0) {
-            const lastPay = slotPays.length ? slotPays[slotPays.length-1] : null;
-            if(lastPay) chitAmount = parseFloat(lastPay.chit)||0;
-        }
-
-        // Calculate fully paid months
-        const _perSlotTotals = {};
-        slotPays.forEach(p=>{
-            const slots=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
-            slots.forEach(s=>{ _perSlotTotals[s]=(_perSlotTotals[s]||0)+(parseFloat(p.paid)||0); });
-        });
-        const fullyPaidSlotSet = new Set(Object.keys(_perSlotTotals).filter(s=>chitAmount<=0||_perSlotTotals[s]>=chitAmount).map(Number));
-        const monthsDone   = fullyPaidSlotSet.size;
-        const pct          = Math.min(100,Math.round(monthsDone/totalMonths*100));
-        const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal         = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-
-        // Build table rows - FLAT LIST with visual grouping for partials
-        const mergedRows = allDueDates.map((dueDate, slotIndex) => {
-            // Find all payments for this month/slot
-            const monthPayments = slotPays.filter(p => {
-                if(p.monthSlot != null) return p.monthSlot === slotIndex;
-                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(slotIndex);
-                return getMonthSlot(allDueDates, p.date) === slotIndex;
-            });
-            
-            // If no payments for this month, show one pending row
-            if(monthPayments.length === 0) {
-                const isOverdue = dueDate < today;
-                const statusBadge = isOverdue 
-                    ? `<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">🔴 Overdue</span>`
-                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
-                
-                // Chit Picked cell for pending rows
-                const commitment_p = mComms.find(c => c.groupId===grp.id && (c.slotNum==null?1:c.slotNum)===slotNum && c.targetMonth===slotIndex+1);
-                const commitmentBadge = commitment_p
-                    ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:2px 7px;font-size:0.68rem;font-weight:800;">🎯 Chit Target</span>`
-                    : `<span style="color:var(--text-dim);">—</span>`;
-                
-                const _poPend = _payoutsMap[grp.id+'_'+slotIndex]||0;
-                const _poCellPend = _poPend>0
-                    ? (!isMember
-                        ? `<input type="number" value="${_poPend}" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                        : `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poPend)}</span>`)
-                    : (!isMember
-                        ? `<input type="number" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                        : `<span style="color:var(--text-dim);">—</span>`);
-                return `<tr style="">
-                    <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
-                    <td style="color:${isOverdue?'#f87171':'#c7d2fe'};font-weight:600;">${fmtDate(dueDate)}</td>
-                    <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-weight:700;">—</td>
-                    <td style="vertical-align:middle;">${_poCellPend}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);">—</td>
-                    <td style="vertical-align:middle;">${statusBadge}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td style="vertical-align:middle;">${commitmentBadge}</td>
-                    <td style="vertical-align:middle;"></td>
-                </tr>`;
-            }
-            
-            // If only ONE payment, show normally
-            if(monthPayments.length === 1) {
-                const pay = monthPayments[0];
-                const iPaid = parseFloat(pay.paid)||0;
-                const iBal = parseFloat(pay.balance)||0;
-                const iMode = pay.paidBy||'—';
-                const iCp = pay.chitPicked==='Yes';
-                const isPaid = iPaid > 0;
-                
-                const rowBg = isPaid ? 'rgba(16,185,129,0.07)' : '';
-                const rowBL = iCp ? 'border-left:3px solid #10b981;' : '';
-                
-                let statusBadge = isPaid 
-                    ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
-                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
-                
-                const editCell = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
-                
-                // Chit Picked cell: show amount if picked, Chit Target badge if it's commitment month, else —
-                const commitment_s = mComms.find(c => c.groupId===grp.id && (c.slotNum==null?1:c.slotNum)===slotNum && c.targetMonth===slotIndex+1);
-                const chitPickedCell = iCp
-                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:2px 7px;font-size:0.68rem;font-weight:800;">🏆 ${pay.chitPickedBy ? fmtAmt(parseFloat(pay.chitPickedBy)||0) || pay.chitPickedBy : fmtAmt(parseFloat(pay.chit)||0)}</span>`
-                    : (commitment_s
-                        ? `<span style="background:rgba(155,89,182,0.2);color:#bb86fc;border:1px solid rgba(155,89,182,0.4);border-radius:5px;padding:2px 7px;font-size:0.68rem;font-weight:800;">🎯 Chit Target</span>`
-                        : `<span style="color:var(--text-dim);">—</span>`);
-                
-                const dateColor = isPaid ? '#a5b4fc' : '#c7d2fe';
-                
-                const _poSingle = _payoutsMap[grp.id+'_'+slotIndex]||0;
-                const _poCellSingle = _poSingle>0
-                    ? (!isMember
-                        ? `<input type="number" value="${_poSingle}" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                        : `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poSingle)}</span>`)
-                    : (!isMember
-                        ? `<input type="number" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                        : `<span style="color:var(--text-dim);">—</span>`);
-                return `<tr style="background:${rowBg};${rowBL}">
-                        <td style="text-align:center;color:var(--text-dim);font-weight:700;font-size:0.7rem;">${slotIndex+1}</td>
-                        <td style="color:${dateColor};font-weight:600;">${fmtDate(dueDate)}</td>
-                        <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                        <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${fmtDate(pay.date)}</td>
-                        <td style="vertical-align:middle;color:${isPaid?'#34d399':'#fbbf24'};font-weight:700;">${fmtAmt(iPaid)}</td>
-                        <td style="vertical-align:middle;">${_poCellSingle}</td>
-                        <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
-                        <td style="vertical-align:middle;">${statusBadge}</td>
-                        <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
-                        <td style="vertical-align:middle;">${chitPickedCell}</td>
-                        <td style="vertical-align:middle;">${editCell}</td>
-                    </tr>`;
-            }
-            
-            // MULTIPLE PAYMENTS (Partial) - Show main row FIRST, then detail rows
-            const totalMonthPayments = monthPayments.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
-            const mainIBal = parseFloat(monthPayments[monthPayments.length-1].balance)||0;
-            
-            // Determine if partial is actually fully paid
-            const isPartialFullyPaid = totalMonthPayments >= chitAmount;
-            const statusForPartial = isPartialFullyPaid
-                ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
-                : `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⚡ Partial</span>`;
-            
-            let mainRows = '';
-            
-            // Main summary row for this month (shows total of all partials) - CLICKABLE to toggle
-            const _poMulti = _payoutsMap[grp.id+'_'+slotIndex]||0;
-            const _poCellMulti = _poMulti>0
-                ? (!isMember
-                    ? `<input type="number" value="${_poMulti}" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                    : `<span style="color:#a78bfa;font-weight:700;">${fmtAmt(_poMulti)}</span>`)
-                : (!isMember
-                    ? `<input type="number" placeholder="—" data-gid="${grp.id}" data-idx="${slotIndex}" onchange="updateLedgerPayout(this)" style="width:72px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);color:#a78bfa;border-radius:6px;padding:3px 6px;font-size:0.72rem;font-weight:700;text-align:center;outline:none;">`
-                    : `<span style="color:var(--text-dim);">—</span>`);
-            mainRows += `<tr style="background:${isPartialFullyPaid ? 'rgba(16,185,129,0.07)' : 'rgba(245,158,11,0.12)'};border-left:3px solid ${isPartialFullyPaid ? '#10b981' : '#f59e0b'};font-weight:600;cursor:pointer;" onclick="togglePaymentDetails(this,'partial_${sectionId}_${slotIndex}')">
-                    <td style="text-align:center;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:800;font-size:0.8rem;">▶ ${slotIndex+1}</td>
-                    <td style="color:${isPartialFullyPaid ? '#a5b4fc' : '#fbbf24'};font-weight:700;">${fmtDate(dueDate)}</td>
-                    <td style="color:#c4b5fd;">${chitAmount>0?fmtAmt(chitAmount):'—'}</td>
-                    <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#f59e0b'};font-weight:700;">Multiple Payments</td>
-                    <td style="vertical-align:middle;color:${isPartialFullyPaid ? '#34d399' : '#fbbf24'};font-weight:700;">${fmtAmt(totalMonthPayments)}</td>
-                    <td style="vertical-align:middle;">${_poCellMulti}</td>
-                    <td style="vertical-align:middle;color:#f59e0b;">${mainIBal>0?fmtAmt(mainIBal):'—'}</td>
-                    <td style="vertical-align:middle;">${statusForPartial}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">—</td>
-                    <td style="vertical-align:middle;"><span style="color:var(--text-dim);">—</span></td>
-                    <td style="vertical-align:middle;"></td>
-                </tr>`;
-            
-            // Detail rows for each partial payment (hidden by default)
-            mainRows += monthPayments.map((pay, payIdx) => {
-                const iPaid = parseFloat(pay.paid)||0;
-                const iBal = parseFloat(pay.balance)||0;
-                const iMode = pay.paidBy||'—';
-                const iCp = pay.chitPicked==='Yes';
-                const isPaid = iPaid > 0;
-                
-                let iStatusBadge = isPaid 
-                    ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">✅ Paid</span>`
-                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:5px;padding:2px 6px;font-size:0.62rem;font-weight:800;">⏳ Pending</span>`;
-                
-                const editBtn = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
-                
-                const iChitPickedCell = iCp 
-                    ? `<span style="background:rgba(16,185,129,0.2);color:#34d399;border:1px solid rgba(16,185,129,0.4);border-radius:5px;padding:1px 6px;font-size:0.62rem;font-weight:800;">🏆 ${pay.chitPickedBy || 'Picked'}</span>`
-                    : `<span style="color:var(--text-dim);">—</span>`;
-                
-                return `<tr class="partial_${sectionId}_${slotIndex}" style="display:none;background:rgba(245,158,11,0.04);border-left:2px solid #f59e0b;">
-                    <td style="text-align:center;color:#f59e0b;font-size:0.6rem;padding:4px 6px;font-weight:800;">  ↳${payIdx+1}</td>
-                    <td style="color:#fbbf24;font-weight:600;font-size:0.85rem;"></td>
-                    <td style="color:#c4b5fd;"></td>
-                    <td style="vertical-align:middle;color:#f59e0b;font-size:0.75rem;font-weight:700;">${fmtDate(pay.date)}</td>
-                    <td style="vertical-align:middle;color:#34d399;font-weight:700;">${fmtAmt(iPaid)}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);">—</td>
-                    <td style="vertical-align:middle;color:#f59e0b;">${iBal>0?fmtAmt(iBal):'—'}</td>
-                    <td style="vertical-align:middle;">${iStatusBadge}</td>
-                    <td style="vertical-align:middle;color:var(--text-dim);font-size:0.7rem;">${iMode}</td>
-                    <td style="vertical-align:middle;">${iChitPickedCell}</td>
-                    <td style="vertical-align:middle;">${editBtn}</td>
-                </tr>`;
-            }).join('');
-            
-            return mainRows;
-        }).join('');
-
-        // Next due date — first unpaid future slot
-        const _td = new Date().toISOString().split('T')[0];
-        const nextDueDate = allDueDates.find((d,i) => {
-            const isPaid = slotPays.some(p =>
-                (Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)) || p.monthSlot===i
-            );
-            return !isPaid && d >= _td;
-        }) || null;
-
-        const overdueCnt = allDueDates.filter((d,i)=>!slotPays.find(p=>{
-            if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
-            if(p.monthSlot!=null) return p.monthSlot===i;
-            return getMonthSlot(allDueDates, p.date)===i;
-        })&&d<today).length;
-
-        const chitSlotBadge = totalSlots>1
-            ? `<span style="background:rgba(245,158,11,0.25);border:1px solid rgba(245,158,11,0.5);color:#fbbf24;border-radius:5px;padding:2px 9px;font-size:0.75rem;font-weight:800;margin-left:6px;">Chit ${slotNum}</span>`
-            : '';
-        const labelBadge = enr.label
-            ? `<span style="background:rgba(243,156,18,.18);border:1px solid rgba(243,156,18,.35);border-radius:5px;padding:1px 7px;font-size:0.72rem;color:#f39c12;margin-left:6px;">${enr.label}</span>` : '';
-        
-        // Calculate end date
-        const startDate = new Date((grp.startDate || grp.gStart || new Date().toISOString().split('T')[0]) + 'T00:00:00');
-        const endDate = new Date(startDate);
-        endDate.setMonth(endDate.getMonth() + totalMonths);
-        const _edM = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        const pad = n => String(n).padStart(2, '0');
-        const endDateStr = `${pad(endDate.getDate())}.${_edM[endDate.getMonth()]}.${endDate.getFullYear()}`;
-
-        // All commitments for this group across ALL members (to show availability)
-        const allGroupComms = cs.filter(c => c.groupId === grp.id);
-        const takenMonths = new Set(allGroupComms.map(c => c.targetMonth).filter(Boolean));
-        const freeMonths = [];
-        for(let m=1; m<=totalMonths; m++){ if(!takenMonths.has(m)) freeMonths.push(m); }
-        const commitAvailText = freeMonths.length===0
-            ? '<span style="color:#f87171;font-size:0.72rem;font-weight:800;">All months taken</span>'
-            : freeMonths.length===totalMonths
-                ? '<span style="color:#34d399;font-size:0.72rem;font-weight:800;">All months free</span>'
-                : freeMonths.slice(0,5).map(n=>getOrdinal(n)).join(', ') + (freeMonths.length>5?' +' + (freeMonths.length-5) + ' more':'');
-
-        // Commitment chip for this member+slot
-        const myCommObj = mComms.find(c => c.groupId===grp.id && (c.slotNum==null?1:c.slotNum)===slotNum);
-        const myCommChip = myCommObj && myCommObj.targetMonth
-            ? `<span style="background:rgba(155,89,182,0.2);border:1px solid rgba(155,89,182,0.45);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#bb86fc;font-weight:800;">🎯 ${getOrdinal(myCommObj.targetMonth)} Month</span>`
-            : '';
-
-        return `<div style="margin-bottom:16px;page-break-inside:avoid;">
-            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
-
-                <!-- 6-chip stat row: Row1=START|NEXT DUE|END, Row2=PENDING|COMMITMENT|AVAIL -->
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-                    <!-- Row 1 -->
-                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:2px solid #34d399;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">START DATE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#34d399;">${fmtDate(grp.startDate||grp.gStart||'')}</div>
-                    </div>
-                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-top:2px solid #6366f1;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">NEXT DUE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#818cf8;">${nextDueDate?fmtDate(nextDueDate):'—'}</div>
-                    </div>
-                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-top:2px solid #ef4444;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">END DATE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#f87171;">${endDateStr}</div>
-                    </div>
-                    <!-- Row 2 -->
-                    <div style="background:rgba(165,180,252,0.08);border:1px solid rgba(165,180,252,0.25);border-top:2px solid #a5b4fc;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">PENDING</div>
-                        <div style="font-size:0.92rem;font-weight:900;color:#a5b4fc;">${monthsDone}/${totalMonths}</div>
-                    </div>
-                    <div style="background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.25);border-top:2px solid #bb86fc;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">COMMITMENT</div>
-                        <div style="font-size:0.82rem;font-weight:900;color:#bb86fc;">${myCommObj&&myCommObj.targetMonth?getOrdinal(myCommObj.targetMonth)+' Month':'—'}</div>
-                    </div>
-                    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-top:2px solid #818cf8;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">COMMIT AVAIL</div>
-                        <div style="font-size:0.72rem;font-weight:800;color:#a5b4fc;">${commitAvailText}</div>
-                    </div>
-                </div>
-
-                <!-- Progress bar -->
-                <div style="background:#252f48;border-radius:5px;height:6px;overflow:hidden;">
-                    <div style="height:100%;border-radius:5px;background:linear-gradient(90deg,#f39c12,#f57c00);width:${pct}%;"></div>
-                </div>
-                <div style="font-size:0.62rem;color:var(--text-dim);margin-top:4px;">Month ${monthsDone}/${totalMonths} paid${overdueCnt>0?' · <span style="color:#f87171;">'+overdueCnt+' overdue</span>':''}</div>
-            </div>
-
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:0 0 12px 12px;overflow:hidden;page-break-inside:avoid;">
-                <div onclick="toggleLedgerTable('${sectionId}',this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;cursor:pointer;user-select:none;border-bottom:1px solid var(--border);page-break-inside:avoid;">
-                    <span style="font-size:0.78rem;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">📋 Schedule & Payments (${totalMonths} months)</span>
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <span style="font-size:0.78rem;color:#34d399;font-weight:700;">${fmtAmt(tPaid)}</span>
-                        ${tBal>0?`<span style="font-size:0.78rem;color:#f59e0b;font-weight:700;">${fmtAmt(tBal)} bal</span>`:''}
-                        ${overdueCnt>0?`<span style="font-size:0.72rem;color:#f87171;font-weight:700;">${overdueCnt} overdue</span>`:''}
-                        <span style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;" class="ledger-chevron">&#9654;</span>
-                    </div>
-                </div>
-                <div id="${sectionId}" style="display:block;page-break-inside:avoid;">
-                    <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%;page-break-inside:avoid;">
-                        <table class="table-custom" style="table-layout:auto !important;width:100% !important;">
-                            <thead><tr style="page-break-inside:avoid;">
-                                <th style="text-align:center;">#</th>
-                                <th>Due Date</th>
-                                <th>Monthly Pay</th>
-                                <th>Pay Date</th>
-                                <th>Paid</th>
-                                <th style="color:#a78bfa;">Payout</th>
-                                <th>Balance</th>
-                                <th>Status</th>
-                                <th>Mode</th>
-                                <th>Chit Picked</th>
-                                <th></th>
-                            </tr></thead>
-                            <tbody style="page-break-inside:avoid;">
-                                ${mergedRows}
-                                <tr style="font-weight:800;background:rgba(255,255,255,.04);page-break-inside:avoid;">
-                                    <td colspan="4" style="color:var(--text-dim);">Total</td>
-                                    <td style="color:#34d399;">${fmtAmt(tPaid)}</td>
-                                    <td style="color:#f59e0b;">${tBal>0?fmtAmt(tBal):'—'}</td>
-                                    <td colspan="4"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="padding:6px 14px 8px;font-size:0.65rem;color:var(--text-dim);border-top:1px solid var(--border);page-break-inside:avoid;">
-                        ✅ Paid &nbsp;|&nbsp; ⚡ Partial &nbsp;|&nbsp; 🔴 Overdue &nbsp;|&nbsp; ⏳ Pending
-                    </div>
-                </div>
-            </div>
-        </div>`;
+    // Admin shortcut
+    if(phone === ADMIN_PHONE){
+        const user = {phone: phone, role: 'admin', name: 'Admin'};
+        CURRENT_USER = user;
+        sessionStorage.setItem('akdf_session', JSON.stringify(user));
+        applyUserSession(user);
+        return;
     }
 
-    const groupSections = enrollments.map((enr,idx)=>{
-        const grp=gs.find(g=>g.id===enr.groupId); if(!grp) return '';
-        const totalSlots = enr.qty || 1;
-        
-        // Create a section for EACH slot
-        const slotSections = [];
-        for(let slotNum = 1; slotNum <= totalSlots; slotNum++) {
-            const slotPays = ps.filter(p => {
-                if(p.memberId !== mid || p.groupId !== grp.id) return false;
-                if(p.slotNum != null) return p.slotNum === slotNum;
-                return true;
-            });
-            
-            const allDueDates = buildDueDateList(grp);
-            const id = `ledger_${idx}_${slotNum}`;
-            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id));
-        }
-        
-        return slotSections.join('');
-    }).join('');
-
-    // Build commitment chip
-    // commitmentChip removed from member name — shown in chip row instead
-
-    const ledgerHtml = `
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-top:6px;">
-            <div style="width:46px;height:46px;border-radius:12px;background:rgba(243,156,18,.15);border:2px solid rgba(243,156,18,.4);color:#f39c12;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:900;flex-shrink:0;">${ini(m.name)}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:1rem;font-weight:900;">${m.name}</div>
-                <div style="font-size:0.72rem;color:var(--text-dim);margin-top:1px;">${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);return g?g.name:'';}).filter(Boolean).join(' · ')}</div>
-            </div>
-            <div style="display:flex;gap:6px;">
-                ${!isMember?`<button class="btn-edit-sm" onclick="openEditMember('${mid}')">Edit</button>`:''} 
-                <button onclick="printMemberStatement('${mid}')" style="background:linear-gradient(135deg,#f39c12,#f57c00);color:#000;padding:8px 14px;font-size:0.8rem;font-weight:800;border:none;border-radius:9px;cursor:pointer;">Print</button>
-            </div>
-        </div>
-        ${groupSections||'<div style="text-align:center;color:var(--text-dim);padding:30px;">No group enrollments found</div>'}
-    `;
-
-    if(isMember){
-        document.getElementById('memberLedgerData').innerHTML = ledgerHtml;
-        document.getElementById('mhGroups').textContent = memberGroups.length;
-        document.getElementById('mhTotalPaid').textContent = fmtAmt(totalPaid);
-        document.getElementById('mhBalance').textContent = fmtAmt(totalBal);
-    } else {
-        document.getElementById('ledgerData').innerHTML = ledgerHtml;
-    }
-}
-
-async function updateLedgerPayout(input){
-    if(!isAdmin()){ showToast('🚫 Admin only', false); return; }
-    const gid = input.dataset.gid;
-    const idx = parseInt(input.dataset.idx);
-    const val = parseFloat(input.value)||0;
-    try {
-        const doc = await db.collection('settings').doc('collectionPayouts').get();
-        const payouts = doc.exists ? (doc.data().payouts||{}) : {};
-        const key = gid + '_' + idx;
-        if(val > 0) payouts[key] = val; else delete payouts[key];
-        await db.collection('settings').doc('collectionPayouts').set({ payouts }, { merge: false });
-        input.style.borderColor = '#34d399';
-        setTimeout(() => { input.style.borderColor = 'rgba(167,139,250,0.3)'; }, 1200);
-    } catch(e) { showToast('❌ Failed to save payout', false); }
-}
-
-function toggleLedgerTable(id, el){
-    const table = document.getElementById(id);
-    if(table){
-        const isHidden = table.style.display === 'none';
-        table.style.display = isHidden ? 'block' : 'none';
-        const chevron = el.querySelector('.ledger-chevron');
-        if(chevron) chevron.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
-    }
-}
-
-function togglePaymentDetails(row, detailClass){
-    const detailRows = document.querySelectorAll('.' + detailClass);
-    const isHidden = detailRows.length === 0 || (detailRows[0] && detailRows[0].style.display === 'none');
-    
-    detailRows.forEach(r => {
-        r.style.display = isHidden ? 'table-row' : 'none';
+    // Check if member exists
+    const members = await getCollection('members');
+    const matched = members.find(function(m){
+        return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
     });
-    
-    // Toggle arrow in first cell
-    const firstCell = row.querySelector('td:first-child');
-    if(firstCell) {
-        const currentText = firstCell.textContent.trim();
-        const num = currentText.replace('▶', '').replace('▼', '').trim();
-        firstCell.textContent = (isHidden ? '▼' : '▶') + ' ' + num;
+
+    // Check existing access request regardless of member match
+    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {empty:true, docs:[]}; });
+
+    if(!reqs.empty && reqs.docs.length > 0){
+        const req = reqs.docs[0].data();
+        if(req.status === 'approved'){
+            if(matched){
+                const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
+                CURRENT_USER = user;
+                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                applyUserSession(user);
+            } else {
+                showToast('✅ Approved but no member profile yet. Contact admin.', false);
+            }
+        } else if(req.status === 'denied'){
+            showLoginStep('loginStep3');
+        } else {
+            // Already pending
+            document.getElementById('pendingPhone').textContent = '+91 ' + phone;
+            showLoginStep('loginStep2');
+        }
+    } else {
+        // New request — send to admin (works for both members and unknown numbers)
+        await db.collection('accessRequests').add({
+            phone: phone,
+            name: matched ? matched.name : 'Unknown (' + phone + ')',
+            memberId: matched ? matched.id : '',
+            status: 'pending',
+            requestedAt: new Date().toISOString()
+        });
+        document.getElementById('pendingPhone').textContent = '+91 ' + phone;
+        showLoginStep('loginStep2');
+        showToast('📨 Access request sent to admin', true);
     }
 }
 
-function getMonthSlot(dueDates, payDate){
-    if(!payDate) return -1;
-    const pDate = new Date(payDate+'T00:00:00');
-    for(let i=0; i<dueDates.length; i++){
-        const dDate = new Date(dueDates[i]+'T00:00:00');
-        const dNext = i<dueDates.length-1 ? new Date(dueDates[i+1]+'T00:00:00') : new Date(dDate.getFullYear(),dDate.getMonth()+2,1);
-        if(pDate >= dDate && pDate < dNext) return i;
+async function checkAccessStatus(){
+    const phone = document.getElementById('loginPhone').value.trim() ||
+                  (CURRENT_USER ? CURRENT_USER.phone : '');
+    if(!phone){ goBackToLogin(); return; }
+    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {empty:true, docs:[]}; });
+    if(!reqs.empty && reqs.docs.length > 0){
+        const req = reqs.docs[0].data();
+        if(req.status === 'approved'){
+            const members = await getCollection('members');
+            const matched = members.find(function(m){
+                return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
+            });
+            if(matched){
+                const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
+                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                showToast('✅ Access approved! Loading…', true);
+                setTimeout(function(){ location.reload(); }, 800);
+                return;
+            }
+        } else if(req.status === 'denied'){
+            showLoginStep('loginStep3');
+            return;
+        }
     }
-    return -1;
+    showToast('⏳ Still pending approval', true);
 }
 
-function buildDueDateList(grp){
-    const start  = grp.startDate||grp.gStart||new Date().toISOString().split('T')[0];
-    const dur    = parseInt(grp.duration||grp.gDuration)||21;
-    const s      = new Date(start+'T00:00:00');
-    // Always use configured dueDay — never fall back to start date's day
-    const dueDay = parseInt(grp.dueDay) || parseInt(grp.monthlyDueDay) || s.getDate();
-    const baseYear  = s.getFullYear();
-    const baseMonth = s.getMonth();
-    const pad = n => String(n).padStart(2,'0');
-    const dates = [];
-    for(let i=0; i<dur; i++){
-        const yr     = baseYear + Math.floor((baseMonth + i) / 12);
-        const mo     = (baseMonth + i) % 12;
-        const maxDay = new Date(yr, mo+1, 0).getDate();
-        const day    = Math.min(dueDay, maxDay);
-        dates.push(yr + '-' + pad(mo+1) + '-' + pad(day));
+// ── Login step switcher ───────────────────────────────────────────────────────
+var _pendingPollTimer = null;
+
+function showLoginStep(stepId){
+    ['loginStep1','loginStep2','loginStep3'].forEach(function(id){
+        document.getElementById(id).classList.remove('active');
+    });
+    document.getElementById(stepId).classList.add('active');
+    if(stepId === 'loginStep2'){
+        if(_pendingPollTimer) clearInterval(_pendingPollTimer);
+        _pendingPollTimer = setInterval(silentCheckStatus, 5000);
+    } else {
+        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer = null; }
     }
-    return dates;
+}
+
+async function silentCheckStatus(){
+    const phone = document.getElementById('loginPhone').value.trim();
+    if(!phone) return;
+    const reqs = await db.collection('accessRequests').where('phone','==',phone).get().catch(function(){ return {docs:[]}; });
+    if(!reqs.docs || reqs.docs.length === 0) return;
+    const req = reqs.docs[0].data();
+    if(req.status === 'approved'){
+        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer = null; }
+        const members = await getCollection('members');
+        const matched = members.find(function(m){
+            return (m.phone||'').replace(/\D/g,'').slice(-10) === phone;
+        });
+        if(matched){
+            const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
+            sessionStorage.setItem('akdf_session', JSON.stringify(user));
+            showToast('✅ Access approved! Loading…', true);
+            setTimeout(function(){ location.reload(); }, 1000);
+        }
+    } else if(req.status === 'denied'){
+        if(_pendingPollTimer){ clearInterval(_pendingPollTimer); _pendingPollTimer = null; }
+        showLoginStep('loginStep3');
+    }
+}
+
+function goBackToLogin(){
+    document.getElementById('loginPhone').value = '';
+    showLoginStep('loginStep1');
+}
+
+// ── Apply session UI ──────────────────────────────────────────────────────────
+function applyUserSession(user){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'block';
+
+    if(user.role === 'admin'){
+        document.body.classList.add('admin-mode');
+        document.documentElement.classList.add('admin-mode-early');
+        document.getElementById('adminHeader').style.display = 'flex';
+        document.getElementById('memberHeader').style.display = 'none';
+        document.getElementById('headerRoleBadge').textContent = 'ADMIN';
+        document.getElementById('headerRoleBadge').style.display = 'inline';
+        document.getElementById('accessReqBtn').style.display = 'inline-flex';
+        document.getElementById('adminStatCards').style.display = '';
+        document.getElementById('adminActionBtns').style.display = 'flex';
+        document.getElementById('adminMemberSearch').style.display = '';
+        document.getElementById('memberLedgerArea').style.display = 'none';
+        document.getElementById('qrGeneratorSection').style.display = '';
+        document.getElementById('waReminderSection').style.display = '';
+        document.getElementById('adminQuickBtns').style.display = 'flex';
+        document.getElementById('memberQrArea').style.display = 'none';
+        updateUI();
+        pollPendingRequests();
+        setTimeout(checkAndShowBackupReminder, 1200);
+    } else {
+        document.getElementById('adminHeader').style.display = 'none';
+        document.getElementById('memberHeader').style.display = 'block';
+        document.getElementById('logoutBtn').style.display = 'none';
+        document.getElementById('memberHeaderAvatar').textContent = ini(user.name);
+        document.getElementById('memberHeaderName').textContent = user.name;
+        document.getElementById('memberHeaderPhone').textContent = '📱 +91 ' + user.phone;
+        document.getElementById('adminStatCards').style.display = 'none';
+        document.getElementById('adminActionBtns').style.display = 'none';
+        document.getElementById('adminMemberSearch').style.display = 'none';
+        document.getElementById('adminQuickBtns').style.display = 'none';
+        document.getElementById('qrGeneratorSection').style.display = 'none';
+        document.getElementById('waReminderSection').style.display = 'none';
+        document.getElementById('memberLedgerArea').style.display = 'block';
+        document.getElementById('memberQrArea').style.display = 'block';
+        document.getElementById('summaryView').value = user.memberId;
+        
+        // Remove admin-mode so tabs are hidden (CSS-driven)
+        document.body.classList.remove('admin-mode');
+    document.documentElement.classList.remove('admin-mode-early');
+        document.documentElement.classList.remove('admin-mode-early');
+        
+        loadMemberLedger();
+        if(typeof loadMemberQr === 'function') loadMemberQr(user.memberId);
+        updateUI();  // Call updateUI to set stats
+    }
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+function handleLogout(){
+    sessionStorage.removeItem('akdf_session');
+    CURRENT_USER = null;
+    document.getElementById('adminHeader').style.display = 'flex';
+    document.getElementById('memberHeader').style.display = 'none';
+    document.body.classList.remove('admin-mode');
+    document.documentElement.classList.remove('admin-mode-early');
+    document.getElementById('adminStatCards').style.display = '';
+    document.getElementById('adminActionBtns').style.display = 'flex';
+    document.getElementById('adminMemberSearch').style.display = '';
+    document.getElementById('memberLedgerArea').style.display = 'none';
+    document.getElementById('qrGeneratorSection').style.display = '';
+    document.getElementById('waReminderSection').style.display = '';
+    document.getElementById('adminQuickBtns').style.display = 'flex';
+    document.getElementById('memberQrArea').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('accessReqBtn').style.display = 'none';
+    document.getElementById('headerRoleBadge').textContent = 'ADMIN';
+    document.getElementById('headerRoleBadge').className = 'badge text-warning border border-warning px-2';
+    document.getElementById('ledgerData').innerHTML = '';
+    document.getElementById('memberLedgerData').innerHTML = '';
+    document.getElementById('summarySearch').value = '';
+    document.getElementById('summaryView').value = '';
+    showLoginStep('loginStep1');
+    document.getElementById('loginPhone').value = '';
+    document.getElementById('loginScreen').style.display = 'flex';
+}
+
+// ── Access Requests Panel ─────────────────────────────────────────────────────
+var _reqFilter = 'pending';
+
+async function openAccessRequests(){
+    _reqFilter = 'pending';
+    await renderAccessRequests();
+    openModal('accessModal');
+}
+
+async function filterRequests(type){
+    _reqFilter = type;
+    ['pending','approved','all'].forEach(function(t){
+        var btn = document.getElementById('reqTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if(btn) btn.className = t === type ? 'btn-save' : 'btn-cancel';
+    });
+    await renderAccessRequests();
+}
+
+async function renderAccessRequests(){
+    var list = document.getElementById('accessRequestsList');
+    list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:16px;">Loading…</div>';
+    var snap = await db.collection('accessRequests').orderBy('requestedAt','desc').get()
+        .catch(function(){ return db.collection('accessRequests').get(); });
+    var all      = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+    var filtered = _reqFilter === 'all' ? all : all.filter(function(r){ return r.status === _reqFilter; });
+
+    if(!filtered.length){
+        list.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:24px;">No ' + (_reqFilter==='all'?'':_reqFilter) + ' requests</div>';
+        return;
+    }
+
+    list.innerHTML = filtered.map(function(r){
+        var dateStr = r.requestedAt ? fmtDateObj(new Date(r.requestedAt)) : '—';
+        var actions = '';
+        if(r.status === 'pending'){
+            actions = '<button class="btn-approve" onclick="handleApprove(\'' + r.id + '\',\'' + r.phone + '\')">✅ Approve</button>' +
+                      '<button class="btn-deny" onclick="handleDeny(\'' + r.id + '\')">✕ Deny</button>';
+        } else if(r.status === 'approved'){
+            actions = '<span class="badge-approved">✅ Approved</span>' +
+                      '<button class="btn-deny" style="font-size:0.92rem;padding:4px 8px;" onclick="handleDeny(\'' + r.id + '\')">Revoke</button>';
+        } else {
+            actions = '<span class="badge-denied">🚫 Denied</span>' +
+                      '<button class="btn-approve" style="font-size:0.92rem;padding:4px 8px;" onclick="handleApprove(\'' + r.id + '\',\'' + r.phone + '\')">Re-approve</button>';
+        }
+        return '<div class="req-card">' +
+            '<div style="flex:1;min-width:0;">' +
+            '<div class="req-name">' + (r.name||'Unknown') + '</div>' +
+            '<div class="req-phone">📱 +91 ' + r.phone + ' &nbsp;·&nbsp; ' + dateStr + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' + actions + '</div>' +
+            '</div>';
+    }).join('');
+}
+
+async function handleApprove(reqId, phone){
+    await db.collection('accessRequests').doc(reqId).update({status:'approved', approvedAt: new Date().toISOString()});
+    showToast('✅ Access approved!');
+    await renderAccessRequests();
+    await pollPendingRequests();
+}
+
+async function handleDeny(reqId){
+    await db.collection('accessRequests').doc(reqId).update({status:'denied', deniedAt: new Date().toISOString()});
+    showToast('🚫 Access denied');
+    await renderAccessRequests();
+    await pollPendingRequests();
+}
+
+// ── Poll pending requests (admin) ─────────────────────────────────────────────
+var _knownPendingIds = {};
+var _firstPoll = true;
+
+async function pollPendingRequests(){
+    if(!CURRENT_USER || CURRENT_USER.role !== 'admin') return;
+    var snap = await db.collection('accessRequests').where('status','==','pending').get().catch(function(){ return {docs:[]}; });
+    var count = snap.docs.length;
+
+    // Detect new requests
+    var newRequests = [];
+    snap.docs.forEach(function(d){
+        if(!_knownPendingIds[d.id]){
+            if(!_firstPoll) newRequests.push(Object.assign({id:d.id}, d.data()));
+            _knownPendingIds[d.id] = true;
+        }
+    });
+    // Clean up resolved ones
+    Object.keys(_knownPendingIds).forEach(function(id){
+        if(!snap.docs.find(function(d){ return d.id === id; })){
+            delete _knownPendingIds[id];
+        }
+    });
+    _firstPoll = false;
+
+    // Update badge
+    var badge = document.getElementById('pendingCount');
+    if(count > 0){
+        badge.style.display = 'flex';
+        badge.textContent   = count;
+    } else {
+        badge.style.display = 'none';
+    }
+
+    // Alert for each new request
+    newRequests.forEach(function(req){
+        playRequestSound();
+        showRequestBanner(req);
+    });
+}
+
+// ── Notification sound ────────────────────────────────────────────────────────
+function playRequestSound(){
+    try{
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [[0, 880],[0.18, 1100],[0.36, 1320]].forEach(function(pair){
+            var delay = pair[0], freq = pair[1];
+            var osc  = ctx.createOscillator();
+            var gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+            gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+            gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + delay + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.5);
+            osc.start(ctx.currentTime + delay);
+            osc.stop(ctx.currentTime + delay + 0.6);
+        });
+    } catch(e){}
+}
+
+// ── Floating request banner ───────────────────────────────────────────────────
+function showRequestBanner(req){
+    var name  = req.name  || 'Unknown';
+    var phone = req.phone || '';
+    var reqId = req.id;
+
+    // Keyframes (inject once)
+    if(!document.getElementById('akBannerStyle')){
+        var s = document.createElement('style');
+        s.id = 'akBannerStyle';
+        s.textContent = '@keyframes akSlideDown{from{opacity:0;transform:translateX(-50%) translateY(-16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+        document.head.appendChild(s);
+    }
+
+    var banner = document.createElement('div');
+    banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);' +
+        'background:linear-gradient(135deg,#1c253b,#141b2d);' +
+        'border:1px solid rgba(243,156,18,0.5);border-radius:16px;padding:14px 16px;' +
+        'z-index:99999;box-shadow:0 8px 32px rgba(0,0,0,0.6);' +
+        'min-width:280px;max-width:320px;animation:akSlideDown 0.3s ease;';
+
+    // Row
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;';
+
+    // Bell
+    var bell = document.createElement('div');
+    bell.style.cssText = 'font-size:1.5rem;flex-shrink:0;';
+    bell.textContent = '🔔';
+
+    // Text
+    var txt = document.createElement('div');
+    txt.style.cssText = 'flex:1;min-width:0;';
+    txt.innerHTML = '<div style="font-size:0.78rem;font-weight:800;color:#f39c12;margin-bottom:2px;">New Access Request</div>' +
+        '<div style="font-size:0.85rem;font-weight:700;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + name + '</div>' +
+        '<div style="font-size:0.7rem;color:#8e9aaf;">📱 +91 ' + phone + '</div>';
+
+    // Buttons
+    var btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;flex-direction:column;gap:5px;flex-shrink:0;';
+
+    var btnApprove = document.createElement('button');
+    btnApprove.style.cssText = 'background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;padding:6px 10px;font-size:0.72rem;font-weight:800;cursor:pointer;';
+    btnApprove.textContent = '✅ Approve';
+    btnApprove.onclick = function(){ handleApprove(reqId, phone); banner.remove(); };
+
+    var btnDeny = document.createElement('button');
+    btnDeny.style.cssText = 'background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;padding:6px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;';
+    btnDeny.textContent = '✕ Deny';
+    btnDeny.onclick = function(){ handleDeny(reqId); banner.remove(); };
+
+    btns.appendChild(btnApprove);
+    btns.appendChild(btnDeny);
+    row.appendChild(bell);
+    row.appendChild(txt);
+    row.appendChild(btns);
+    banner.appendChild(row);
+    document.body.appendChild(banner);
+
+    setTimeout(function(){ if(banner.parentNode) banner.remove(); }, 12000);
 }
