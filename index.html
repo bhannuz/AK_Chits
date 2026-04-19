@@ -113,9 +113,12 @@
             <div id="memberLedgerData"></div>
         </div>
 
-        <div id="adminQuickBtns" class="d-flex gap-2" style="margin-top:10px;">
-            <button class="btn btn-outline-warning w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddMember()">👤 Create Member</button>
-            <button class="btn btn-outline-success w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddGroup()">🏦 New Group</button>
+        <!-- ✅ FIXED: Wrapped with id="adminControls" - Hidden for members -->
+        <div id="adminControls" style="display: none;">
+            <div id="adminQuickBtns" class="d-flex gap-2" style="margin-top:10px;">
+                <button class="btn btn-outline-warning w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddMember()">👤 Create Member</button>
+                <button class="btn btn-outline-success w-100 fw-bold" style="padding:14px 8px;font-size:0.95rem;border-radius:14px;" onclick="openAddGroup()">🏦 New Group</button>
+            </div>
         </div>
 
         <!-- ── QR Payment Generator (Admin only) ── -->
@@ -731,6 +734,56 @@
             if(!open && typeof waRenderMemberGrid === 'function') waRenderMemberGrid();
             if(!open && typeof waRenderVersions === 'function') waRenderVersions();
         }
+    </script>
+    <!-- ✅ NEW: Show/Hide admin buttons based on user role -->
+    <script>
+        /**
+         * Toggle admin controls visibility
+         * Shows "Create Member" and "New Group" buttons only for ADMIN users
+         * Hides them for MEMBER users
+         */
+        function toggleAdminControls() {
+            const adminControls = document.getElementById('adminControls');
+            
+            // Check if user is member
+            const isMember = CURRENT_USER && CURRENT_USER.role === 'member';
+            
+            if(adminControls) {
+                // Hide for members, show for admin
+                adminControls.style.display = isMember ? 'none' : 'block';
+                
+                // Log for debugging
+                if(isMember) {
+                    console.log('🔒 Member view: Admin buttons HIDDEN');
+                } else {
+                    console.log('🔓 Admin view: Admin buttons VISIBLE');
+                }
+            }
+        }
+
+        /**
+         * Initialize UI based on user role
+         * Waits for CURRENT_USER to be set by app.js
+         */
+        function initializeUIForUserRole() {
+            // Wait for CURRENT_USER to be set (from app.js)
+            const checkInterval = setInterval(() => {
+                if(typeof CURRENT_USER !== 'undefined') {
+                    clearInterval(checkInterval);
+                    toggleAdminControls();
+                }
+            }, 100);
+        }
+
+        // Run when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('📄 Page loaded, waiting for user...');
+            initializeUIForUserRole();
+        });
+
+        // Also watch for user changes
+        // Call toggleAdminControls() whenever user logs in/out
+        // You can add this to your existing login/logout handlers in app.js
     </script>
     <script src="app.js"></script>
 </body>
