@@ -192,9 +192,8 @@ function applyUserSession(user){
         document.getElementById('memberQrArea').style.display = 'block';
         document.getElementById('summaryView').value = user.memberId;
         
-        // Remove admin-mode so tabs are hidden (CSS-driven)
+        // Remove admin-mode so nav tabs are hidden for members
         document.body.classList.remove('admin-mode');
-    document.documentElement.classList.remove('admin-mode-early');
         document.documentElement.classList.remove('admin-mode-early');
         
         loadMemberLedger();
@@ -205,19 +204,23 @@ function applyUserSession(user){
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 function handleLogout(){
+    document.body.classList.remove('admin-mode');
+    document.documentElement.classList.remove('admin-mode-early');
     sessionStorage.removeItem('akdf_session');
     CURRENT_USER = null;
     document.getElementById('adminHeader').style.display = 'flex';
     document.getElementById('memberHeader').style.display = 'none';
-    document.body.classList.remove('admin-mode');
-    document.documentElement.classList.remove('admin-mode-early');
+    document.getElementById('navGroups').style.display = '';
+    document.getElementById('navBackup').style.display = '';
+    document.getElementById('navPlanner').style.display = '';
+    document.querySelector('.nav-bar').style.display = '';
     document.getElementById('adminStatCards').style.display = '';
     document.getElementById('adminActionBtns').style.display = 'flex';
     document.getElementById('adminMemberSearch').style.display = '';
     document.getElementById('memberLedgerArea').style.display = 'none';
     document.getElementById('qrGeneratorSection').style.display = '';
     document.getElementById('waReminderSection').style.display = '';
-    document.getElementById('adminQuickBtns').style.display = 'flex';
+    document.getElementById('adminQuickBtns').style.display = 'none';
     document.getElementById('memberQrArea').style.display = 'none';
     document.getElementById('logoutBtn').style.display = 'none';
     document.getElementById('accessReqBtn').style.display = 'none';
@@ -264,7 +267,7 @@ async function renderAccessRequests(){
     }
 
     list.innerHTML = filtered.map(function(r){
-        var dateStr = r.requestedAt ? fmtDateObj(new Date(r.requestedAt)) : '—';
+        var dateStr = r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('en-IN') : '—';
         var actions = '';
         if(r.status === 'pending'){
             actions = '<button class="btn-approve" onclick="handleApprove(\'' + r.id + '\',\'' + r.phone + '\')">✅ Approve</button>' +
