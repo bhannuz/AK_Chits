@@ -37,7 +37,7 @@ async function loadMemberLedger(){
     const isMember = CURRENT_USER && CURRENT_USER.role==='member';
     const today = new Date().toISOString().split('T')[0];
 
-    function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId){
+    function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId, groupLabel=''){
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         
         // Get chit amount from Firebase field: fixedAmt
@@ -294,8 +294,72 @@ async function loadMemberLedger(){
             ? `<span style="background:rgba(155,89,182,0.2);border:1px solid rgba(155,89,182,0.45);border-radius:6px;padding:3px 9px;font-size:0.72rem;color:#bb86fc;font-weight:800;">🎯 ${getOrdinal(myCommObj.targetMonth)} Month</span>`
             : '';
 
+        // ── Determine group status ──
+        const _today2 = new Date().toISOString().split('T')[0];
+        const isCompleted  = monthsDone >= totalMonths && tBal <= 0;
+        const isEndPassed  = endDateStr && (()=>{ try{ const[d,m,y]=endDateStr.split('.');const mn=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(m);return new Date(y,mn,parseInt(d)).toISOString().split('T')[0] < _today2; }catch(e){return false;} })();
+        const groupStatus  = isCompleted
+            ? 'completed'   // all months paid, no balance
+            : isEndPassed
+                ? 'closed'  // end date passed but balance remains
+                : pct === 0
+                    ? 'new' // no payments yet
+                    : 'active';
+
+        // Restore collapse state — completed/closed default to COLLAPSED, active/new default OPEN
+        const _lsKey = 'ledger_open_' + sectionId;
+        const _lsVal = localStorage.getItem(_lsKey);
+        const _isOpen = _lsVal !== null
+            ? _lsVal !== 'closed'
+            : (groupStatus === 'active' || groupStatus === 'new'); // default open only for active
+
         return `<div style="margin-bottom:16px;page-break-inside:avoid;">
-            <div style="background:#1c253b;border-radius:12px 12px 0 0;padding:12px 16px;border:1px solid var(--border);border-bottom:none;page-break-inside:avoid;">
+
+            <!-- ── Group Card Header (always visible, tap to collapse) ── -->
+            ${(()=>{
+                const _sc = {
+                    completed: { bg:'linear-gradient(135deg,rgba(16,185,129,0.18),rgba(16,185,129,0.06))', border:'rgba(16,185,129,0.4)',  dot:'#10b981', nameColor:'#34d399',  badge:'✅ COMPLETED', badgeBg:'rgba(16,185,129,0.2)',  badgeColor:'#34d399',  badgeBorder:'rgba(16,185,129,0.4)'  },
+                    closed:    { bg:'linear-gradient(135deg,rgba(239,68,68,0.14),rgba(239,68,68,0.04))',  border:'rgba(239,68,68,0.35)',  dot:'#ef4444', nameColor:'#f87171',  badge:'🔒 CLOSED',    badgeBg:'rgba(239,68,68,0.15)',   badgeColor:'#f87171',  badgeBorder:'rgba(239,68,68,0.35)'  },
+                    new:       { bg:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.04))',border:'rgba(99,102,241,0.35)', dot:'#6366f1', nameColor:'#a5b4fc',  badge:'🆕 NEW',       badgeBg:'rgba(99,102,241,0.18)',  badgeColor:'#a5b4fc',  badgeBorder:'rgba(99,102,241,0.4)'  },
+                    active:    { bg:'linear-gradient(135deg,rgba(243,156,18,0.18),rgba(243,156,18,0.06))',border:'rgba(243,156,18,0.35)', dot:'#f39c12', nameColor:'#f39c12',  badge:'🟢 ACTIVE',    badgeBg:'rgba(16,185,129,0.15)', badgeColor:'#34d399',  badgeBorder:'rgba(16,185,129,0.35)' },
+                };
+                const s = _sc[groupStatus] || _sc.active;
+                return `<div onclick="ledgerToggleSection('${sectionId}')"
+                     style="display:flex;align-items:center;justify-content:space-between;gap:10px;
+                             background:${s.bg};border:1px solid ${s.border};
+                             border-radius:${_isOpen?'14px 14px 0 0':'14px'};
+                             padding:13px 16px;cursor:pointer;user-select:none;transition:border-radius .25s;"
+                     id="hdr_${sectionId}">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                        <div style="width:10px;height:10px;border-radius:50%;background:${s.dot};flex-shrink:0;box-shadow:0 0 6px ${s.dot};"></div>
+                        <div style="min-width:0;">
+                            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;">
+                                <span style="font-size:1rem;font-weight:900;color:${s.nameColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${grp.name}${labelBadge}${chitSlotBadge}</span>
+                                <span style="font-size:0.6rem;background:${s.badgeBg};border:1px solid ${s.badgeBorder};color:${s.badgeColor};border-radius:5px;padding:1px 7px;font-weight:800;">${s.badge}</span>
+                                ${groupLabel?`<span style="font-size:0.6rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-dim);border-radius:4px;padding:1px 6px;font-weight:700;">${groupLabel}</span>`:''}
+                            </div>
+                            <div style="font-size:0.65rem;color:var(--text-dim);">${fmtDate(grp.startDate||grp.gStart||'')} → ${endDateStr} &nbsp;·&nbsp; ${monthsDone}/${totalMonths} paid</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        ${overdueCnt>0?`<span style="background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.3);border-radius:5px;padding:2px 7px;font-size:0.65rem;font-weight:800;">${overdueCnt} overdue</span>`:''}
+                        ${tBal>0?`<span style="background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:2px 7px;font-size:0.65rem;font-weight:800;">${fmtAmt(tBal)} bal</span>`:''}
+                        ${groupStatus==='completed'?`<span style="color:#34d399;font-size:0.7rem;font-weight:800;">₹${tPaid.toLocaleString('en-IN')} paid</span>`:''}
+                        <span id="chv_${sectionId}" style="font-size:1rem;color:${s.dot};transition:transform .25s;display:inline-block;transform:${_isOpen?'rotate(90deg)':'rotate(0deg)'};">&#9654;</span>
+                    </div>
+                </div>`;
+            })()}
+
+            <!-- ── Collapsible body ── -->
+            <div id="body_${sectionId}" style="display:${_isOpen?'block':'none'};">
+            <div style="background:#1c253b;border-radius:0;padding:12px 16px;
+                border-left:1px solid ${groupStatus==='completed'?'rgba(16,185,129,0.4)':groupStatus==='closed'?'rgba(239,68,68,0.35)':groupStatus==='new'?'rgba(99,102,241,0.35)':'rgba(243,156,18,0.35)'};
+                border-right:1px solid ${groupStatus==='completed'?'rgba(16,185,129,0.4)':groupStatus==='closed'?'rgba(239,68,68,0.35)':groupStatus==='new'?'rgba(99,102,241,0.35)':'rgba(243,156,18,0.35)'};
+                border-top:none;border-bottom:none;">
+
+                <!-- Status banner for completed/closed groups -->
+                ${groupStatus==='completed'?`<div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🎉</span><div><div style="font-size:0.8rem;font-weight:800;color:#34d399;">Chit Completed!</div><div style="font-size:0.65rem;color:var(--text-dim);">All ${totalMonths} months paid · Total ₹${tPaid.toLocaleString('en-IN')}</div></div></div>`:''}
+                ${groupStatus==='closed'?`<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🔒</span><div><div style="font-size:0.8rem;font-weight:800;color:#f87171;">Group Ended</div><div style="font-size:0.65rem;color:var(--text-dim);">End date passed · ₹${tBal.toLocaleString('en-IN')} balance remaining</div></div></div>`:''}
 
                 <!-- 6-chip stat row: Row1=START|NEXT DUE|END, Row2=PENDING|COMMITMENT|AVAIL -->
                 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
@@ -376,6 +440,7 @@ async function loadMemberLedger(){
                     </div>
                 </div>
             </div>
+            </div><!-- end collapsible body -->
         </div>`;
     }
 
@@ -394,7 +459,8 @@ async function loadMemberLedger(){
             
             const allDueDates = buildDueDateList(grp);
             const id = `ledger_${idx}_${slotNum}`;
-            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id));
+            const groupLabel = enrollments.length>1 ? 'Group '+(idx+1)+' of '+enrollments.length : '';
+            slotSections.push(buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, id, groupLabel));
         }
         
         return slotSections.join('');
@@ -442,6 +508,19 @@ async function updateLedgerPayout(input){
         input.style.borderColor = '#34d399';
         setTimeout(() => { input.style.borderColor = 'rgba(167,139,250,0.3)'; }, 1200);
     } catch(e) { showToast('❌ Failed to save payout', false); }
+}
+
+// Toggle individual group section in member ledger, persist state
+function ledgerToggleSection(sectionId){
+    const body = document.getElementById('body_' + sectionId);
+    const chv  = document.getElementById('chv_'  + sectionId);
+    const hdr  = document.getElementById('hdr_'  + sectionId);
+    if(!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'block';
+    if(chv) chv.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
+    if(hdr) hdr.style.borderRadius = isOpen ? '14px' : '14px 14px 0 0';
+    localStorage.setItem('ledger_open_' + sectionId, isOpen ? 'closed' : 'open');
 }
 
 function toggleLedgerTable(id, el){
