@@ -211,12 +211,14 @@ async function renderCollectionsTab(){
             const isPast    = dueDate < todayStr;
             const isToday   = dueDate === todayStr;
             const isFuture  = dueDate > todayStr;
-            const status    = received===0&&isFuture ? 'upcoming'
-                            : received===0&&(isPast||isToday) ? 'overdue'
-                            : balance<0 ? 'deficit'
-                            : payout>0&&balance===0 ? 'full'
-                            : received>0&&payout===0 ? 'received'
-                            : received>0 ? 'partial' : 'upcoming';
+const allMembersPaid = totalSlots > 0 && membersPaidThisMonth >= totalSlots;
+const status    = received===0&&isFuture ? 'upcoming'
+                : received===0&&(isPast||isToday) ? 'overdue'
+                : balance<0 ? 'deficit'
+                : payout>0&&balance===0 ? 'full'
+                : allMembersPaid&&payout===0 ? 'received'
+                : allMembersPaid ? 'full'
+                : received>0 ? 'partial' : 'upcoming';
             const statusBadge = status==='full'     ? '<span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">✅ Settled</span>'
                               : status==='deficit'  ? '<span style="background:rgba(239,68,68,0.12);color:#f87171;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">⬇ Deficit</span>'
                               : status==='received' ? '<span style="background:rgba(52,211,153,0.12);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">💰 Received</span>'
