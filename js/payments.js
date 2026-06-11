@@ -1,6 +1,5 @@
 // ═══════════════════════════════════════════════════════════
 // AK Chit Funds — PAYMENTS
-// Edit only this file when changing record payment, multi-month, edit/delete payments
 // ═══════════════════════════════════════════════════════════
 
 // MULTI-MONTH HELPERS
@@ -22,19 +21,60 @@ function getSelectedMonthSlots(){
     return Array.from(document.querySelectorAll('#monthSelectorGrid input[type=checkbox]:checked:not(:disabled)')).map(cb=>parseInt(cb.value));
 }
 
+// ══════════════════════════════════════════
+// SINGLE MONTH SELECTOR — dropdown of all months
+// ══════════════════════════════════════════
+window._singleMonthPaidSlots = new Set();
+
+async function buildSingleMonthDropdown(){
+    const mid=document.getElementById('pMember').value;
+    const gid=document.getElementById('pGroup').value;
+    const wrap=document.getElementById('singleMonthDropdownWrap');
+    const sel=document.getElementById('pSingleMonthSlot');
+    const badge=document.getElementById('singleMonthBadge');
+    window._singleMonthPaidSlots=new Set();
+    sel.innerHTML='<option value="">-- Select Month --</option>';
+    badge.style.display='none';
+    if(!mid||!gid){wrap.style.display='none';return;}
+    const gs=await getCollection('groups');
+    const grp=gs.find(g=>g.id===gid);
+    if(!grp){wrap.style.display='none';return;}
+    const {paidSlots,allDueDates}=await getPaidSlots(mid,gid,grp);
+    window._singleMonthPaidSlots=paidSlots;
+    if(!allDueDates.length){wrap.style.display='none';return;}
+    wrap.style.display='block';
+    const today=new Date().toISOString().split('T')[0];
+    const currentSlot=getMonthSlot(allDueDates,today);
+    let autoSelect=currentSlot;
+    // If current month already paid, jump to next unpaid
+    if(paidSlots.has(currentSlot)){
+        for(let i=currentSlot+1;i<allDueDates.length;i++){
+            if(!paidSlots.has(i)){autoSelect=i;break;}
+        }
+    }
+    sel.innerHTML='<option value="">-- Select Month --</option>'+allDueDates.map((dd,i)=>{
+        const isPaid=paidSlots.has(i);
+        const isPast=dd<today;
+        const isCurrent=i===currentSlot;
+        let tag='';
+        if(isPaid) tag=' ✅ Paid';
+        else if(isCurrent) tag=' ← Current';
+        else if(isPast) tag=' ⚠ Overdue';
+        else tag=' (Upcoming)';
+        return `<option value="${i}" ${i===autoSelect?'selected':''}>${fmtDate(dd)}${tag}</option>`;
+    }).join('');
+    onSingleMonthSlotChange();
+}
+
+
 async function onNumMonthsChange(){
-    const val=document.getElementById('pNumMonths').value;
     const preview=document.getElementById('multiMonthPreview');
     document.getElementById('totalChitRef').style.display='none';
-    if(val==='1'){
-        preview.style.display='none';
-        document.getElementById('perMonthLabel').textContent='';
-    } else {
-        document.getElementById('perMonthLabel').textContent='(per month)';
-        preview.style.display='block';
-        await buildMonthSelectorGrid();
-    }
+    document.getElementById('perMonthLabel').textContent='(per month)';
+    preview.style.display='block';
+    await buildMonthSelectorGrid();
     calcBalance();
+    updateChitPickedOption();
 }
 
 async function buildMonthSelectorGrid(){
@@ -42,7 +82,7 @@ async function buildMonthSelectorGrid(){
     const gid=document.getElementById('pGroup').value;
     const grid=document.getElementById('monthSelectorGrid');
     const summary=document.getElementById('selectedSummary');
-    grid.innerHTML='<div style="color:var(--text-dim);font-size:0.92rem;padding:8px;">Select member & group first…</div>';
+    grid.innerHTML='<div style="color:var(--text-dim);font-size:0.92rem;padding:8px;">Select member & group first\u2026</div>';
     summary.style.display='none';
     document.getElementById('perMonthAmtWrap').style.display='none';
     document.getElementById('perMonthCustomToggle').checked=false;
@@ -61,7 +101,7 @@ async function buildMonthSelectorGrid(){
             <input type="checkbox" value="${i}" ${paid?'disabled checked':''} onchange="updateSelectedSummary();calcBalance();">
             <div>
                 <div style="font-size:1.05rem;font-weight:700;">${fmtDate(dd)}</div>
-                <div style="font-size:0.98rem;color:${paid?'#34d399':(isPast?'#f87171':'var(--text-dim)')}">${paid?'✅ Paid':(isPast?'⚠ Overdue':'Upcoming')}</div>
+                <div style="font-size:0.98rem;color:${paid?'#34d399':(isPast?'#f87171':'var(--text-dim)')}">${paid?'\u2705 Paid':(isPast?'\u26a0 Overdue':'Upcoming')}</div>
             </div>
         </label>`;
     }).join('');
@@ -76,11 +116,12 @@ function updateSelectedSummary(){
         document.getElementById('perMonthAmtWrap').style.display='none';
     } else {
         summary.style.display='block';
-        summary.textContent=`📅 ${newlySelected.length} month${newlySelected.length>1?'s':''} selected for payment`;
+        summary.textContent=`\ud83d\udcc5 ${newlySelected.length} month${newlySelected.length>1?'s':''} selected for payment`;
         document.getElementById('perMonthAmtWrap').style.display='block';
         buildPerMonthAmtGrid(newlySelected);
     }
     calcBalance();
+    updateChitPickedOption();
 }
 
 function buildPerMonthAmtGrid(selectedSlots){
@@ -100,7 +141,7 @@ function buildPerMonthAmtGrid(selectedSlots){
         const val=existing[slot]!==undefined?existing[slot]:(chit||'');
         return `<div class="pma-row" data-slot="${slot}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:7px 10px;">
             <span style="flex:1;font-size:0.92rem;color:#a5b4fc;font-weight:700;">${label}</span>
-            <input type="number" placeholder="₹ amount" value="${val}" style="width:110px;background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 9px;border-radius:7px;font-size:1rem;" oninput="calcBalance()">
+            <input type="number" placeholder="\u20b9 amount" value="${val}" style="width:110px;background:var(--input-bg);border:1px solid var(--border);color:white;padding:6px 9px;border-radius:7px;font-size:1rem;" oninput="calcBalance()">
         </div>`;
     }).join('');
 }
@@ -111,6 +152,7 @@ function togglePerMonthCustom(){
     if(isCustom && slots.length>0) buildPerMonthAmtGrid(slots);
     else document.getElementById('perMonthAmtGrid').style.display='none';
     calcBalance();
+    updateChitPickedOption();
 }
 
 function onChitAmtChange(){
@@ -121,6 +163,7 @@ function onChitAmtChange(){
         });
     }
     calcBalance();
+    updateChitPickedOption();
 }
 
 function getPerMonthAmounts(){
@@ -153,9 +196,9 @@ function calcBalance(){
         if(n>1){
             document.getElementById('totalChitRef').style.display='block';
             document.getElementById('totalChitVal').textContent=isCustom
-                ? `₹${totalChit.toLocaleString('en-IN')} (${n} months, custom amounts)`
-                : `₹${totalChit.toLocaleString('en-IN')} (${n}×₹${chit.toLocaleString('en-IN')})`;
-            document.getElementById('totalBalVal').textContent=`₹${bal.toLocaleString('en-IN')}`;
+                ? `\u20b9${totalChit.toLocaleString('en-IN')} (${n} months, custom amounts)`
+                : `\u20b9${totalChit.toLocaleString('en-IN')} (${n}\u00d7\u20b9${chit.toLocaleString('en-IN')})`;
+            document.getElementById('totalBalVal').textContent=`\u20b9${bal.toLocaleString('en-IN')}`;
         } else {
             document.getElementById('totalChitRef').style.display='none';
         }
@@ -163,6 +206,8 @@ function calcBalance(){
         document.getElementById('totalChitRef').style.display='none';
     }
 }
+
+
 
 // PAYMENT FORM
 // ══════════════════════════════════════════
@@ -172,7 +217,7 @@ function resetPaymentForm(){
     document.getElementById('pMember').value='';
     document.getElementById('pMemberList').style.display='none';
     document.getElementById('pGroup').innerHTML='<option value="">-- Select Member First --</option>';
-    document.getElementById('pNumMonths').value='1';
+    document.getElementById('pNumMonths').value='multi';
     if(document.getElementById('perMonthCustomToggle')) document.getElementById('perMonthCustomToggle').checked=false;
     if(document.getElementById('perMonthAmtGrid')) document.getElementById('perMonthAmtGrid').style.display='none';
     if(document.getElementById('perMonthAmtWrap')) document.getElementById('perMonthAmtWrap').style.display='none';
@@ -190,10 +235,15 @@ function resetPaymentForm(){
     const sel=document.getElementById('pChitPicked');
     [...sel.options].forEach(o=>o.disabled=false);
     sel.title='';
+    // reset single month dropdown
+    if(document.getElementById('singleMonthDropdownWrap')) document.getElementById('singleMonthDropdownWrap').style.display='none';
+    if(document.getElementById('pSingleMonthSlot')) document.getElementById('pSingleMonthSlot').innerHTML='<option value="">-- Select Month --</option>';
+    if(document.getElementById('singleMonthBadge')) document.getElementById('singleMonthBadge').style.display='none';
+    window._singleMonthPaidSlots=new Set();
 }
 
 function openPaymentModal(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
+    if(!isAdmin()){showToast('\ud83d\udeab Access denied',false);return;}
     resetPaymentForm();
     openModal('paymentModal');
 }
@@ -211,7 +261,7 @@ async function linkGroupForPayment(){
             const qty = parseInt(e.qty||1);
             if(qty > 1){
                 return Array.from({length:qty},(_,i)=>{
-                    const slotLabel = e.label ? `${e.label} — Chit ${i+1}` : `Chit ${i+1} of ${qty}`;
+                    const slotLabel = e.label ? `${e.label} \u2014 Chit ${i+1}` : `Chit ${i+1} of ${qty}`;
                     return `<option value="${e.groupId}" data-enrollment-id="${e.enrollmentId}" data-slot="${i+1}">${g.name} (${slotLabel})</option>`;
                 }).join('');
             } else {
@@ -243,7 +293,8 @@ async function onGroupChange(){
     document.getElementById('totalChitRef').style.display='none';
     const mid=document.getElementById('pMember').value;
     const gid=document.getElementById('pGroup').value;
-    // Auto-fill chit amount: prefer group fixedAmt, fallback to last payment's chit
+    // Show joint member info if this enrollment is a joint chit
+    await showJointMemberInfo(mid, gid);
     if(gid){
         const gs=await getCollection('groups');
         const grp=gs.find(g=>g.id===gid);
@@ -252,7 +303,6 @@ async function onGroupChange(){
             autoChit=parseFloat(grp.fixedAmt)||0;
         }
         if(!autoChit && mid){
-            // Fallback: use chit amount from most recent payment for this member+group
             const ps2=await getCollection('payments');
             const lastP=ps2.filter(p=>p.memberId===mid&&p.groupId===gid&&p.chit).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
             if(lastP.length) autoChit=parseFloat(lastP[0].chit)||0;
@@ -260,6 +310,7 @@ async function onGroupChange(){
         if(autoChit){
             document.getElementById('pChit').value=autoChit;
             calcBalance();
+    updateChitPickedOption();
         }
     }
     if(mid&&gid){
@@ -276,86 +327,154 @@ async function onGroupChange(){
             sel.title='';
         }
     }
-    if(document.getElementById('pNumMonths').value==='multi') await buildMonthSelectorGrid();
-}
-
-async function savePayment(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    const mid=document.getElementById('pMember').value;
-    const gid=document.getElementById('pGroup').value;
-    const date=document.getElementById('pDate').value;
-    const chitPerMonth=parseFloat(document.getElementById('pChit').value)||0;
-    const paid=parseFloat(document.getElementById('pPaid').value)||0;
-    const paidBy=document.getElementById('pPaidBy').value;
-    const chitPicked=document.getElementById('pChitPicked').value;
-    const chitPickedBy=document.getElementById('pChitPickedBy').value.trim();
-    const isMulti=document.getElementById('pNumMonths').value==='multi';
-
-    if(!mid)return showToast('❌ Select a member',false);
-    if(!gid)return showToast('❌ Select a group',false);
-    if(!date)return showToast('❌ Enter date',false);
-    if(!paid)return showToast('❌ Enter amount paid',false);
-
-    if(chitPicked==='Yes'){
-        const ps=await getCollection('payments');
-        const alreadyPicked=ps.some(p=>p.memberId===mid&&p.groupId===gid&&p.chitPicked==='Yes');
-        if(alreadyPicked)return showToast('❌ This member already picked the chit',false);
-    }
-
-    if(isMulti){
-        const monthSlots=getSelectedMonthSlots();
-        if(monthSlots.length===0)return showToast('❌ Select at least one month',false);
-        const numMonths=monthSlots.length;
-        const perMonthMap=getPerMonthAmounts();
-        let totalChit=0;
-        let perMonthBreakdown=null;
-        if(perMonthMap && Object.keys(perMonthMap).length>0){
-            perMonthBreakdown=monthSlots.map(s=>({slot:s, amt:perMonthMap[s]||chitPerMonth}));
-            totalChit=perMonthBreakdown.reduce((s,r)=>s+r.amt,0);
-        } else {
-            totalChit=chitPerMonth*numMonths;
-        }
-        const balance=Math.max(0,totalChit-paid);
-        const enrollmentId1 = document.getElementById('pEnrollmentId').value||'';
-        const slotNum1 = parseInt(document.getElementById('pSlotNum').value||'1');
-        await db.collection('payments').add({
-            memberId:mid, groupId:gid, enrollmentId:enrollmentId1, slotNum:slotNum1, date,
-            chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
-            numMonths, monthSlots, monthSlot:monthSlots[0],
-            paidPerMonth:paid/numMonths, balPerMonth:balance/numMonths,
-            ...(perMonthBreakdown?{perMonthBreakdown}:{})
-        });
-        bustCache('payments');
-        showToast(`✅ ${numMonths}-month payment saved!`);
+    if(document.getElementById('pNumMonths').value==='multi'){
+        await buildMonthSelectorGrid();
     } else {
-        const gs=await getCollection('groups');
-        const grp=gs.find(g=>g.id===gid);
-        const dueDates=grp?getGroupDueDates(grp):[];
-        const slotIdx=getMonthSlot(dueDates,date);
-        const balance=Math.max(0,chitPerMonth-paid);
-        const enrollmentId2 = document.getElementById('pEnrollmentId').value||'';
-        const slotNum2 = parseInt(document.getElementById('pSlotNum').value||'1');
-        await db.collection('payments').add({
-            memberId:mid, groupId:gid, enrollmentId:enrollmentId2, slotNum:slotNum2, date,
-            chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
-            numMonths:1, monthSlot:slotIdx>=0?slotIdx:null,
-            monthSlots:slotIdx>=0?[slotIdx]:[]
-        });
-        bustCache('payments');
-        showToast('✅ Payment saved!');
+        await buildSingleMonthDropdown();
     }
-
-    closeModal('paymentModal');
-    updateUI();
-    if(document.getElementById('summaryView').value===mid) loadMemberLedger();
 }
 
+
+// JOINT ENROLLMENT DISPLAY
+// ══════════════════════════════════════════
+async function showJointMemberInfo(mid, gid){
+    let banner = document.getElementById('jointMemberBanner');
+    if(!banner) return;
+    banner.style.display='none';
+    banner.innerHTML='';
+    if(!mid||!gid) return;
+    const ms = await getCollection('members');
+    const m = ms.find(x=>x.id===mid);
+    if(!m||!m.enrollments) return;
+    const enr = m.enrollments.find(e=>e.groupId===gid);
+    if(!enr||!enr.coMemberId) return;
+    const coM = ms.find(x=>x.id===enr.coMemberId);
+    if(!coM) return;
+    banner.style.display='block';
+    banner.innerHTML=`
+        <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:1.3rem;">👥</span>
+            <div>
+                <div style="font-size:0.88rem;font-weight:800;color:#a5b4fc;">Joint Chit</div>
+                <div style="font-size:0.8rem;color:var(--text-dim);">
+                    <strong style="color:#c4b5fd;">${m.name}</strong>
+                    <span style="margin:0 6px;color:var(--text-dim);">+</span>
+                    <strong style="color:#c4b5fd;">${coM.name}</strong>
+                    ${coM.phone?'<span style="color:var(--text-dim);"> · '+coM.phone+'</span>':''}
+                    share this chit slot
+                </div>
+            </div>
+        </div>`;
+}
 // ══════════════════════════════════════════
 
+// Simplified savePayment - remove payment note temporarily to fix the issue
+async function savePayment(){
+    try {
+        if(!isAdmin()){showToast('🚫 Access denied',false);return;}
+        
+        const mid=document.getElementById('pMember').value;
+        const gid=document.getElementById('pGroup').value;
+        const date=document.getElementById('pDate').value;
+        const chitPerMonth=parseFloat(document.getElementById('pChit').value)||0;
+        const paid=parseFloat(document.getElementById('pPaid').value)||0;
+        const paidBy=document.getElementById('pPaidBy').value;
+        const chitPicked=document.getElementById('pChitPicked').value;
+        const chitPickedBy=document.getElementById('pChitPickedBy').value.trim();
+        const mode = document.getElementById('pNumMonths').value;
+
+        if(!mid){showToast('❌ Select a member',false);return;}
+        if(!gid){showToast('❌ Select a group',false);return;}
+        if(!date){showToast('❌ Enter date',false);return;}
+        if(!paid){showToast('❌ Enter amount paid',false);return;}
+
+        if(mode === '1') {
+            // Single month mode
+            const slotSel = document.getElementById('pSingleMonthSlot');
+            const selectedSlot = slotSel.value !== '' ? parseInt(slotSel.value) : null;
+            if(selectedSlot===null){showToast('❌ Select which month this payment is for',false);return;}
+            
+            const monthSlots = [selectedSlot];
+            const balance = Math.max(0, chitPerMonth - paid);
+            
+            // Check if this slot already has chit picked
+            if(chitPicked==='Yes'){
+                const ps=await getCollection('payments');
+                const alreadyPicked=ps.some(p=>
+                    p.memberId===mid&&
+                    p.groupId===gid&&
+                    p.chitPicked==='Yes'&&
+                    (p.monthSlot===selectedSlot||
+                     (Array.isArray(p.monthSlots)&&p.monthSlots.includes(selectedSlot)))
+                );
+                if(alreadyPicked){showToast('❌ Chit already picked for this month',false);return;}
+            }
+            
+            const enrollmentId1 = document.getElementById('pEnrollmentId').value||'';
+            const slotNum1 = parseInt(document.getElementById('pSlotNum').value||'1');
+            
+            await db.collection('payments').add({
+                memberId:mid, groupId:gid, enrollmentId:enrollmentId1, slotNum:slotNum1, date,
+                chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
+                numMonths:1, monthSlots, monthSlot:selectedSlot,
+                paidPerMonth:paid, balPerMonth:balance
+            });
+            
+        } else {
+            // Multiple month mode
+            const monthSlots=getSelectedMonthSlots();
+            if(monthSlots.length===0){showToast('❌ Select at least one month',false);return;}
+            
+            const numMonths=monthSlots.length;
+            const totalChit=chitPerMonth*numMonths;
+            const balance=Math.max(0,totalChit-paid);
+            
+            if(chitPicked==='Yes'){
+                const ps=await getCollection('payments');
+                const alreadyPickedInSlots=ps.some(p=>
+                    p.memberId===mid&&
+                    p.groupId===gid&&
+                    p.chitPicked==='Yes'&&
+                    monthSlots.some(slot=>
+                        (Array.isArray(p.monthSlots)&&p.monthSlots.includes(slot))||
+                        p.monthSlot===slot
+                    )
+                );
+                if(alreadyPickedInSlots){showToast('❌ Chit already picked for one of these slots',false);return;}
+            }
+            
+            const enrollmentId1 = document.getElementById('pEnrollmentId').value||'';
+            const slotNum1 = parseInt(document.getElementById('pSlotNum').value||'1');
+            
+            await db.collection('payments').add({
+                memberId:mid, groupId:gid, enrollmentId:enrollmentId1, slotNum:slotNum1, date,
+                chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
+                numMonths, monthSlots, monthSlot:monthSlots[0],
+                paidPerMonth:paid/numMonths, balPerMonth:balance/numMonths
+            });
+        }
+        
+        bustCache('payments');
+        showToast('✅ Payment recorded!');
+        closeModal('paymentModal');
+        resetPaymentForm();
+        
+        await updateUI();
+        const summaryView = document.getElementById('summaryView');
+        if(summaryView) {
+            summaryView.value = mid;
+            await loadMemberLedger();
+        }
+        
+    } catch(error) {
+        console.error('Payment save error:', error);
+        showToast('❌ ' + error.message, false);
+    }
+}
 // EDIT / DELETE EXISTING PAYMENT
 // ══════════════════════════════════════════
 async function openEditPayment(pid){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
+    if(!isAdmin()){showToast('\ud83d\udeab Access denied',false);return;}
     const ps=await getCollection('payments');
     const p=ps.find(x=>x.id===pid);if(!p)return;
     document.getElementById('epId').value=pid;
@@ -366,6 +485,8 @@ async function openEditPayment(pid){
     document.getElementById('epPaidBy').value=p.paidBy||'';
     document.getElementById('epChitPicked').value=p.chitPicked||'No';
     document.getElementById('epChitPickedBy').value=p.chitPickedBy||'';
+    document.getElementById('epPaymentNote').value=p.paymentNote||'';
+    onEditNoteChange();
     document.getElementById('epChitPickedNameDiv').style.display=p.chitPicked==='Yes'?'block':'none';
 
     const infoBox=document.getElementById('epMultiMonthInfo');
@@ -377,7 +498,7 @@ async function openEditPayment(pid){
         let slotLabels='';
         if(grp&&p.monthSlots){
             const dueDates=getGroupDueDates(grp);
-            slotLabels=p.monthSlots.map((s,i)=>dueDates[s]?fmtDate(dueDates[s]):`Month ${s+1}`).join(' → ');
+            slotLabels=p.monthSlots.map((s,i)=>dueDates[s]?fmtDate(dueDates[s]):`Month ${s+1}`).join(' \u2192 ');
         }
         detailEl.innerHTML=`Covers <strong>${p.numMonths} months</strong>${slotLabels?': '+slotLabels:''}`;
     } else {
@@ -397,7 +518,7 @@ function epTogglePickedName(){
 }
 
 async function saveEditPayment(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
+    if(!isAdmin()){showToast('\ud83d\udeab Access denied',false);return;}
     const pid=document.getElementById('epId').value;if(!pid)return;
     const date=document.getElementById('epDate').value;
     const chit=parseFloat(document.getElementById('epChit').value)||0;
@@ -406,25 +527,306 @@ async function saveEditPayment(){
     const paidBy=document.getElementById('epPaidBy').value;
     const chitPicked=document.getElementById('epChitPicked').value;
     const chitPickedBy=document.getElementById('epChitPickedBy').value.trim();
-    if(!date)return showToast('❌ Enter date',false);
-    if(!paid)return showToast('❌ Enter amount paid',false);
-    await db.collection('payments').doc(pid).update({date,chit,paid,balance,paidBy,chitPicked,chitPickedBy});
+    if(!date)return showToast('\u274c Enter date',false);
+    if(!paid)return showToast('\u274c Enter amount paid',false);
+    const paymentNote=getEditPaymentNoteText();
+    await db.collection('payments').doc(pid).update({date,chit,paid,balance,paidBy,chitPicked,chitPickedBy,paymentNote});
     bustCache('payments');
-    closeModal('editPaymentModal');showToast('✅ Payment updated!');updateUI();
+    closeModal('editPaymentModal');showToast('\u2705 Payment updated!');updateUI();
     const mid=document.getElementById('summaryView').value;
     if(mid)loadMemberLedger();
 }
 
 async function deletePayment(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
+    if(!isAdmin()){showToast('\ud83d\udeab Access denied',false);return;}
     const pid=document.getElementById('epId').value;if(!pid)return;
-    showConfirm('🗑','Delete Payment?','This will permanently delete this payment record.',async()=>{
+    showConfirm('\ud83d\uddd1','Delete Payment?','This will permanently delete this payment record.',async()=>{
         await db.collection('payments').doc(pid).delete();
         bustCache('payments');
-        closeModal('editPaymentModal');showToast('🗑 Payment deleted');updateUI();
+        closeModal('editPaymentModal');showToast('\ud83d\uddd1 Payment deleted');updateUI();
         const mid=document.getElementById('summaryView').value;
         if(mid)loadMemberLedger();
     });
 }
 
 // ══════════════════════════════════════════
+
+
+// ── Paid By: Editable Combo Dropdown ──────────────────────
+const DEFAULT_PAID_BY = ['UPI','GPay','PhonePe','PPay','Bank Transfer','Cash','Cheque'];
+let _paidByOptions = null;
+let _managingFor = null; // which input id triggered manage modal
+
+function getPaidByOptions() {
+    if (_paidByOptions) return _paidByOptions;
+    try {
+        const stored = localStorage.getItem('ak_paidby_options');
+        _paidByOptions = stored ? JSON.parse(stored) : [...DEFAULT_PAID_BY];
+    } catch(e) { _paidByOptions = [...DEFAULT_PAID_BY]; }
+    return _paidByOptions;
+}
+
+function savePaidByToStorage() {
+    try { localStorage.setItem('ak_paidby_options', JSON.stringify(_paidByOptions)); } catch(e){}
+}
+
+function showPaidByDropdown(inputId, dropId) {
+    const input = document.getElementById(inputId);
+    const drop  = document.getElementById(dropId);
+    if (!input || !drop) return;
+
+    const q = input.value.toLowerCase().trim();
+    const opts = getPaidByOptions().filter(o => !q || o.toLowerCase().includes(q));
+
+    if (!opts.length) { drop.style.display = 'none'; return; }
+
+    drop.innerHTML = opts.map(o =>
+        `<div onclick="selectPaidBy('${inputId}','${dropId}','${o.replace(/'/g,"\\'")}');event.stopPropagation();"
+              style="padding:10px 14px;font-size:0.85rem;font-weight:600;color:var(--text-primary);cursor:pointer;border-bottom:1px solid var(--border);"
+              onmouseenter="this.style.background='rgba(99,102,241,0.15)'"
+              onmouseleave="this.style.background=''">${o}</div>`
+    ).join('');
+    drop.style.display = 'block';
+
+    // Close on outside click
+    const close = (e) => {
+        if (!input.contains(e.target) && !drop.contains(e.target)) {
+            drop.style.display = 'none';
+            document.removeEventListener('click', close);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', close), 50);
+}
+
+function selectPaidBy(inputId, dropId, value) {
+    document.getElementById(inputId).value = value;
+    document.getElementById(dropId).style.display = 'none';
+}
+
+function openManagePaidBy(inputId) {
+    _managingFor = inputId;
+    renderPaidByOptionsList();
+    openModal('managePaidByModal');
+}
+
+function renderPaidByOptionsList() {
+    const opts = getPaidByOptions();
+    const el = document.getElementById('paidByOptionsList');
+    if (!el) return;
+    el.innerHTML = opts.map((o, i) =>
+        `<div style="display:flex;align-items:center;gap:8px;background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:8px 12px;">
+            <span style="flex:1;font-size:0.85rem;font-weight:600;color:var(--text-primary);">${o}</span>
+            <button onclick="movePaidByOption(${i},-1)" title="Move up" style="background:none;border:none;color:var(--text-dim);font-size:0.85rem;cursor:pointer;padding:2px 5px;" ${i===0?'disabled style="opacity:.3;"':''}>▲</button>
+            <button onclick="movePaidByOption(${i},1)" title="Move down" style="background:none;border:none;color:var(--text-dim);font-size:0.85rem;cursor:pointer;padding:2px 5px;" ${i===opts.length-1?'disabled style="opacity:.3;"':''}>▼</button>
+            <button onclick="deletePaidByOption(${i})" title="Delete" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:7px;padding:4px 9px;font-size:0.78rem;cursor:pointer;">✕</button>
+        </div>`
+    ).join('') || '<div style="color:var(--text-dim);font-size:0.8rem;text-align:center;">No options yet</div>';
+}
+
+function addPaidByOption() {
+    const input = document.getElementById('newPaidByInput');
+    const val = (input.value || '').trim();
+    if (!val) return;
+    const opts = getPaidByOptions();
+    if (opts.some(o => o.toLowerCase() === val.toLowerCase())) {
+        showToast('⚠️ Option already exists', false); return;
+    }
+    opts.push(val);
+    _paidByOptions = opts;
+    input.value = '';
+    renderPaidByOptionsList();
+}
+
+function deletePaidByOption(i) {
+    const opts = getPaidByOptions();
+    opts.splice(i, 1);
+    _paidByOptions = opts;
+    renderPaidByOptionsList();
+}
+
+function movePaidByOption(i, dir) {
+    const opts = getPaidByOptions();
+    const j = i + dir;
+    if (j < 0 || j >= opts.length) return;
+    [opts[i], opts[j]] = [opts[j], opts[i]];
+    _paidByOptions = opts;
+    renderPaidByOptionsList();
+}
+
+function savePaidByOptions() {
+    savePaidByToStorage();
+    closeModal('managePaidByModal');
+    showToast('✅ Payment modes saved!');
+}
+
+
+// ── Payment Notes Handling ──────────────────────────────────
+function onPaymentNoteChange() {
+    const sel = document.getElementById('pPaymentNote');
+    const custom = document.getElementById('pCustomNote');
+    if (!sel || !custom) return;
+    custom.style.display = sel.value === 'Custom' ? '' : 'none';
+}
+
+function onEditNoteChange() {
+    const sel = document.getElementById('epPaymentNote');
+    const custom = document.getElementById('epCustomNote');
+    if (!sel || !custom) return;
+    custom.style.display = sel.value === 'Custom' ? '' : 'none';
+}
+
+// Get note text to store
+function getPaymentNoteText() {
+    const sel = document.getElementById('pPaymentNote');
+    const custom = document.getElementById('pCustomNote');
+    if (!sel) return '';
+    if (sel.value === 'Custom') {
+        return custom?.value || 'Custom Note';
+    }
+    return sel.value || '';
+}
+
+function getEditPaymentNoteText() {
+    const sel = document.getElementById('epPaymentNote');
+    const custom = document.getElementById('epCustomNote');
+    if (!sel) return '';
+    if (sel.value === 'Custom') {
+        return custom?.value || 'Custom Note';
+    }
+    return sel.value || '';
+}
+
+// ── Update Chit Picked option based on selected months ──
+// ── Update Chit Picked option based on selected months ──
+async function onNumMonthsChange(){
+    const isSingle = document.getElementById('pNumMonths').value === '1';
+    document.getElementById('singleMonthDropdownWrap').style.display = isSingle ? '' : 'none';
+    document.getElementById('multiMonthPreview').style.display = isSingle ? 'none' : '';
+    
+    if(isSingle) {
+        await populateSingleMonthDropdown();
+    } else {
+        await buildMonthSelectorGrid();
+    }
+}
+
+async function populateSingleMonthDropdown() {
+    const mid = document.getElementById('pMember').value;
+    const gid = document.getElementById('pGroup').value;
+    const sel = document.getElementById('pSingleMonthSlot');
+    
+    if (!mid || !gid) {
+        sel.innerHTML = '<option value="">-- Select member & group first --</option>';
+        return;
+    }
+    
+    const gs = await getCollection('groups');
+    const grp = gs.find(g => g.id === gid);
+    if (!grp) return;
+    
+    const {paidSlots, allDueDates} = await getPaidSlots(mid, gid, grp);
+    
+    sel.innerHTML = allDueDates.map((dd, i) => {
+        const paid = paidSlots.has(i);
+        const label = fmtDate(dd) + (paid ? ' ✅ Paid' : '');
+        return `<option value="${i}" ${paid ? 'disabled' : ''}>${label}</option>`;
+    }).join('');
+    
+    sel.value = '';
+    onSingleMonthSlotChange();
+}
+
+function onSingleMonthSlotChange() {
+    const slotVal = document.getElementById('pSingleMonthSlot').value;
+    const badge = document.getElementById('singleMonthBadge');
+    
+    if (slotVal === '') {
+        badge.style.display = 'none';
+    } else {
+        badge.style.display = 'block';
+        badge.textContent = '📅 Month ' + (parseInt(slotVal) + 1);
+        badge.style.background = 'rgba(34,197,94,0.1)';
+        badge.style.borderColor = 'rgba(34,197,94,0.4)';
+        badge.style.color = '#34d399';
+    }
+    
+    updateChitPickedOptionForMode();
+}
+
+async function updateChitPickedOptionForMode() {
+    const mode = document.getElementById('pNumMonths').value;
+    
+    if (mode === '1') {
+        // Single month mode
+        const slotVal = document.getElementById('pSingleMonthSlot').value;
+        if (slotVal === '') return;
+        
+        const mid = document.getElementById('pMember').value;
+        const gid = document.getElementById('pGroup').value;
+        const chitSelect = document.getElementById('pChitPicked');
+        const yesOption = chitSelect.querySelector('option[value="Yes"]');
+        
+        const ps = await getCollection('payments');
+        const alreadyPicked = ps.some(p =>
+            p.memberId === mid &&
+            p.groupId === gid &&
+            p.chitPicked === 'Yes' &&
+            (p.monthSlot === parseInt(slotVal) ||
+             (Array.isArray(p.monthSlots) && p.monthSlots.includes(parseInt(slotVal))))
+        );
+        
+        yesOption.disabled = alreadyPicked;
+        if (alreadyPicked) chitSelect.value = 'No';
+    } else {
+        // Multiple month mode
+        await updateChitPickedOption();
+    }
+}
+async function updateChitPickedOption() {
+    try {
+        const monthSlots = getSelectedMonthSlots();
+        const mid = document.getElementById('pMember').value;
+        const gid = document.getElementById('pGroup').value;
+        const chitSelect = document.getElementById('pChitPicked');
+        const yesOption = chitSelect ? chitSelect.querySelector('option[value="Yes"]') : null;
+        
+        console.log('updateChitPickedOption:', {monthSlots, mid, gid, hasYesOption: !!yesOption});
+        
+        if (!yesOption || !mid || !gid || monthSlots.length === 0) {
+            if (yesOption) yesOption.disabled = false;
+            console.log('Conditions not met, enabling Yes option');
+            return;
+        }
+        
+        // Check if any of the selected slots already have chitPicked='Yes'
+        const ps = await getCollection('payments');
+        const alreadyPicked = ps.some(p => {
+            const matches = p.memberId === mid && 
+                          p.groupId === gid && 
+                          p.chitPicked === 'Yes';
+            if (!matches) return false;
+            
+            // Check if this payment covers any of our selected slots
+            const coversSlot = monthSlots.some(slot =>
+                (Array.isArray(p.monthSlots) && p.monthSlots.includes(slot)) ||
+                p.monthSlot === slot
+            );
+            
+            if (coversSlot) {
+                console.log('Found payment with chitPicked=Yes for slot:', p.monthSlot, p.monthSlots);
+            }
+            return coversSlot;
+        });
+        
+        console.log('Already picked in selected slots:', alreadyPicked);
+        yesOption.disabled = alreadyPicked;
+        
+        if (alreadyPicked) {
+            chitSelect.value = 'No';
+            console.log('Disabled Yes option and set to No');
+        }
+    } catch(error) {
+        console.error('Error in updateChitPickedOption:', error);
+    }
+}
+}
