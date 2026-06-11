@@ -211,11 +211,13 @@ async function renderCollectionsTab(){
             const isPast    = dueDate < todayStr;
             const isToday   = dueDate === todayStr;
             const isFuture  = dueDate > todayStr;
+            const allMembersPaid = totalSlots > 0 && membersPaidThisMonth >= totalSlots;
             const status    = received===0&&isFuture ? 'upcoming'
                             : received===0&&(isPast||isToday) ? 'overdue'
                             : balance<0 ? 'deficit'
                             : payout>0&&balance===0 ? 'full'
-                            : received>0&&payout===0 ? 'received'
+                            : allMembersPaid&&payout===0 ? 'received'
+                            : allMembersPaid ? 'full'
                             : received>0 ? 'partial' : 'upcoming';
             const statusBadge = status==='full'     ? '<span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">✅ Settled</span>'
                               : status==='deficit'  ? '<span style="background:rgba(239,68,68,0.12);color:#f87171;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">⬇ Deficit</span>'
@@ -284,72 +286,10 @@ async function renderCollectionsTab(){
     colArea.innerHTML = html || '<div style="text-align:center;color:var(--text-dim);padding:40px;">No data.</div>';
 }
 
-// ── Per-Group Member Sort State ────────────────────────────
-const _grpMemberSort = {}; // { [gid]: { key, dir } }
-
-function sortGroupMembers(gid, key) {
-    if (!_grpMemberSort[gid]) _grpMemberSort[gid] = { key: '', dir: 0 };
-    const s = _grpMemberSort[gid];
-    
-    if (s.key === key) {
-        // Same column: cycle dir: 1 (asc) → -1 (desc) → 0 (no sort) → 1 (asc)
-        if (s.dir === 0) { s.dir = 1; }
-        else if (s.dir === 1) { s.dir = -1; }
-        else { s.dir = 0; s.key = ''; }
-    } else {
-        // Different column: start with ascending (dir=1)
-        s.key = key;
-        s.dir = 1;
-    }
-    renderGroupsTab();
-}
-
-// ── Group Sort State ───────────────────────────────────────
-let _gsortKey = 'name';
-let _gsortDir = 1; // 1 = asc, -1 = desc
-
-function sortGroups(key) {
-    if (_gsortKey === key) { _gsortDir *= -1; } else { _gsortKey = key; _gsortDir = 1; }
-    // Update button styles
-    ['name','commitment','months'].forEach(k => {
-        const btn   = document.getElementById('gsort' + (k==='name'?'Name':k==='commitment'?'Commit':'Months'));
-        const arrow = document.getElementById('gsort' + (k==='name'?'Name':k==='commitment'?'Commit':'Months') + 'Arrow');
-        if (!btn || !arrow) return;
-        const active = k === key;
-        btn.style.background  = active ? 'rgba(99,102,241,0.25)' : 'var(--card-bg)';
-        btn.style.borderColor = active ? 'rgba(99,102,241,0.6)'  : 'var(--border)';
-        btn.style.color       = active ? '#a5b4fc' : 'var(--text-dim)';
-        arrow.textContent     = active ? (_gsortDir === 1 ? ' ↑' : ' ↓') : '';
-    });
-    renderGroupsTab();
-}
-
 async function renderGroupsTab(){
     _applyGroupsSubTabStyles();
-    // Ensure default sort arrow is shown
-    const defaultArrow = document.getElementById('gsortNameArrow');
-    if (defaultArrow && !defaultArrow.textContent) defaultArrow.textContent = ' ↑';
     const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');const cs=await getCollection('memberCommitments');
     if(!gs.length){document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';return;}
-
-    // ── Apply sort
-    gs.sort((a, b) => {
-        if (_gsortKey === 'name') {
-            return _gsortDir * (a.name||'').localeCompare(b.name||'');
-        }
-        if (_gsortKey === 'commitment') {
-            const ca = parseFloat(a.gAmt || a.chitAmt || 0);
-            const cb = parseFloat(b.gAmt || b.chitAmt || 0);
-            return _gsortDir * (ca - cb);
-        }
-        if (_gsortKey === 'months') {
-            const da = parseInt(a.duration || a.gDuration || 0);
-            const db = parseInt(b.duration || b.gDuration || 0);
-            return _gsortDir * (da - db);
-        }
-        return 0;
-    });
-
     document.getElementById('groupListArea').innerHTML=gs.map((g,gIdx)=>{
         const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
         const gPays=ps.filter(p=>p.groupId===g.id);
@@ -361,140 +301,60 @@ async function renderGroupsTab(){
         if(g.startDate||g.gStart){const _s=new Date(g.startDate||g.gStart),_n=new Date();elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));}
         const left=Math.max(0,totalMonths-elapsed);const pct=Math.min(100,Math.round(elapsed/totalMonths*100));
 
-        // Build chit slots — joint pairs share ONE row
-        const seenJoint = new Set();
-        const expandedSlots = [];
-        gMs.forEach(m => {
-            const enr = (m.enrollments||[]).find(e=>e.groupId===g.id);
-            const qty = enr ? parseInt(enr.qty||1) : 1;
-            const coMid = enr && enr.coMemberId ? enr.coMemberId : '';
-            if(coMid) {
-                const pairKey = [m.id, coMid].sort().join('_');
-                if(!seenJoint.has(pairKey)) {
-                    seenJoint.add(pairKey);
-                    const coM = ms.find(x=>x.id===coMid);
-                    for(let q=0;q<qty;q++) expandedSlots.push({m, slotNum:q+1, totalSlots:qty, isJoint:true, coM, coMid});
-                }
-            } else {
-                for(let q=0;q<qty;q++) expandedSlots.push({m, slotNum:q+1, totalSlots:qty, isJoint:false, coM:null, coMid:''});
-            }
+        const expandedSlots=[];
+        gMs.forEach(m=>{
+            const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
+            const qty=enr?parseInt(enr.qty||1):1;
+            for(let q=0;q<qty;q++) expandedSlots.push({m,slotNum:q+1,totalSlots:qty});
         });
-        const totalSlots = expandedSlots.length;
-        const todayStr = new Date().toISOString().split('T')[0];
-
-        // ── Per-group member sort
-        const gSort = _grpMemberSort[g.id];
-        if (gSort && gSort.key) {
-            expandedSlots.sort((a, b) => {
-                if (gSort.key === 'member') {
-                    return gSort.dir * (a.m.name||'').localeCompare(b.m.name||'');
-                }
-                if (gSort.key === 'months') {
-                    const allMpA = ps.filter(p=>p.memberId===a.m.id&&p.groupId===g.id);
-                    const allMpB = ps.filter(p=>p.memberId===b.m.id&&p.groupId===g.id);
-                    const sA = new Set(); allMpA.forEach(p=>{ if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>sA.add(s)); else if(p.monthSlot!=null)sA.add(p.monthSlot); else sA.add('p'+p.id); });
-                    const sB = new Set(); allMpB.forEach(p=>{ if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>sB.add(s)); else if(p.monthSlot!=null)sB.add(p.monthSlot); else sB.add('p'+p.id); });
-                    return gSort.dir * (sA.size - sB.size);
-                }
-                if (gSort.key === 'commitment') {
-                    const cA = cs.find(c=>c.memberId===a.m.id&&c.groupId===g.id);
-                    const cB = cs.find(c=>c.memberId===b.m.id&&c.groupId===g.id);
-                    return gSort.dir * ((cA?cA.targetMonth:0) - (cB?cB.targetMonth:0));
-                }
-                return 0;
-            });
-        }
-
-        const memberRows = expandedSlots.map(({m, slotNum, totalSlots, isJoint, coM, coMid}, i) => {
-            const enr = (m.enrollments||[]).find(e=>e.groupId===g.id);
-            const memberQty = enr ? parseInt(enr.qty||1) : 1;
-            const allDD = getGroupDueDates(g);
-            const fixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt) : 0;
-
-            // My payments
-            const allMp = ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
-            const mp = memberQty>1
-                ? allMp.filter(p=>{
+        const totalSlots=expandedSlots.length;
+        const memberRows=expandedSlots.map(({m,slotNum,totalSlots},i)=>{
+            const enr=(m.enrollments||[]).find(e=>e.groupId===g.id);
+            const memberQty=enr?parseInt(enr.qty||1):1; // per-member chit count
+            const allMp=ps.filter(p=>p.memberId===m.id&&p.groupId===g.id);
+            const mp=memberQty>1
+                ?allMp.filter(p=>{
                     if(enr&&enr.enrollmentId&&p.enrollmentId) return p.enrollmentId===enr.enrollmentId&&(p.slotNum==null||p.slotNum===slotNum);
                     if(p.slotNum!=null) return p.slotNum===slotNum;
                     return slotNum===1;
-                }) : allMp;
-
-            // Co-member payments (joint)
-            const coMp = isJoint && coM ? ps.filter(p=>p.memberId===coMid&&p.groupId===g.id) : [];
-
-            // Individual paid amounts
-            const myPaid = mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-            const coPaid = coMp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-            const paid   = myPaid + coPaid;
-
-            // Union of paid slots across both members
-            const paidSlotNums = new Set();
-            [...mp, ...coMp].forEach(p=>{
-                if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s=>paidSlotNums.add(s));
-                else if(p.monthSlot!=null) paidSlotNums.add(p.monthSlot);
+                })
+                :allMp;
+            const paid=mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+            const rawBal=mp.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+            // For fixed-amount groups: compute outstanding balance = (overdue unpaid months * fixedAmt) + any recorded balance
+            const fixedAmt=g.amtType!=='variable'&&g.fixedAmt?parseFloat(g.fixedAmt):0;
+            const allDD=getGroupDueDates(g);
+            const paidSlotNums=new Set();
+            mp.forEach(p=>{
+                if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>paidSlotNums.add(s));
+                else if(p.monthSlot!=null)paidSlotNums.add(p.monthSlot);
             });
-
-            // Balance = overdue months (by original slot index) not paid by either member
-            // Use original allDD index so paidSlotNums lookup is correct
-            const chitAmt = fixedAmt>0 ? fixedAmt : (mp[0]?parseFloat(mp[0].chit)||0:(coMp[0]?parseFloat(coMp[0].chit)||0:0));
-            const overdueUnpaid = chitAmt>0
-                ? allDD.filter((d,idx)=>d<=todayStr && !paidSlotNums.has(idx)).length
-                : 0;
-            const bal = overdueUnpaid * chitAmt;
-
-            // Months covered = union of paid slots
-            const _paidSlots = new Set();
-            [...mp,...coMp].forEach(p=>{
-                if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s=>_paidSlots.add(s));
-                else if(p.monthSlot!=null) _paidSlots.add(p.monthSlot);
+            const todayStr=new Date().toISOString().split('T')[0];
+            const unpaidOverdueMonths=fixedAmt>0?allDD.filter((d,idx)=>!paidSlotNums.has(idx)&&d<todayStr).length:0;
+            const bal=fixedAmt>0?(rawBal+(unpaidOverdueMonths*fixedAmt)):rawBal;
+            const pickedPay=mp.find(p=>p.chitPicked==='Yes');
+            const pickedAmt=pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
+            const pickedBy=pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
+            // Count unique paid slots (not sum of numMonths) to avoid double-counting installments
+            const _paidSlots=new Set();
+            mp.forEach(p=>{
+                if(Array.isArray(p.monthSlots))p.monthSlots.forEach(s=>_paidSlots.add(s));
+                else if(p.monthSlot!=null)_paidSlots.add(p.monthSlot);
                 else _paidSlots.add('pay_'+p.id);
             });
-            const monthsCovered = _paidSlots.size;
-
-            const pickedPay = [...mp,...coMp].find(p=>p.chitPicked==='Yes');
-            const pickedAmt = pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
-            const pickedBy  = pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
-            const multiChitBadge = totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">x${totalSlots} chits</span>`:'';
-            const slotLabelBadge = totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
-
-            // ── Name cell ────────────────────────────────────────────────────
-            const nameCell = isJoint && coM
-                ? `<td>
-                    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                        <strong>${m.name}</strong>
-                        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:5px;padding:1px 6px;font-size:0.7rem;font-weight:800;">&#x1f465; Joint</span>
-                        ${multiChitBadge}${slotLabelBadge}
-                    </div>
-                    <div style="font-size:0.75rem;color:var(--text-dim);">${m.phone||''}</div>
-                    <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(99,102,241,0.2);">
-                        <strong style="font-size:0.88rem;color:#c4b5fd;">${coM.name}</strong>
-                        <span style="font-size:0.72rem;color:var(--text-dim);"> · ${coM.phone||''}</span>
-                    </div>
-                  </td>`
-                : `<td><strong>${m.name}</strong>${multiChitBadge}${slotLabelBadge}<br><span style="font-size:0.92rem;color:var(--text-dim);">${m.phone||''}</span></td>`;
-
-            // ── Paid cell — stacked P1 / P2 for joint ───────────────────────
-            const paidCell = isJoint && coM
-                ? `<td>
-                    <div style="color:#34d399;font-weight:700;">${fmtAmt(myPaid)}</div>
-                    <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(99,102,241,0.15);color:${coPaid>0?'#34d399':'#f87171'};font-weight:700;">${coPaid>0?fmtAmt(coPaid):'Pending'}</div>
-                  </td>`
-                : `<td style="color:#34d399;">${fmtAmt(paid)}</td>`;
-
-            // ── Balance cell — single combined balance ───────────────────────
-            const balCell = `<td style="color:${bal>0?'#f59e0b':'#34d399'};font-weight:700;">${bal>0?fmtAmt(bal):'—'}</td>`;
-
+            const monthsCovered=_paidSlots.size;
+            const multiChitBadge=totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">×${totalSlots} chits</span>`:'';
+            const slotLabel=totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
             return [
                 `<tr${pickedPay?' class="chit-picked"':''}>`,
                 `<td>${i+1}</td>`,
-                nameCell,
-                paidCell,
-                balCell,
+                `<td><strong>${m.name}</strong>${multiChitBadge}${slotLabel}<br><span style="font-size:0.92rem;color:var(--text-dim);">${m.phone||''}</span></td>`,
+                `<td style="color:#34d399;">${fmtAmt(paid)}</td>`,
+                `<td style="color:#f59e0b;">${fmtAmt(bal)}</td>`,
                 `<td style="color:#a5b4fc;font-size:1.05rem;">${monthsCovered}/${totalMonths}</td>`,
-                (()=>{ const mComm=cs.find(c=>c.memberId===m.id&&c.groupId===g.id&&(c.slotNum==null?1:c.slotNum)===slotNum); const commVal=mComm?mComm.targetMonth:0; const commId=mComm?mComm.id:''; return '<td><input type="number" min="0" max="'+totalMonths+'" value="'+(commVal||'')+'" placeholder="—" data-mid="'+m.id+'" data-gid="'+g.id+'" data-slot="'+slotNum+'" data-commid="'+commId+'" onchange="updateGroupCommitment(this)" style="width:60px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#bb86fc;border-radius:7px;padding:4px 6px;font-size:0.78rem;font-weight:800;text-align:center;outline:none;" title="Commitment month for this slot"></td>'; })(),
+(()=>{ const mComm=cs.find(c=>c.memberId===m.id&&c.groupId===g.id&&(c.slotNum==null?1:c.slotNum)===slotNum); const commVal=mComm?mComm.targetMonth:0; const commId=mComm?mComm.id:''; return '<td><input type="number" min="0" max="'+totalMonths+'" value="'+(commVal||'')+'" placeholder="—" data-mid="'+m.id+'" data-gid="'+g.id+'" data-slot="'+slotNum+'" data-commid="'+commId+'" onchange="updateGroupCommitment(this)" style="width:60px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#bb86fc;border-radius:7px;padding:4px 6px;font-size:0.78rem;font-weight:800;text-align:center;outline:none;" title="Commitment month for this slot"></td>'; })(),
                 `<td>${pickedPay
-                    ?`<div><span class="chit-yes-badge">&#x2705; Picked</span><div style="color:#34d399;font-weight:800;font-size:0.92rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
+                    ?`<div><span class="chit-yes-badge">✅ Picked</span><div style="color:#34d399;font-weight:800;font-size:0.92rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
                     :'<span class="chit-no">—</span>'}</td>`,
                 `<td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button></td>`,
                 `</tr>`
@@ -533,15 +393,7 @@ async function renderGroupsTab(){
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
 
                 ${gMs.length?`<div class="table-wrap"><table class="table-custom">
-                    <thead><tr>
-                        <th>#</th>
-                        <th onclick="sortGroupMembers('${g.id}','member')" style="cursor:pointer;user-select:none;white-space:nowrap;">Member ${(gSort&&gSort.key==='member')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th>Paid</th>
-                        <th>Balance</th>
-                        <th onclick="sortGroupMembers('${g.id}','months')" style="cursor:pointer;user-select:none;white-space:nowrap;">Months ${(gSort&&gSort.key==='months')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th onclick="sortGroupMembers('${g.id}','commitment')" style="cursor:pointer;user-select:none;white-space:nowrap;">Commitment ${(gSort&&gSort.key==='commitment')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th>Chit Picked Amt</th><th></th>
-                    </tr></thead>
+                    <thead><tr><th>#</th><th>Member</th><th>Paid</th><th>Balance</th><th>Months</th><th>Commitment</th><th>Chit Picked Amt</th><th></th></tr></thead>
                     <tbody>${memberRows}</tbody>
                 </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:1rem;padding:10px;">No members yet</div>'}
             </div>
