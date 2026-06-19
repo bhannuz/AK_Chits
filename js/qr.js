@@ -73,7 +73,7 @@ function qrLoadVersion(ver){
     document.getElementById('qr_upi').value          = ver.upi  || '';
     document.getElementById('qr_amt').value          = ver.amt  || '';
     document.getElementById('qr_note').value         = ver.note || '';
-    document.getElementById('qr_due').value          = ver.due  || '';
+    document.getElementById('qr_due').value = new Date().toISOString().split('T')[0];
 
     _qrSelectedMembers = Object.assign({}, ver.members||{});
     var container = document.getElementById('qr_selected_members');
@@ -104,7 +104,7 @@ function qrNewForm(){
     document.getElementById('qr_upi').value          = '';
     document.getElementById('qr_amt').value          = '';
     document.getElementById('qr_note').value         = '';
-    document.getElementById('qr_due').value          = '';
+    document.getElementById('qr_due').value = new Date().toISOString().split('T')[0];
     _qrSelectedMembers = {};
     var c = document.getElementById('qr_selected_members');
     if(c) c.innerHTML = '';
@@ -641,7 +641,35 @@ async function generateWaReminders(){
                 '\nThank you 🏆\n*AK Chit Funds*';
         }
 
-        cards.push({ member, message, phone: member.phone||'' });
+        // Build payment history for this member
+        var historyLines = [];
+        var historyHtml  = '';
+        mGroups.forEach(function(g){
+            var gPays = mPays.filter(function(p){ return p.groupId===g.id; })
+                             .sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+            if(!gPays.length) return;
+            historyLines.push('\n*' + g.name + '*');
+            historyLines.push('Date          Amount    Mode       Note');
+            historyLines.push('─'.repeat(44));
+            historyHtml += '<div style="margin-bottom:10px;"><div style="font-weight:800;color:#6366f1;font-size:0.8rem;margin-bottom:4px;">'+g.name+'</div>';
+            historyHtml += '<table style="width:100%;border-collapse:collapse;font-size:0.72rem;">';
+            historyHtml += '<thead><tr style="border-bottom:1px solid #334155;"><th style="padding:4px 8px;text-align:left;color:#94a3b8;">Date</th><th style="padding:4px 8px;text-align:right;color:#94a3b8;">Paid</th><th style="padding:4px 8px;text-align:right;color:#94a3b8;">Balance</th><th style="padding:4px 8px;text-align:left;color:#94a3b8;">Mode</th><th style="padding:4px 8px;text-align:left;color:#94a3b8;">Note</th></tr></thead><tbody>';
+            gPays.forEach(function(p){
+                var dt = p.date || '—';
+                var paid = '₹' + (parseFloat(p.paid)||0).toLocaleString('en-IN');
+                var bal  = '₹' + (parseFloat(p.balance)||0).toLocaleString('en-IN');
+                var mode = p.paidBy || '—';
+                var note = p.paymentNote || '';
+                var months = Array.isArray(p.monthSlots) && p.monthSlots.length > 1 ? ' ('+p.monthSlots.length+' months)' : '';
+                historyLines.push(dt + '  ' + paid.padStart(9) + '  ' + mode.slice(0,10).padEnd(10) + '  ' + note);
+                historyHtml += '<tr style="border-bottom:1px solid #1e293b;"><td style="padding:4px 8px;color:#cbd5e1;">'+dt+'</td><td style="padding:4px 8px;text-align:right;color:#34d399;font-weight:700;">'+paid+months+'</td><td style="padding:4px 8px;text-align:right;color:#f87171;">'+bal+'</td><td style="padding:4px 8px;color:#94a3b8;">'+mode+'</td><td style="padding:4px 8px;color:#f59e0b;">'+note+'</td></tr>';
+            });
+            var gTotal = gPays.reduce(function(s,p){ return s+(parseFloat(p.paid)||0); },0);
+            historyHtml += '<tr style="background:rgba(99,102,241,0.08);"><td style="padding:5px 8px;font-weight:800;color:#a5b4fc;" colspan="1">Total</td><td style="padding:5px 8px;text-align:right;font-weight:800;color:#34d399;">₹'+gTotal.toLocaleString('en-IN')+'</td><td colspan="3"></td></tr>';
+            historyHtml += '</tbody></table></div>';
+        });
+
+        cards.push({ member, message, phone: member.phone||'', historyHtml, totalPaid, totalBal });
     });
 
     if(!cards.length){
@@ -660,25 +688,78 @@ async function generateWaReminders(){
         var waUrl = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(c.message);
 
         var card = document.createElement('div');
-        card.style.cssText = 'background:rgba(37,211,102,0.05);border:1px solid rgba(37,211,102,0.2);border-radius:12px;overflow:hidden;';
-        card.innerHTML =
-            // Header
-            '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(37,211,102,0.15);">' +
+        card.style.cssText = 'background:rgba(37,211,102,0.05);border:1px solid rgba(37,211,102,0.2);border-radius:12px;overflow:hidden;margin-bottom:8px;';
+
+        // Header
+        var headerDiv = '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(37,211,102,0.15);">' +
             '<div>' +
             '<div style="font-weight:800;font-size:0.88rem;color:white;">' + c.member.name + '</div>' +
-            '<div style="font-size:0.68rem;color:var(--text-dim);">📞 ' + (c.phone||'No phone') + '</div>' +
+            '<div style="font-size:0.68rem;color:var(--text-dim);">📞 ' + (c.phone||'No phone') + ' &nbsp;|&nbsp; Paid: ₹' + (c.totalPaid||0).toLocaleString('en-IN') + ' &nbsp;|&nbsp; Balance: ₹' + (c.totalBal||0).toLocaleString('en-IN') + '</div>' +
             '</div>' +
-            (phone ?
-                '<a href="' + waUrl + '" target="_blank" style="display:flex;align-items:center;gap:5px;background:#25D366;color:white;border:none;border-radius:8px;padding:7px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;text-decoration:none;">💬 Send</a>'
-                : '<span style="font-size:0.68rem;color:#f87171;">No phone number</span>') +
+            '<div style="display:flex;gap:6px;align-items:center;">' +
+            (c.historyHtml ? '<button onclick="downloadMemberHistory(this)" data-name="' + c.member.name + '" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:8px;padding:7px 10px;font-size:0.72rem;font-weight:800;cursor:pointer;white-space:nowrap;">📄 History</button>' : '') +
+            (phone ? '<a href="' + waUrl + '" target="_blank" style="display:flex;align-items:center;gap:5px;background:#25D366;color:white;border:none;border-radius:8px;padding:7px 12px;font-size:0.75rem;font-weight:800;cursor:pointer;text-decoration:none;">💬 Send</a>' : '<span style="font-size:0.68rem;color:#f87171;">No phone</span>') +
             '</div>' +
-            // Message preview
-            '<div style="padding:10px 14px;">' +
+            '</div>';
+
+        // History HTML stored on button via data attr won't work for large HTML — store on card element
+        var previewDiv = '<div style="padding:10px 14px;">' +
             '<div style="font-size:0.65rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;margin-bottom:5px;">Message Preview</div>' +
             '<div style="font-size:0.72rem;color:var(--text-dim);white-space:pre-wrap;line-height:1.65;background:rgba(0,0,0,0.2);border-radius:8px;padding:8px;max-height:120px;overflow-y:auto;">' + c.message + '</div>' +
             '</div>';
+
+        card.innerHTML = headerDiv + previewDiv;
+
+        // Store historyHtml on the card's download button via closure
+        if(c.historyHtml){
+            var histHtml = c.historyHtml;
+            var memberName = c.member.name;
+            var totalPaidAmt = c.totalPaid||0;
+            var totalBalAmt  = c.totalBal||0;
+            var dlBtn = card.querySelector('button[data-name]');
+            if(dlBtn){
+                dlBtn.addEventListener('click', function(){
+                    _openHistoryWindow(memberName, histHtml, totalPaidAmt, totalBalAmt);
+                });
+            }
+        }
+
         listEl.appendChild(card);
     });
+}
+
+// ── Payment History Window ─────────────────────────────────
+function _openHistoryWindow(name, historyHtml, totalPaid, totalBal) {
+    var w = window.open('', '_blank', 'width=700,height=600');
+    if(!w) { alert('Pop-up blocked. Please allow pop-ups for this site.'); return; }
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Payment History – ${name}</title>
+<style>
+  body{margin:0;padding:20px;font-family:sans-serif;background:#0f172a;color:#e2e8f0;}
+  h2{color:#f39c12;margin-bottom:4px;}
+  .sub{color:#94a3b8;font-size:0.82rem;margin-bottom:20px;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{padding:8px 10px;text-align:left;}
+  th{background:#1e293b;color:#94a3b8;font-size:0.72rem;text-transform:uppercase;}
+  tr{border-bottom:1px solid #1e293b;}
+  .summary{display:flex;gap:20px;margin-bottom:20px;padding:12px 16px;background:#1e293b;border-radius:8px;}
+  .s-lbl{font-size:0.7rem;color:#94a3b8;margin-bottom:2px;}
+  .s-val{font-size:1.1rem;font-weight:800;}
+  @media print{body{background:white;color:black;} th{background:#f1f5f9;color:#374151;} .no-print{display:none;}}
+</style></head><body>
+<h2>📋 Payment History</h2>
+<div class="sub">${name} &nbsp;·&nbsp; Generated on ${new Date().toLocaleDateString('en-IN')}</div>
+<div class="summary">
+  <div><div class="s-lbl">Total Paid</div><div class="s-val" style="color:#34d399;">₹${totalPaid.toLocaleString('en-IN')}</div></div>
+  <div><div class="s-lbl">Balance Due</div><div class="s-val" style="color:#f87171;">₹${totalBal.toLocaleString('en-IN')}</div></div>
+</div>
+${historyHtml}
+<div class="no-print" style="margin-top:20px;display:flex;gap:10px;">
+  <button onclick="window.print()" style="background:#6366f1;color:white;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;">🖨 Print / Save PDF</button>
+  <button onclick="window.close()" style="background:#334155;color:#e2e8f0;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.9rem;">✕ Close</button>
+</div>
+</body></html>`);
+    w.document.close();
 }
 
 // Stubs
@@ -689,3 +770,71 @@ function generateQrForMember(){}
 function downloadQrForMember(){}
 function shareQrForMember(){}
 function onQrMonthChange(){}
+
+// ── Auto-set QR Due Date ──────────────────────────────────
+function setQrDueDate() {
+    const today = new Date();
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+    const dateStr = nextMonth.toISOString().split('T')[0];
+    document.getElementById('qr_due').value = dateStr;
+}
+
+async function onQrGroupChange() {
+    const noteTxt = (document.getElementById('qr_note')?.value || '').toLowerCase().trim();
+    if (!noteTxt) return;
+
+    const groups = await getCollection('groups');
+    const matchedGroup = groups.find(g => (g.name || '').toLowerCase().includes(noteTxt) || noteTxt.includes((g.name || '').toLowerCase()));
+    
+    if (matchedGroup) {
+        // Auto-set due date to group's next due date
+        const today = new Date();
+        const dueDay = parseInt(matchedGroup.dueDay || 15);
+        const curMonth = today.getDate() >= dueDay ? today.getMonth() + 1 : today.getMonth();
+        const year = curMonth > 11 ? today.getFullYear() + 1 : today.getFullYear();
+        const dueDate = new Date(year, curMonth % 12, dueDay);
+        const dateStr = dueDate.toISOString().split('T')[0];
+        document.getElementById('qr_due').value = dateStr;
+    }
+}
+
+// ── Auto-update: When group name changes, fetch group's due date ────────
+async function onQrGroupChange() {
+    const noteTxt = (document.getElementById('qr_note')?.value || '').trim();
+    if (!noteTxt || noteTxt.length < 2) return;
+    
+    try {
+        const groups = await getCollection('groups');
+        if (!groups || !Array.isArray(groups)) return;
+        
+        // Find group that matches the entered text
+        const matchedGroup = groups.find(g => 
+            (g.name || '').toLowerCase().includes(noteTxt.toLowerCase()) ||
+            noteTxt.toLowerCase().includes((g.name || '').toLowerCase())
+        );
+        
+        if (matchedGroup && matchedGroup.dueDay) {
+            // Calculate next due date based on group's due day
+            const today = new Date();
+            const dueDay = parseInt(matchedGroup.dueDay) || 15;
+            
+            // If today is after due day, set to next month; otherwise this month
+            let month = today.getMonth();
+            let year = today.getFullYear();
+            
+            if (today.getDate() >= dueDay) {
+                month += 1;
+                if (month > 11) {
+                    month = 0;
+                    year += 1;
+                }
+            }
+            
+            const dueDate = new Date(year, month, dueDay);
+            const dateStr = dueDate.toISOString().split('T')[0];
+            document.getElementById('qr_due').value = dateStr;
+        }
+    } catch(e) {
+        // If group fetch fails, keep current due date
+    }
+}

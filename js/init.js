@@ -14,6 +14,8 @@
         if(t === 'backup'){
             if(typeof loadEmailConfigToForm  === 'function') loadEmailConfigToForm();
             if(typeof updateBackupStatusUI   === 'function') updateBackupStatusUI();
+            // Default to Statistics sub-tab and load data
+            if(typeof switchBackupSubTab === 'function') switchBackupSubTab('stats');
         }
         if(t === 'planner'){
             if(typeof ncpRestoreSession === 'function') ncpRestoreSession();

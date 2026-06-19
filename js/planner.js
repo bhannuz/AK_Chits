@@ -561,3 +561,96 @@ async function ncpRestoreSession(){
         ncpFillForm(all[keys[0]]);
     }
 }
+
+// ── Planner Sub-tab Switcher ──────────────────────────────────────────────────
+function switchPlannerSubTab(tab) {
+    const panels = { planner: 'plPlannerPanel', completed: 'plCompletedPanel' };
+    const btns   = { planner: 'plSubPlanner',   completed: 'plSubCompleted'   };
+    Object.keys(panels).forEach(k => {
+        const p = document.getElementById(panels[k]);
+        const b = document.getElementById(btns[k]);
+        if(p) p.style.display = k === tab ? '' : 'none';
+        if(b){
+            b.style.background = k === tab ? 'rgba(99,102,241,0.85)' : 'var(--card-bg)';
+            b.style.color      = k === tab ? 'white' : 'var(--text-dim)';
+            b.style.border     = k === tab ? 'none' : '1px solid var(--border)';
+        }
+    });
+    if(tab === 'completed') renderCompletedGroups();
+}
+
+// ── Completed Groups Renderer ─────────────────────────────────────────────────
+async function renderCompletedGroups() {
+    const el = document.getElementById('completedGroupsList');
+    if(!el) return;
+    el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-dim);font-size:0.8rem;">Loading…</div>';
+
+    const gs = await getCollection('groups');
+    const ps = await getCollection('payments');
+    const ms = await getCollection('members');
+
+    // A group is "completed" if all its months have at least one payment recorded
+    // OR if it has an explicit status==='closed'
+    const completed = gs.filter(g => {
+        if(g.status === 'closed') return true;
+        // Check if all due dates have payments
+        const dueDates = getGroupDueDates(g);
+        if(!dueDates.length) return false;
+        const gPays = ps.filter(p => p.groupId === g.id);
+        const paidMonths = new Set();
+        gPays.forEach(p => {
+            if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s => paidMonths.add(s));
+            else if(p.monthSlot != null) paidMonths.add(p.monthSlot);
+        });
+        return dueDates.every((_, i) => paidMonths.has(i));
+    });
+
+    if(!completed.length){
+        el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-dim);font-size:0.85rem;">No completed groups yet.<br><span style="font-size:0.72rem;">Groups appear here when all months are paid or status is set to Closed.</span></div>';
+        return;
+    }
+
+    el.innerHTML = completed.map(g => {
+        const gPays = ps.filter(p => p.groupId === g.id);
+        const totalCollected = gPays.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
+        const totalBalance   = gPays.reduce((s,p) => s + (parseFloat(p.balance)||0), 0);
+        const chitPicks      = gPays.filter(p => p.chitPicked === 'Yes').length;
+        const uniqueMembers  = new Set(gPays.map(p => p.memberId)).size;
+        const startDate = g.startDate || g.start || '—';
+        const endDate   = g.endDate   || g.end   || '—';
+        const chitAmt   = g.chitAmount || g.amount || '—';
+        const months    = g.duration  || g.months  || '—';
+
+        return `<div style="background:var(--card-bg);border:1px solid rgba(16,185,129,0.25);border-radius:12px;overflow:hidden;margin-bottom:10px;">
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                    <div style="font-size:0.88rem;font-weight:800;color:white;">${g.name||'—'}</div>
+                    <div style="font-size:0.68rem;color:var(--text-dim);margin-top:2px;">${startDate} → ${endDate} &nbsp;·&nbsp; ${months} months</div>
+                </div>
+                <span style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.35);color:#34d399;border-radius:20px;padding:3px 10px;font-size:0.68rem;font-weight:800;">✅ Completed</span>
+            </div>
+            <table style="width:100%;border-collapse:collapse;">
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:7px 14px;font-size:0.75rem;color:var(--text-dim);">💰 Total Collected</td>
+                    <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#f39c12;text-align:right;">₹${totalCollected.toLocaleString('en-IN')}</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:7px 14px;font-size:0.75rem;color:var(--text-dim);">📋 Outstanding Balance</td>
+                    <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:${totalBalance>0?'#f87171':'#34d399'};text-align:right;">₹${totalBalance.toLocaleString('en-IN')}</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:7px 14px;font-size:0.75rem;color:var(--text-dim);">👥 Members</td>
+                    <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#60a5fa;text-align:right;">${uniqueMembers}</td>
+                </tr>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:7px 14px;font-size:0.75rem;color:var(--text-dim);">💳 Chit Amount</td>
+                    <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#a5b4fc;text-align:right;">₹${Number(chitAmt).toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                    <td style="padding:7px 14px;font-size:0.75rem;color:var(--text-dim);">🎯 Chits Picked</td>
+                    <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#34d399;text-align:right;">${chitPicks} / ${months}</td>
+                </tr>
+            </table>
+        </div>`;
+    }).join('');
+}
