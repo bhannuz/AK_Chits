@@ -30,6 +30,52 @@
 </head>
 <body>
 
+<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════════════════ -->
+<div id="loginScreen" style="display:flex;position:fixed;top:0;left:0;width:100%;height:100%;background:#070b14;z-index:9999;align-items:center;justify-content:center;padding:20px;overflow-y:auto;">
+    <div class="login-card">
+        <div class="login-brand">
+            <img src="logo.png" alt="AK Chit Funds" style="width:56px;height:56px;border-radius:14px;object-fit:cover;margin-bottom:12px;">
+            <div class="login-brand-title">AK Chit Funds</div>
+            <div class="login-brand-sub">☁ CLOUD &nbsp;·&nbsp; Chit Fund Management</div>
+        </div>
+
+        <!-- Step 1: Enter phone -->
+        <div id="loginStep1" class="login-step active">
+            <div style="font-size:0.8rem;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;">Enter Mobile Number</div>
+            <div class="login-phone-input">
+                <span class="phone-prefix">+91</span>
+                <input type="tel" id="loginPhone" class="form-input" placeholder="10-digit number" maxlength="10" inputmode="numeric" style="flex:1;margin-bottom:0;"
+                    onkeydown="if(event.key==='Enter') handleLoginSubmit()">
+            </div>
+            <button class="btn-save" style="margin-top:14px;width:100%;" onclick="handleLoginSubmit()">🔐 Request Access</button>
+        </div>
+
+        <!-- Step 2: Pending approval -->
+        <div id="loginStep2" class="login-step">
+            <div class="pending-box">
+                <div style="font-size:2rem;margin-bottom:10px;">⏳</div>
+                <div style="font-weight:800;color:#fbbf24;margin-bottom:6px;">Access Pending</div>
+                <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:4px;">Request sent for</div>
+                <div id="pendingPhone" style="font-weight:700;color:white;margin-bottom:14px;"></div>
+                <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:14px;">Waiting for admin approval. This page will refresh automatically.</div>
+                <button class="btn-save" style="width:100%;margin-bottom:8px;" onclick="checkAccessStatus()">🔄 Check Status</button>
+                <button class="btn-cancel" style="width:100%;" onclick="goBackToLogin()">← Back</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Denied -->
+        <div id="loginStep3" class="login-step">
+            <div class="denied-box">
+                <div style="font-size:2rem;margin-bottom:10px;">🚫</div>
+                <div style="font-weight:800;color:#f87171;margin-bottom:8px;">Access Denied</div>
+                <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:14px;">Your request was not approved. Contact the admin for assistance.</div>
+                <button class="btn-cancel" style="width:100%;" onclick="goBackToLogin()">← Try Again</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ══ END LOGIN SCREEN ═══════════════════════════════════════════════════════ -->
+
 <div class="container py-2" style="padding-left:12px;padding-right:12px;">
     <!-- ADMIN HEADER -->
     <div id="adminHeader" class="app-header">
@@ -85,6 +131,14 @@
         </div>
     </div>
 
+    <!-- MEMBER SUB-TAB NAV — shown only in member-mode -->
+    <div id="memberSubNav" style="display:none;padding:10px 0 0;">
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+            <button id="mSubDash"  onclick="switchMemberSubTab('dash')"  style="flex:1;padding:8px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;background:rgba(243,156,18,0.85);color:black;transition:all .2s;">🏠 Dashboard</button>
+            <button id="mSubQr"    onclick="switchMemberSubTab('qr')"    style="flex:1;padding:8px 4px;border:none;border-radius:10px;font-size:0.72rem;font-weight:800;cursor:pointer;background:var(--card-bg);color:var(--text-dim);border:1px solid var(--border);transition:all .2s;">📱 QR Pay</button>
+        </div>
+    </div>
+
     <!-- HOME TAB -->
     <div id="homeTab" class="tab-content active">
         <div id="adminStatCards" class="row g-2 mt-3 text-center" style="margin-left:0;margin-right:0;">
@@ -115,9 +169,63 @@
             <div id="ledgerData"></div>
         </div>
 
-        <div id="memberLedgerArea" style="display:none;margin-top:12px;">
-            <div id="memberLedgerData"></div>
+        <!-- Member Statistics Panel -->
+        <div id="mStatsPanel" style="display:none;margin-top:4px;">
+            <!-- Filters -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+                <div style="font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;">🔍 Filters</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px;">
+                    <div>
+                        <label style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">🏦 Group</label>
+                        <select id="mStatsGroupFilter" class="form-input" style="margin-bottom:0;font-size:0.75rem;padding:6px 8px;" onchange="renderMemberStats()">
+                            <option value="">All Groups</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">📅 Month</label>
+                        <select id="mStatsMonthFilter" class="form-input" style="margin-bottom:0;font-size:0.75rem;padding:6px 8px;" onchange="renderMemberStats()">
+                            <option value="">All Months</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('mStatsGroupFilter').value='';document.getElementById('mStatsMonthFilter').value='';renderMemberStats();" style="width:100%;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:8px;padding:6px;font-size:0.72rem;font-weight:800;cursor:pointer;">✕ Clear Filters</button>
+            </div>
+            <!-- Summary + Groups 2-col -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📊 Summary</div>
+                    <table style="width:100%;border-collapse:collapse;"><tbody id="mStatsSummary"></tbody></table>
+                </div>
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">🏦 Groups <span style="font-size:0.5rem;font-weight:400;color:var(--text-dim);">tap=filter</span></div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr style="background:rgba(255,255,255,0.02);">
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Bal</th>
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">%</th>
+                        </tr></thead>
+                        <tbody id="mStatsGroups"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Payment History full width -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;">
+                <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📅 Payment History</div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:rgba(255,255,255,0.02);">
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Date</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Mode</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:center;">Chit</th>
+                    </tr></thead>
+                    <tbody id="mStatsMonthly"></tbody>
+                </table>
+            </div>
         </div>
+
+        
 
 
 
@@ -157,11 +265,14 @@
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
                         <div>
                             <label class="form-label-small">Group / Month</label>
-                            <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. 3 Lakhs – Apr 2026">
+                            <input type="text" id="qr_note" class="form-input" style="margin-bottom:0;" placeholder="e.g. 3 Lakhs – Apr 2026" oninput="onQrGroupChange()">
                         </div>
                         <div>
                             <label class="form-label-small">Due Date</label>
-                            <input type="date" id="qr_due" class="form-input" style="margin-bottom:0;">
+                            <div style="display:flex;gap:6px;">
+                                <input type="date" id="qr_due" class="form-input" style="margin-bottom:0;flex:1;">
+                                <button type="button" onclick="setQrDueDate()" title="Set to 30 days later" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:10px;padding:8px 10px;font-size:0.75rem;font-weight:800;cursor:pointer;flex-shrink:0;white-space:nowrap;">+30d</button>
+                            </div>
                         </div>
                     </div>
 
@@ -272,8 +383,27 @@
             </div>
         </div>
 
-        <!-- ── Member QR View (shown to logged-in member) ── -->
-        <div id="memberQrArea" style="display:none;margin-top:12px;"></div>
+    </div>
+
+    <!-- MEMBER PANELS (outside homeTab so tab switching works) -->
+    <!-- Dashboard panel: ledger for member's own account -->
+    <div id="mDashPanel" style="display:none;margin-top:4px;">
+        <div id="memberLedgerArea" style="margin-top:0;">
+            <div id="memberLedgerData"></div>
+        </div>
+    </div>
+
+    <!-- Payments panel: same ledger but scrollable history view -->
+    <div id="mPayPanel" style="display:none;margin-top:4px;">
+        <div id="memberLedgerArea2" style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;color:var(--text-dim);font-size:0.82rem;">
+            Loading payment history…
+        </div>
+    </div>
+
+    <!-- QR panel: admin payment requests + UPI links -->
+    <div id="mQrPanel" style="display:none;margin-top:4px;">
+        <!-- Admin QR payment requests -->
+        <div id="memberQrArea"></div>
     </div>
 
     <!-- GROUPS TAB -->
@@ -282,6 +412,7 @@
             <button id="grpSubGroups" onclick="switchGroupsSubTab('groups')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .2s;">📂 Groups</button>
             <button id="grpSubCollections" onclick="switchGroupsSubTab('collections')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .2s;">📅 Monthly Collection</button>
         </div>
+
         <div id="groupListArea" class="mt-2"></div>
         <div id="collectionsArea" style="display:none;"></div>
     </div>
@@ -289,6 +420,15 @@
     <!-- PLANNER TAB -->
     <div id="plannerTab" class="tab-content">
         <div style="padding-top:12px;">
+
+            <!-- Sub-tab buttons -->
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+                <button id="plSubPlanner" onclick="switchPlannerSubTab('planner')" style="flex:1;padding:9px;border:none;border-radius:12px;font-size:0.82rem;font-weight:800;cursor:pointer;background:rgba(99,102,241,0.85);color:white;transition:all .2s;">📋 Planner</button>
+                <button id="plSubCompleted" onclick="switchPlannerSubTab('completed')" style="flex:1;padding:9px;border:none;border-radius:12px;font-size:0.82rem;font-weight:800;cursor:pointer;background:var(--card-bg);color:var(--text-dim);border:1px solid var(--border);transition:all .2s;">✅ Completed Groups</button>
+            </div>
+
+            <!-- Planner sub-tab -->
+            <div id="plPlannerPanel">
 
             <!-- Saved Versions bar -->
             <div id="ncpSavedBar" style="margin-bottom:12px;"></div>
@@ -401,6 +541,18 @@
                 <div style="font-size:0.68rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">💡 Planner Insights</div>
                 <div id="ncpSuggestionText" style="font-size:0.82rem;color:var(--text-dim);line-height:1.8;"></div>
             </div>
+
+            </div><!-- end plPlannerPanel -->
+
+            <!-- Completed Groups sub-tab -->
+            <div id="plCompletedPanel" style="display:none;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                    <span style="font-size:0.65rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">✅ Completed Chit Groups</span>
+                    <button onclick="renderCompletedGroups()" style="background:none;border:none;color:var(--text-dim);font-size:0.75rem;cursor:pointer;">🔄 Refresh</button>
+                </div>
+                <div id="completedGroupsList"></div>
+            </div>
+
         </div>
     </div>
 
@@ -408,17 +560,177 @@
     <div id="backupTab" class="tab-content">
         <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
 
+        <!-- ── Sub-tab buttons ── -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button id="bkSubStats" onclick="switchBackupSubTab('stats')" style="flex:1;padding:10px;border:none;border-radius:12px;font-size:0.85rem;font-weight:800;cursor:pointer;background:rgba(99,102,241,0.85);color:white;transition:all .2s;">📊 Statistics</button>
+            <button id="bkSubBackup" onclick="switchBackupSubTab('backup')" style="flex:1;padding:10px;border:none;border-radius:12px;font-size:0.85rem;font-weight:800;cursor:pointer;background:var(--card-bg);color:var(--text-dim);border:1px solid var(--border);transition:all .2s;">💾 Backup</button>
+        </div>
 
+        <!-- ── Statistics Sub-tab ── -->
+        <div id="bkStatsPanel">
 
-        <!-- ── Backup / Restore ── -->
-        <div class="stat-card p-4">
-            <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
-            <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
-            <hr style="border-color:var(--border);">
-            <p class="small mb-2" style="color:var(--text-dim);">Restore all data from backup file:</p>
-            <input type="file" id="restoreFile" class="form-control mb-2 bg-dark text-white border-secondary" accept=".json">
-            <button class="btn btn-outline-info w-100 py-3 fw-bold" onclick="confirmRestore()">🔄 Restore All Data</button>
-            <p class="small mt-2 text-center" style="color:#ef4444;">⚠️ This will overwrite existing data</p>
+            <!-- Filters: 2x2 grid, member is dropdown filtered by group -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
+                <div style="font-size:0.65rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🔍 Filters</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">🏦 Group</label>
+                        <select id="statGroupFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="onStatGroupFilterChange()">
+                            <option value="">All Groups</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">👤 Member</label>
+                        <select id="statMemberFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="applyStatSubFilter()">
+                            <option value="">All Members</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">💳 Mode</label>
+                        <select id="statModeFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="applyStatSubFilter()">
+                            <option value="">All Modes</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">✅ Chit Picked</label>
+                        <select id="statChitFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="applyStatSubFilter()">
+                            <option value="">All</option>
+                            <option value="Yes">Picked ✅</option>
+                            <option value="No">Not Picked</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                    <button onclick="clearStatFilters()" style="flex:1;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:8px;padding:7px;font-size:0.75rem;font-weight:800;cursor:pointer;">✕ Clear</button>
+                    <button onclick="loadStatistics()" style="flex:1;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:8px;padding:7px;font-size:0.75rem;font-weight:800;cursor:pointer;">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- Hidden state — keep for backup.js compatibility -->
+            <input type="hidden" id="sfActiveGroup">
+            <input type="hidden" id="sfActiveMode">
+            <input type="hidden" id="sfActiveChit">
+            <input type="hidden" id="sfActiveMember">
+            <div style="display:none">
+                <select id="statFilterType"></select>
+                <div id="statSubFilterWrap"><div id="sfGroup"></div><div id="sfMode"></div><div id="sfChit"></div><div id="sfMember"></div></div>
+                <div id="statActiveFilters"></div>
+            </div>
+
+            <!-- Tables: 2 per row -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+
+                <!-- Summary -->
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📊 Summary</div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <tbody>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">💰 Collected</td>
+                                <td id="statTotalCollected" style="padding:7px 10px;font-size:0.82rem;font-weight:800;color:#f39c12;text-align:right;">₹0</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">📋 Balance</td>
+                                <td id="statTotalBalance" style="padding:7px 10px;font-size:0.82rem;font-weight:800;color:#f87171;text-align:right;">₹0</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">📝 Payments</td>
+                                <td id="statTotalPayments" style="padding:7px 10px;font-size:0.82rem;font-weight:800;color:#34d399;text-align:right;">0</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">🎯 Chits Picked</td>
+                                <td id="statChitsPicked" style="padding:7px 10px;font-size:0.82rem;font-weight:800;color:#a5b4fc;text-align:right;">0</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">👥 Members</td>
+                                <td id="statTotalMembers" style="padding:7px 10px;font-size:0.82rem;font-weight:800;color:#60a5fa;text-align:right;">0</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">⏳ Pending</td>
+                                <td id="statPendingChits" style="padding:7px 10px;font-size:0.82rem;font-weight:800;color:#f59e0b;text-align:right;">0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Payment Modes -->
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">💳 Payment Modes</div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:rgba(255,255,255,0.02);">
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Mode</th>
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">Amt</th>
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">%</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statPayModePie"></tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+
+                <!-- Monthly Collections -->
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📅 Monthly</div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:rgba(255,255,255,0.02);">
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Month</th>
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statMonthlyChart"></tbody>
+                    </table>
+                    <div id="statMonthlyLabels" style="display:none;"></div>
+                </div>
+
+                <!-- Group Breakdown -->
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">🏦 Groups</div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:rgba(255,255,255,0.02);">
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
+                                <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">Collected</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statGroupList"></tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Top Members full width -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+                <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">🏆 Top Contributors</div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:rgba(255,255,255,0.02);">
+                            <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">#</th>
+                            <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Member</th>
+                            <th style="padding:5px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">Total Paid</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statTopMembers"></tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- ── Backup Sub-tab ── -->
+        <div id="bkBackupPanel" style="display:none;">
+            <div class="stat-card p-4">
+                <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
+                <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
+                <hr style="border-color:var(--border);">
+                <p class="small mb-2" style="color:var(--text-dim);">Restore all data from backup file:</p>
+                <input type="file" id="restoreFile" class="form-control mb-2 bg-dark text-white border-secondary" accept=".json">
+                <button class="btn btn-outline-info w-100 py-3 fw-bold" onclick="confirmRestore()">🔄 Restore All Data</button>
+                <p class="small mt-2 text-center" style="color:#ef4444;">⚠️ This will overwrite existing data</p>
+            </div>
         </div>
     </div>
 </div>
@@ -483,80 +795,142 @@
 
 <!-- PAYMENT MODAL -->
 <div id="paymentModal" class="modal-overlay">
-    <div class="modal-content-custom">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div class="modal-title" style="margin-bottom:0;">💳 Record Payment</div>
-            <button onclick="resetPaymentForm()" title="Clear all fields" style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:6px 12px;font-size:1.05rem;font-weight:700;cursor:pointer;">🔄 Refresh</button>
-        </div>
-        <label class="form-label-small">Payment Date</label>
-        <input type="date" id="pDate" class="form-input">
-        <label class="form-label-small">Member</label>
-        <div style="position:relative;">
-            <input type="text" id="pMemberSearch" class="form-input" placeholder="🔍 Search Member..." oninput="filterSearch('pMemberSearch','pMemberList','pMember')">
-            <input type="hidden" id="pMember">
-            <div id="pMemberList" class="suggestions-list"></div>
-        </div>
-        <label class="form-label-small">Group / Enrollment</label>
-        <select id="pGroup" class="form-input"><option value="">-- Select Member First --</option></select>
-        <input type="hidden" id="pEnrollmentId">
-        <input type="hidden" id="pSlotNum" value="1">
+    <div class="modal-content-custom" style="max-height:92vh;overflow-y:auto;padding:14px 16px;">
 
-        <label class="form-label-small">Payment Type</label>
-        <select id="pNumMonths" class="form-input" onchange="onNumMonthsChange()">
-            <option value="1">Single Month</option>
-            <option value="multi">Multiple Months (past dues / bulk) 📅</option>
-        </select>
+        <!-- Header row: title + refresh + close -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <div style="font-size:1rem;font-weight:800;color:#f39c12;flex:1;">💳 Record Payment</div>
+            <button onclick="resetPaymentForm()" title="Clear" style="background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:8px;padding:6px 10px;font-size:0.8rem;font-weight:700;cursor:pointer;">🔄</button>
+            <button onclick="closeModal('paymentModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;padding:2px 6px;">✕</button>
+        </div>
 
-        <div id="multiMonthPreview" class="multi-month-preview">
-            <div class="multi-month-preview-title">📅 Select Months to Pay</div>
-            <div style="font-size:0.92rem;color:var(--text-dim);margin-bottom:8px;">✅ Green = already paid &nbsp;|&nbsp; Tick the months being paid now</div>
+        <!-- Date + Member on same row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+                <label class="form-label-small">Date</label>
+                <input type="date" id="pDate" class="form-input" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;">
+            </div>
+            <div>
+                <label class="form-label-small">Member</label>
+                <div style="position:relative;">
+                    <input type="text" id="pMemberSearch" class="form-input" placeholder="🔍 Search…" oninput="filterSearch('pMemberSearch','pMemberList','pMember')" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;">
+                    <input type="hidden" id="pMember">
+                    <div id="pMemberList" class="suggestions-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Group + Payment Type on same row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div>
+                <label class="form-label-small">Group / Slot</label>
+                <select id="pGroup" class="form-input" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;"><option value="">-- Member first --</option></select>
+                <input type="hidden" id="pEnrollmentId">
+                <input type="hidden" id="pSlotNum" value="1">
+            </div>
+            <div>
+                <label class="form-label-small">Type</label>
+                <select id="pNumMonths" class="form-input" onchange="onNumMonthsChange()" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;">
+                    <option value="1">Single Month</option>
+                    <option value="multi" selected>Multi Month 📅</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="jointMemberBanner" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.28);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:0.8rem;"></div>
+
+        <!-- Single Month dropdown -->
+        <div id="singleMonthDropdownWrap" style="display:none;margin-bottom:8px;">
+            <label class="form-label-small">📅 Which Month?</label>
+            <select id="pSingleMonthSlot" class="form-input" onchange="onSingleMonthSlotChange()" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;">
+                <option value="">-- Select Month --</option>
+            </select>
+            <div id="singleMonthBadge" style="display:none;border-radius:7px;padding:5px 10px;font-size:0.82rem;margin-top:5px;border:1px solid;"></div>
+        </div>
+
+        <!-- Multi Month grid -->
+        <div id="multiMonthPreview" style="margin-bottom:8px;">
+            <div style="font-size:0.78rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📅 Select Months</div>
             <div id="monthSelectorGrid" class="month-selector-grid"></div>
             <div id="selectedSummary" class="selected-summary" style="display:none;"></div>
-            <!-- Per-month custom amounts -->
-            <div id="perMonthAmtWrap" style="display:none;margin-top:10px;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    <label style="font-size:0.92rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;flex:1;">💰 Amount per Month (if different)</label>
-                    <label style="font-size:1.05rem;color:#a5b4fc;display:flex;align-items:center;gap:5px;cursor:pointer;">
-                        <input type="checkbox" id="perMonthCustomToggle" onchange="togglePerMonthCustom()"> Different amounts
-                    </label>
-                </div>
-                <div id="perMonthAmtGrid" style="display:none;display:flex;flex-direction:column;gap:5px;max-height:200px;overflow-y:auto;"></div>
+            <div id="perMonthAmtWrap" style="display:none;margin-top:6px;">
+                <label style="font-size:0.75rem;color:#a5b4fc;display:flex;align-items:center;gap:5px;cursor:pointer;">
+                    <input type="checkbox" id="perMonthCustomToggle" onchange="togglePerMonthCustom()"> Different amounts per month
+                </label>
+                <div id="perMonthAmtGrid" style="display:none;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto;margin-top:5px;"></div>
             </div>
         </div>
 
-        <div class="row g-2">
-            <div class="col-6">
-                <label class="form-label-small">Chit Amount <span id="perMonthLabel" style="color:#a5b4fc;font-size:1.05rem;"></span></label>
-                <input type="number" id="pChit" class="form-input" placeholder="₹ per month" oninput="onChitAmtChange()">
+        <!-- Chit Amt + Paid Amt -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+            <div>
+                <label class="form-label-small">Chit Amt <span id="perMonthLabel" style="color:#a5b4fc;"></span></label>
+                <input type="number" id="pChit" class="form-input" placeholder="₹ per month" oninput="onChitAmtChange()" style="margin-bottom:0;font-size:0.85rem;padding:7px 9px;">
             </div>
-            <div class="col-6">
-                <label class="form-label-small">Total Amount Paid</label>
-                <input type="number" id="pPaid" class="form-input" placeholder="₹ total" oninput="calcBalance()">
+            <div>
+                <label class="form-label-small">Amount Paid</label>
+                <input type="number" id="pPaid" class="form-input" placeholder="₹ total" oninput="calcBalance()" style="margin-bottom:0;font-size:0.85rem;padding:7px 9px;">
             </div>
         </div>
-        <div id="totalChitRef" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:1.05rem;">
-            <span style="color:var(--text-dim);">Total Chit:</span>
-            <span id="totalChitVal" style="color:#a5b4fc;font-weight:700;margin-left:6px;"></span>
-            <span style="color:var(--text-dim);margin-left:12px;">Balance:</span>
-            <span id="totalBalVal" style="color:#f59e0b;font-weight:700;margin-left:6px;"></span>
+
+        <!-- Total chit ref bar -->
+        <div id="totalChitRef" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:0.82rem;display:flex;gap:16px;">
+            <span style="color:var(--text-dim);">Total: <span id="totalChitVal" style="color:#a5b4fc;font-weight:700;"></span></span>
+            <span style="color:var(--text-dim);">Balance: <span id="totalBalVal" style="color:#f59e0b;font-weight:700;"></span></span>
         </div>
-        <label class="form-label-small">Paid By</label>
-        <select id="pPaidBy" class="form-input">
-            <option value="">-- Select Mode --</option>
-            <option>UPI</option><option>GPay</option><option>PhonePe</option>
-            <option>PPay</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option>
-        </select>
-        <label class="form-label-small">Chit Picked?</label>
-        <select id="pChitPicked" class="form-input" onchange="toggleChitPickedName()">
-            <option value="No">No</option>
-            <option value="Yes">Yes ✅</option>
-        </select>
-        <div id="chitPickedNameDiv" style="display:none;">
-            <label class="form-label-small">Chit Picked Value</label>
-            <input type="text" id="pChitPickedBy" class="form-input" placeholder="Enter chit picked value">
+
+        <!-- Paid By + Chit Picked + Note on compact grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+            <div>
+                <label class="form-label-small">Paid By</label>
+                <div style="display:flex;gap:4px;">
+                    <select id="pPaidBy" class="form-input" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;flex:1;">
+                        <option value="">-- Mode --</option>
+                    </select>
+                    <button type="button" onclick="openManagePaidBy('pPaidBy')" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:7px;padding:7px 8px;font-size:0.8rem;cursor:pointer;flex-shrink:0;">⚙️</button>
+                </div>
+                <!-- hidden autocomplete div kept for JS compat -->
+                <div id="pPaidByDrop" style="display:none;"></div>
+            </div>
+            <div>
+                <label class="form-label-small">Chit Picked?</label>
+                <select id="pChitPicked" class="form-input" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;" onchange="toggleChitPickedName()">
+                    <option value="No">No</option>
+                    <option value="Yes">Yes ✅</option>
+                </select>
+            </div>
         </div>
-        <button class="btn-save" onclick="savePayment()">✓ Sync Payment</button>
-        <button class="btn-cancel" onclick="closeModal('paymentModal')">Cancel</button>
+
+        <div id="chitPickedNameDiv" style="display:none;margin-bottom:6px;">
+            <input type="text" id="pChitPickedBy" class="form-input" placeholder="Chit picked value / winner" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;">
+        </div>
+
+        <!-- Hidden payment note fields — kept for JS compatibility -->
+        <select id="pPaymentNote" style="display:none;"><option value="">-- None --</option><option value="Advance">Advance</option><option value="Partial">Partial</option><option value="Late Fee">Late Fee</option><option value="Custom">Custom…</option></select>
+        <input type="text" id="pCustomNote" style="display:none;">
+        <div id="pCustomNoteWrap" style="display:none;"></div>
+
+        <!-- Action buttons -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <button class="btn-save" onclick="savePayment()" style="margin-bottom:0;">✓ Save</button>
+            <button class="btn-cancel" onclick="closeModal('paymentModal')" style="margin-bottom:0;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- MANAGE PAID BY MODAL -->
+<div id="managePaidByModal" class="modal-overlay">
+    <div class="modal-content-custom" style="max-width:360px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <div class="modal-title" style="margin-bottom:0;">⚙️ Manage Payment Modes</div>
+            <button onclick="closeModal('managePaidByModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;">✕</button>
+        </div>
+        <div id="paidByOptionsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:260px;overflow-y:auto;"></div>
+        <div style="display:flex;gap:6px;">
+            <input type="text" id="newPaidByInput" class="form-input" style="margin-bottom:0;flex:1;" placeholder="Add new option..." onkeydown="if(event.key==='Enter')addPaidByOption()">
+            <button onclick="addPaidByOption()" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#10b981;border-radius:10px;padding:10px 14px;font-size:0.9rem;font-weight:800;cursor:pointer;flex-shrink:0;">+ Add</button>
+        </div>
+        <button class="btn-save" style="margin-top:12px;" onclick="savePaidByOptions()">✓ Done</button>
     </div>
 </div>
 
@@ -581,160 +955,123 @@
         </div>
         <label class="form-label-small">Balance (auto)</label>
         <input type="number" id="epBal" class="form-input" placeholder="Balance" readonly style="opacity:.7;">
+
+        <!-- Payment Note -->
+        <label class="form-label-small" style="margin-top:10px;">Payment Note</label>
+        <select id="epPaymentNote" class="form-input" onchange="onEditNoteChange()">
+            <option value="">-- None --</option>
+            <option value="Advance">Advance</option>
+            <option value="Partial">Partial</option>
+            <option value="Late Fee">Late Fee</option>
+            <option value="Custom">Custom…</option>
+        </select>
+        <input type="text" id="epCustomNote" class="form-input" placeholder="Enter custom note" style="display:none;margin-top:6px;">
+
         <label class="form-label-small">Paid By</label>
-        <select id="epPaidBy" class="form-input">
-            <option value="">-- Select Mode --</option>
-            <option>UPI</option><option>GPay</option><option>PhonePe</option>
-            <option>PPay</option><option>Bank Transfer</option><option>Cash</option><option>Cheque</option>
-        </select>
-        <label class="form-label-small">Chit Picked?</label>
-        <select id="epChitPicked" class="form-input" onchange="epTogglePickedName()">
-            <option value="No">No</option>
-            <option value="Yes">Yes ✅</option>
-        </select>
-        <div id="epChitPickedNameDiv" style="display:none;">
-            <label class="form-label-small">Chit Picked Value</label>
-            <input type="text" id="epChitPickedBy" class="form-input" placeholder="Enter chit picked value">
+        <div style="display:flex;gap:6px;">
+            <input type="text" id="epPaidBy" class="form-input" style="margin-bottom:0;flex:1;" placeholder="Payment mode">
+            <button onclick="openManagePaidBy('epPaidBy')" title="Manage modes" style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:10px;padding:8px 10px;font-size:0.75rem;cursor:pointer;flex-shrink:0;">⚙️</button>
         </div>
+        <div id="epPaidByDrop" class="paid-by-dropdown" style="display:none;"></div>
+        <label class="form-label-small" style="margin-top:10px;">Chit Picked?</label>
+        <select id="epChitPicked" class="form-input" style="margin-bottom:0;"><option value="No">No</option><option value="Yes">Yes ✅</option></select>
+        <div id="epChitPickedNameDiv" style="display:none;margin-top:8px;"><label class="form-label-small">Chit Picked Value</label><input type="text" id="epChitPickedBy" class="form-input" placeholder="Enter chit picked value"></div>
         <button class="btn-save" onclick="saveEditPayment()">✓ Update Payment</button>
-        <button class="btn-danger-full" onclick="deletePayment()">🗑 Delete Payment</button>
         <button class="btn-cancel" onclick="closeModal('editPaymentModal')">Cancel</button>
+        <button class="btn-danger-full" style="margin-top:6px;" onclick="deletePayment()">🗑 Delete Payment</button>
     </div>
 </div>
 
-<!-- CONFIRM MODAL -->
-<div id="confirmModal" class="modal-overlay">
-    <div class="modal-content-custom" style="max-width:360px;">
-        <div style="font-size:2rem;text-align:center;margin-bottom:10px;" id="confirmIcon">⚠️</div>
-        <div class="modal-title text-center" id="confirmTitle">Are you sure?</div>
-        <p style="font-size:1.05rem;color:var(--text-dim);text-align:center;margin-bottom:20px;" id="confirmMsg"></p>
-        <button class="btn-danger-full" id="confirmOkBtn">Confirm</button>
-        <button class="btn-cancel" onclick="closeModal('confirmModal')">Cancel</button>
-    </div>
-</div>
-
-<!-- QUICK MEMBERS MODAL -->
+<!-- ══ MEMBERS QUICK MODAL ════════════════════════════════════════════════════ -->
 <div id="membersQuickModal" class="modal-overlay">
-    <div class="modal-content-custom" style="max-width:520px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div class="modal-content-custom">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div class="modal-title" style="margin-bottom:0;">👥 All Members</div>
             <button onclick="closeModal('membersQuickModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;">✕</button>
         </div>
-        <input type="text" id="mqSearch" class="form-input" placeholder="🔍 Filter members..." oninput="filterMembersQuick()" style="margin-bottom:10px;">
-        <div id="membersQuickList" style="max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
-        <button class="btn-cancel" onclick="closeModal('membersQuickModal')" style="margin-top:12px;">Close</button>
+        <input type="text" id="mqSearch" class="form-input" placeholder="🔍 Search name or phone…" oninput="filterMembersQuick()" style="margin-bottom:12px;">
+        <div id="membersQuickList" style="display:flex;flex-direction:column;gap:8px;max-height:60vh;overflow-y:auto;"></div>
     </div>
 </div>
 
-<!-- QUICK GROUPS MODAL -->
+<!-- ══ GROUPS QUICK MODAL ═════════════════════════════════════════════════════ -->
 <div id="groupsQuickModal" class="modal-overlay">
-    <div class="modal-content-custom" style="max-width:520px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <div class="modal-title" style="margin-bottom:0;">📁 All Groups</div>
+    <div class="modal-content-custom">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+            <div class="modal-title" style="margin-bottom:0;">📂 All Groups</div>
             <button onclick="closeModal('groupsQuickModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;">✕</button>
         </div>
-        <div id="groupsQuickList" style="max-height:460px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
-        <button class="btn-cancel" onclick="closeModal('groupsQuickModal')" style="margin-top:12px;">Close</button>
+        <div id="groupsQuickList" style="display:flex;flex-direction:column;gap:10px;max-height:65vh;overflow-y:auto;"></div>
     </div>
 </div>
 
-<!-- ══════ LOGIN SCREEN ══════ -->
-<div id="loginScreen">
-    <div class="login-card">
-        <div class="login-brand">
-            <div style="display:flex;justify-content:center;margin-bottom:12px;">
-                <img src="logo.png" alt="AK Chit Funds" style="width:88px;height:88px;border-radius:18px;object-fit:cover;box-shadow:0 4px 24px rgba(243,156,18,.35);">
-            </div>
-            <div class="login-brand-title">AK Chit Funds</div>
-            <div class="login-brand-sub">Enter your mobile number to continue</div>
+<!-- ══ CONFIRM MODAL ══════════════════════════════════════════════════════════ -->
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal-content-custom" style="max-width:340px;">
+        <div style="text-align:center;margin-bottom:16px;">
+            <div id="confirmIcon" style="font-size:2.5rem;margin-bottom:8px;"></div>
+            <div id="confirmTitle" style="font-size:1.1rem;font-weight:800;margin-bottom:6px;"></div>
+            <div id="confirmMsg" style="font-size:0.9rem;color:var(--text-dim);"></div>
         </div>
-        <div id="loginStep1" class="login-step active">
-            <label class="form-label-small">Mobile Number</label>
-            <div class="login-phone-input">
-                <span class="phone-prefix">+91</span>
-                <input type="tel" id="loginPhone" class="form-input" style="margin-bottom:0;" placeholder="10-digit mobile number" maxlength="10" oninput="this.value=this.value.replace(/\D/g,'')">
-            </div>
-            <div style="height:12px;"></div>
-            <button class="btn-save" onclick="handleLoginSubmit()">🔐 Continue</button>
-        </div>
-        <div id="loginStep2" class="login-step">
-            <div class="pending-box">
-                <div style="font-size:2rem;margin-bottom:10px;">⏳</div>
-                <div style="font-weight:800;font-size:1rem;margin-bottom:6px;">Access Requested</div>
-                <div style="font-size:1rem;color:var(--text-dim);margin-bottom:16px;">Your request has been sent to the admin. Please wait for approval.</div>
-                <div id="pendingPhone" style="font-size:1.05rem;color:#f39c12;font-weight:700;margin-bottom:16px;"></div>
-                <button class="btn-cancel" onclick="checkAccessStatus()" style="margin-bottom:8px;">🔄 Check Status</button>
-                <button class="btn-cancel" onclick="goBackToLogin()">← Back</button>
-            </div>
-        </div>
-        <div id="loginStep3" class="login-step">
-            <div class="denied-box">
-                <div style="font-size:2rem;margin-bottom:10px;">🚫</div>
-                <div style="font-weight:800;color:#f87171;margin-bottom:6px;">Access Denied</div>
-                <div style="font-size:1rem;color:var(--text-dim);margin-bottom:16px;">Your access request was denied. Contact the admin for assistance.</div>
-                <button class="btn-cancel" onclick="goBackToLogin()">← Try Another Number</button>
-            </div>
+        <div style="display:flex;gap:8px;">
+            <button id="confirmOkBtn" class="btn-save" style="flex:1;">Confirm</button>
+            <button class="btn-cancel" style="flex:1;" onclick="closeModal('confirmModal')">Cancel</button>
         </div>
     </div>
 </div>
 
-<!-- ACCESS REQUESTS MODAL -->
+<!-- ══ ACCESS REQUESTS MODAL ══════════════════════════════════════════════════ -->
 <div id="accessModal" class="modal-overlay">
-    <div class="modal-content-custom" style="max-width:500px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div class="modal-content-custom">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
             <div class="modal-title" style="margin-bottom:0;">🔐 Access Requests</div>
-            <button onclick="closeModal('accessModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;">✕</button>
+            <button onclick="closeModal('accessModal')" style="background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;">✕</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:14px;">
-            <button onclick="filterRequests('pending')" id="reqTabPending" class="btn-save" style="flex:1;padding:8px;font-size:1.05rem;margin-bottom:0;">⏳ Pending</button>
-            <button onclick="filterRequests('approved')" id="reqTabApproved" class="btn-cancel" style="flex:1;padding:8px;font-size:1.05rem;">✅ Approved</button>
-            <button onclick="filterRequests('all')" id="reqTabAll" class="btn-cancel" style="flex:1;padding:8px;font-size:1.05rem;">📋 All</button>
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <button id="reqTabPending" class="btn-save" style="flex:1;font-size:0.8rem;padding:8px;" onclick="filterRequests('pending')">⏳ Pending</button>
+            <button id="reqTabApproved" class="btn-cancel" style="flex:1;font-size:0.8rem;padding:8px;" onclick="filterRequests('approved')">✅ Approved</button>
+            <button id="reqTabAll" class="btn-cancel" style="flex:1;font-size:0.8rem;padding:8px;" onclick="filterRequests('all')">📋 All</button>
         </div>
-        <div id="accessRequestsList" style="max-height:400px;overflow-y:auto;"></div>
-        <button class="btn-cancel" onclick="closeModal('accessModal')" style="margin-top:10px;">Close</button>
+        <div id="accessRequestsList" style="max-height:60vh;overflow-y:auto;"></div>
     </div>
 </div>
 
-<!-- BOTTOM NAV -->
-<div class="nav-bar">
-    <div class="nav-item active" id="navHome" onclick="switchTab('home')">🏠<br>Home</div>
-    <div class="nav-item" id="navGroups" onclick="switchTab('groups')">📁<br>Groups</div>
-    <div class="nav-item" id="navPlanner" onclick="switchTab('planner')">📋<br>Planner</div>
-    <div class="nav-item" id="navBackup" onclick="switchTab('backup')">💾<br>Backup</div>
-</div>
-    <script>
-        function toggleQrSection(){
-            var body    = document.getElementById('qrSectionBody');
-            var chevron = document.getElementById('qrSectionChevron');
-            if(!body) return;
-            var open = body.style.display !== 'none';
-            body.style.display      = open ? 'none'         : 'block';
-            chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
-            if(!open){
-                // Poll until qr.js is loaded, then render versions
-                var attempts = 0;
-                var poll = setInterval(function(){
-                    attempts++;
-                    if(typeof qrRenderVersions === 'function'){
-                        clearInterval(poll);
-                        qrRenderVersions();
-                    } else if(attempts > 20){
-                        clearInterval(poll);
-                    }
-                }, 100);
-            }
-        }
-        function toggleWaSection(){
-            var body    = document.getElementById('waSectionBody');
-            var chevron = document.getElementById('waSectionChevron');
-            if(!body) return;
-            var open = body.style.display !== 'none';
-            body.style.display      = open ? 'none'         : 'block';
-            chevron.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
-            if(!open && typeof waRenderMemberGrid === 'function') waRenderMemberGrid();
-            if(!open && typeof waRenderVersions === 'function') waRenderVersions();
-        }
-    </script>
-    <script src="app.js"></script>
+<!-- ══ BOTTOM NAV BAR ════════════════════════════════════════════════════════ -->
+<nav class="nav-bar">
+    <div id="navHome" class="nav-item active" onclick="switchTab('home')">
+        <div style="font-size:1.3rem;">🏠</div>
+        <div>Home</div>
+    </div>
+    <div id="navGroups" class="nav-item" onclick="switchTab('groups')">
+        <div style="font-size:1.3rem;">📂</div>
+        <div>Groups</div>
+    </div>
+    <div id="navPlanner" class="nav-item" onclick="switchTab('planner')">
+        <div style="font-size:1.3rem;">📅</div>
+        <div>Planner</div>
+    </div>
+    <div id="navBackup" class="nav-item" onclick="switchTab('backup')">
+        <div style="font-size:1.3rem;">📊</div>
+        <div>Statistics</div>
+    </div>
+</nav>
+<!-- ══ END BOTTOM NAV BAR ════════════════════════════════════════════════════ -->
+
+<!-- Scripts — load in dependency order -->
+<script src="js/firebase.js?v=20260610_v1"></script>
+<script src="js/helpers.js?v=20260610_v1"></script>
+<script src="js/ui.js?v=20260614_v7"></script>
+<script src="js/ledger.js?v=20260619_v4"></script>
+<script src="js/members.js?v=20260610_v1"></script>
+<script src="js/groups.js?v=20260610_v1"></script>
+<script src="js/payments.js?v=20260613_v7"></script>
+<script src="js/backup.js?v=20260614_v5"></script>
+<script src="js/planner.js?v=20260613_v2"></script>
+<script src="js/print.js?v=20260610_v1"></script>
+<script src="js/auth.js?v=20260614_v4"></script>
+<script src="js/quickview.js?v=20260610_v1"></script>
+<script src="js/qr.js?v=20260613_v3"></script>
+<script src="js/init.js?v=20260610_v1"></script>
+
 </body>
 </html>
