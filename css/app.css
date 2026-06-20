@@ -242,6 +242,34 @@
            ── PRINT MEDIA QUERIES (MOBILE PRINTING FIX) ──
            Fixes: Bottom content missing, tables cut off, page breaks
            ════════════════════════════════════════════════════════ */
+        /* ── Responsive chip grid ─────────────────────────────── */
+        .chip-grid {
+            display: grid;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        /* Portrait phone (< 480px) → 3 cols but compact */
+        @media (max-width: 479px) {
+            .chip-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .chip-grid .chip-label { font-size: 0.48rem; }
+            .chip-grid .chip-val   { font-size: 0.65rem; }
+        }
+        /* Landscape phone / small tablet (480px – 767px) → 3 cols normal */
+        @media (min-width: 480px) and (max-width: 767px) {
+            .chip-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+            .chip-grid .chip-label { font-size: 0.55rem; }
+            .chip-grid .chip-val   { font-size: 0.78rem; }
+        }
+        /* Tablet / desktop (≥ 768px) → 3 cols full size */
+        @media (min-width: 768px) {
+            .chip-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .chip-grid .chip-label { font-size: 0.6rem; }
+            .chip-grid .chip-val   { font-size: 0.82rem; }
+        }
+        .chip-box { border-radius: 8px; padding: 7px 5px; text-align: center; min-width: 0; }
+        .chip-label { color: var(--text-dim); text-transform: uppercase; font-weight: 700; letter-spacing: .3px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+        .chip-val { font-weight: 900; word-break: break-word; line-height: 1.25; display: block; }
+
         @media print {
             /* ── GLOBAL PRINT SETUP ── */
             * { background: transparent !important; color: black !important; box-shadow: none !important; text-shadow: none !important; }
