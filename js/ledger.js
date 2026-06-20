@@ -399,33 +399,31 @@ async function loadMemberLedger(){
                 ${groupStatus==='completed'?`<div style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:10px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🎉</span><div><div style="font-size:0.8rem;font-weight:800;color:#34d399;">Chit Completed!</div><div style="font-size:0.65rem;color:var(--text-dim);">All ${totalMonths} months paid · Total ₹${tPaid.toLocaleString('en-IN')}</div></div></div>`:''}
                 ${groupStatus==='closed'?`<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:8px 14px;margin-bottom:10px;display:flex;align-items:center;gap:8px;"><span style="font-size:1.1rem;">🔒</span><div><div style="font-size:0.8rem;font-weight:800;color:#f87171;">Group Ended</div><div style="font-size:0.65rem;color:var(--text-dim);">End date passed · ₹${tBal.toLocaleString('en-IN')} balance remaining</div></div></div>`:''}
 
-                <!-- 6-chip stat row: Row1=START|NEXT DUE|END, Row2=PENDING|COMMITMENT|AVAIL -->
-                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;">
-                    <!-- Row 1 -->
-                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:2px solid #34d399;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">START DATE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#34d399;">${fmtDate(grp.startDate||grp.gStart||'')}</div>
+                <!-- 6-chip stat row responsive -->
+                <div class="chip-grid">
+                    <div class="chip-box" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-top:2px solid #34d399;">
+                        <span class="chip-label">START DATE</span>
+                        <span class="chip-val" style="color:#34d399;">${fmtDate(grp.startDate||grp.gStart||'')}</span>
                     </div>
-                    <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-top:2px solid #6366f1;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">NEXT DUE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#818cf8;">${nextDueDate?fmtDate(nextDueDate):'—'}</div>
+                    <div class="chip-box" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-top:2px solid #6366f1;">
+                        <span class="chip-label">NEXT DUE</span>
+                        <span class="chip-val" style="color:#818cf8;">${nextDueDate?fmtDate(nextDueDate):'—'}</span>
                     </div>
-                    <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-top:2px solid #ef4444;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">END DATE</div>
-                        <div style="font-size:0.78rem;font-weight:900;color:#f87171;">${endDateStr}</div>
+                    <div class="chip-box" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-top:2px solid #ef4444;">
+                        <span class="chip-label">END DATE</span>
+                        <span class="chip-val" style="color:#f87171;">${endDateStr}</span>
                     </div>
-                    <!-- Row 2 -->
-                    <div style="background:rgba(165,180,252,0.08);border:1px solid rgba(165,180,252,0.25);border-top:2px solid #a5b4fc;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">${isMember?'PROGRESS':'PENDING'}</div>
-                        <div style="font-size:0.92rem;font-weight:900;color:#a5b4fc;">${monthsDone}/${totalMonths}</div>
+                    <div class="chip-box" style="background:rgba(165,180,252,0.08);border:1px solid rgba(165,180,252,0.25);border-top:2px solid #a5b4fc;">
+                        <span class="chip-label">${isMember?'PROGRESS':'PENDING'}</span>
+                        <span class="chip-val" style="color:#a5b4fc;">${monthsDone}/${totalMonths}</span>
                     </div>
-                    <div style="background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.25);border-top:2px solid #bb86fc;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">${isMember?'MY COMMITMENT':'COMMITMENT'}</div>
-                        <div style="font-size:0.82rem;font-weight:900;color:#bb86fc;">${myCommObj&&myCommObj.targetMonth?getOrdinal(myCommObj.targetMonth)+' Month':'—'}</div>
+                    <div class="chip-box" style="background:rgba(155,89,182,0.08);border:1px solid rgba(155,89,182,0.25);border-top:2px solid #bb86fc;">
+                        <span class="chip-label">${isMember?'MY COMMIT':'COMMITMENT'}</span>
+                        <span class="chip-val" style="color:#bb86fc;">${myCommObj&&myCommObj.targetMonth?getOrdinal(myCommObj.targetMonth)+' Mo':'—'}</span>
                     </div>
-                    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-top:2px solid #818cf8;border-radius:10px;padding:8px 10px;text-align:center;">
-                        <div style="font-size:0.58rem;color:var(--text-dim);text-transform:uppercase;font-weight:700;letter-spacing:.5px;margin-bottom:3px;">COMMIT AVAIL</div>
-                        <div style="font-size:0.72rem;font-weight:800;color:#a5b4fc;">${commitAvailText}</div>
+                    <div class="chip-box" style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-top:2px solid #818cf8;">
+                        <span class="chip-label">AVAIL</span>
+                        <span class="chip-val" style="color:#a5b4fc;font-size:0.62rem;">${commitAvailText}</span>
                     </div>
                 </div>
 
