@@ -90,3 +90,13 @@ function getMonthSlot(dueDates, payDate){
 }
 
 // ══════════════════════════════════════════
+
+// ── QR Section toggle ─────────────────────────────────────────────────────────
+function toggleQrSection() {
+    const body    = document.getElementById('qrSectionBody');
+    const chevron = document.getElementById('qrSectionChevron');
+    if(!body) return;
+    const open = body.style.display === 'none' || body.style.display === '';
+    body.style.display    = open ? 'block' : 'none';
+    if(chevron) chevron.style.transform = open ? 'rotate(90deg)' : '';
+}
