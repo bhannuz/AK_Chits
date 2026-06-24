@@ -282,7 +282,7 @@ function resetPaymentForm(){
     window._singleMonthPaidSlots=new Set();
     // Initialize correct mode UI (multi is default, onchange won't fire)
     onNumMonthsChange();
-    populatePaidBySelect('pPaidBy');
+    loadPaidByOptions().then(()=>populatePaidBySelect('pPaidBy'));
 }
 
 function openPaymentModal(){
@@ -584,10 +584,10 @@ async function deletePayment(){
 // ══════════════════════════════════════════
 
 
-// ── Paid By: Editable Combo Dropdown ──────────────────────
+// ── Paid By: Editable Combo Dropdown (Firestore-synced) ────
 const DEFAULT_PAID_BY = ['UPI','GPay','PhonePe','PPay','Bank Transfer','Cash','Cheque'];
 let _paidByOptions = null;
-let _managingFor = null; // which input id triggered manage modal
+let _managingFor = null;
 
 function getPaidByOptions() {
     if (_paidByOptions) return _paidByOptions;
@@ -598,8 +598,32 @@ function getPaidByOptions() {
     return _paidByOptions;
 }
 
-function savePaidByToStorage() {
-    try { localStorage.setItem('ak_paidby_options', JSON.stringify(_paidByOptions)); } catch(e){}
+async function loadPaidByOptions() {
+    try {
+        const doc = await db.collection('settings').doc('paidByOptions').get();
+        if (doc.exists && Array.isArray(doc.data().options)) {
+            _paidByOptions = doc.data().options;
+        } else {
+            _paidByOptions = [...DEFAULT_PAID_BY];
+        }
+        localStorage.setItem('ak_paidby_options', JSON.stringify(_paidByOptions));
+    } catch(e) {
+        try {
+            const stored = localStorage.getItem('ak_paidby_options');
+            _paidByOptions = stored ? JSON.parse(stored) : [...DEFAULT_PAID_BY];
+        } catch(e2) { _paidByOptions = [...DEFAULT_PAID_BY]; }
+    }
+    return _paidByOptions;
+}
+
+async function savePaidByToStorage() {
+    try {
+        await db.collection('settings').doc('paidByOptions').set({ options: _paidByOptions });
+        localStorage.setItem('ak_paidby_options', JSON.stringify(_paidByOptions));
+    } catch(e) {
+        try { localStorage.setItem('ak_paidby_options', JSON.stringify(_paidByOptions)); } catch(e2){}
+        showToast('⚠️ Saved locally only — check connection', false);
+    }
 }
 
 function populatePaidBySelect(selectId){
@@ -693,8 +717,8 @@ function movePaidByOption(i, dir) {
     renderPaidByOptionsList();
 }
 
-function savePaidByOptions() {
-    savePaidByToStorage();
+async function savePaidByOptions() {
+    await savePaidByToStorage();
     populatePaidBySelect('pPaidBy');
     closeModal('managePaidByModal');
     showToast('✅ Payment modes saved!');
