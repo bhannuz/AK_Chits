@@ -138,7 +138,7 @@ async function buildMonthSelectorGrid(){
         const label=paid?'✅':(isPast?'⚠':'·');
         const color=paid?'#34d399':(isPast?'#f87171':'var(--text-dim)');
         return`<label class="month-cb-item ${paid?'already-paid':''}" style="padding:4px 5px;gap:3px;">
-            <input type="checkbox" value="${i}" ${paid?'disabled checked':''} onchange="updateSelectedSummary();calcBalance();" style="width:11px;height:11px;margin:0;">
+            <input type="checkbox" value="${i}" onchange="updateSelectedSummary();calcBalance();" style="width:11px;height:11px;margin:0;">
             <div style="min-width:0;">
                 <div style="font-size:0.65rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fmtDate(dd)}</div>
                 <div style="font-size:0.6rem;color:${color};">${label}</div>
