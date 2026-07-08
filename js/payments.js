@@ -88,15 +88,61 @@ async function buildSingleMonthDropdown(){
             if(!paidSlots.has(i)){autoSelect=i;break;}
         }
     }
+    const chitAmount=parseFloat(document.getElementById('pChit').value)||0;
+    const isVariableAmount=grp&&grp.amtType==='variable';
+    const ps=await getCollection('payments');
     sel.innerHTML='<option value="">-- Select Month --</option>'+allDueDates.map((dd,i)=>{
         const isPaid=paidSlots.has(i);
         const isPast=dd<today;
         const isCurrent=i===currentSlot;
         let tag='';
-        if(isPaid) tag=' ✅ Paid';
-        else if(isCurrent) tag=' ← Current';
-        else if(isPast) tag=' ⚠ Overdue';
-        else tag=' (Upcoming)';
+        if(isVariableAmount){
+            if(isPaid){
+                let totalPaidForMonth=0;
+                ps.forEach(p=>{
+                    if(p.memberId!==mid||p.groupId!==gid)return;
+                    const pSlot=p.slotNum?Number(p.slotNum):1;
+                    if(pSlot!==Number(sn))return;
+                    if(eid&&p.enrollmentId&&p.enrollmentId!==''){if(p.enrollmentId!==eid)return;}
+                    if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                    else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                });
+                if(totalPaidForMonth>0){
+                    tag=' ⚠ Partial';
+                }else{
+                    tag=' ← Current';
+                }
+            }else if(isPast){
+                tag=' ⚠ Overdue';
+            }else{
+                tag=' (Upcoming)';
+            }
+        }else{
+            if(isPaid){
+                let totalPaidForMonth=0;
+                ps.forEach(p=>{
+                    if(p.memberId!==mid||p.groupId!==gid)return;
+                    const pSlot=p.slotNum?Number(p.slotNum):1;
+                    if(pSlot!==Number(sn))return;
+                    if(eid&&p.enrollmentId&&p.enrollmentId!==''){if(p.enrollmentId!==eid)return;}
+                    if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                    else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                });
+                if(chitAmount>0&&totalPaidForMonth>=chitAmount){
+                    tag=' ✅ Paid';
+                }else if(chitAmount>0&&totalPaidForMonth>0){
+                    tag=' ⚠ Partial';
+                }else{
+                    tag=' ✅ Paid';
+                }
+            }else if(isCurrent){
+                tag=' ← Current';
+            }else if(isPast){
+                tag=' ⚠ Overdue';
+            }else{
+                tag=' (Upcoming)';
+            }
+        }
         return `<option value="${i}" ${i===autoSelect?'selected':''}>${fmtDate(dd)}${tag}</option>`;
     }).join('');
     onSingleMonthSlotChange();
@@ -132,16 +178,70 @@ async function buildMonthSelectorGrid(){
     const {paidSlots,allDueDates}=await getPaidSlots(mid,gid,grp,eid,sn);
     if(!allDueDates.length){grid.innerHTML='<div style="color:#f87171;font-size:0.92rem;">No due dates configured for this group</div>';return;}
     const today=new Date().toISOString().split('T')[0];
+    const chitAmount=parseFloat(document.getElementById('pChit').value)||0;
+    const isVariableAmount=grp&&grp.amtType==='variable';
+    const ps=await getCollection('payments');
     grid.innerHTML=allDueDates.map((dd,i)=>{
         const paid=paidSlots.has(i);
         const isPast=dd<=today;
-        const label=paid?'✅':(isPast?'⚠':'·');
-        const color=paid?'#34d399':(isPast?'#f87171':'var(--text-dim)');
+        let totalPaidForMonth=0;
+        if(paid){
+            ps.forEach(p=>{
+                if(p.memberId!==mid||p.groupId!==gid)return;
+                const pSlot=p.slotNum?Number(p.slotNum):1;
+                if(pSlot!==Number(sn))return;
+                if(eid&&p.enrollmentId&&p.enrollmentId!==''){if(p.enrollmentId!==eid)return;}
+                if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;}
+            });
+        }
+        let label='·';
+        let statusText='';
+        let color='var(--text-dim)';
+        if(isVariableAmount){
+            if(paid&&totalPaidForMonth>0){
+                label='⚠';
+                statusText='Partial';
+                color='#f59e0b';
+            }else if(isPast){
+                label='○';
+                statusText='Overdue';
+                color='#f87171';
+            }else{
+                label='·';
+                statusText='Upcoming';
+                color='var(--text-dim)';
+            }
+        }else{
+            if(paid){
+                if(chitAmount>0&&totalPaidForMonth>=chitAmount){
+                    label='✅';
+                    statusText='Paid';
+                    color='#34d399';
+                }else if(chitAmount>0&&totalPaidForMonth>0){
+                    label='⚠';
+                    statusText='Partial';
+                    color='#f59e0b';
+                }else{
+                    label='✅';
+                    statusText='Paid';
+                    color='#34d399';
+                }
+            }else if(isPast){
+                label='○';
+                statusText='Overdue';
+                color='#f87171';
+            }else{
+                label='·';
+                statusText='Upcoming';
+                color='var(--text-dim)';
+            }
+        }
         return`<label class="month-cb-item ${paid?'already-paid':''}" style="padding:4px 5px;gap:3px;">
             <input type="checkbox" value="${i}" onchange="updateSelectedSummary();calcBalance();" style="width:11px;height:11px;margin:0;">
             <div style="min-width:0;">
                 <div style="font-size:0.65rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fmtDate(dd)}</div>
-                <div style="font-size:0.6rem;color:${color};">${label}</div>
+                <div style="font-size:0.6rem;color:${color};">${label} ${statusText}</div>
             </div>
         </label>`;
     }).join('');
@@ -792,11 +892,61 @@ async function populateSingleMonthDropdown() {
     const eid=document.getElementById('pEnrollmentId').value||'';
     const sn=parseInt(document.getElementById('pSlotNum').value||'1');
     const {paidSlots, allDueDates} = await getPaidSlots(mid, gid, grp, eid, sn);
+    const chitAmount=parseFloat(document.getElementById('pChit').value)||0;
+    const isVariableAmount=grp&&grp.amtType==='variable';
+    const ps=await getCollection('payments');
+    const today=new Date().toISOString().split('T')[0];
     
     sel.innerHTML = allDueDates.map((dd, i) => {
         const paid = paidSlots.has(i);
-        const label = fmtDate(dd) + (paid ? ' ✅ Paid' : '');
-        return `<option value="${i}" ${paid ? 'disabled' : ''}>${label}</option>`;
+        const isPast = dd < today;
+        let status = '';
+        
+        if(isVariableAmount){
+            if(paid){
+                let totalPaidForMonth=0;
+                ps.forEach(p=>{
+                    if(p.memberId!==mid||p.groupId!==gid)return;
+                    const pSlot=p.slotNum?Number(p.slotNum):1;
+                    if(pSlot!==Number(sn))return;
+                    if(eid&&p.enrollmentId&&p.enrollmentId!==''){if(p.enrollmentId!==eid)return;}
+                    if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                    else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                });
+                if(totalPaidForMonth>0){
+                    status=' ⚠ Partial';
+                }
+            }else if(isPast){
+                status=' ⚠ Overdue';
+            }else{
+                status=' (Upcoming)';
+            }
+        }else{
+            if(paid){
+                let totalPaidForMonth=0;
+                ps.forEach(p=>{
+                    if(p.memberId!==mid||p.groupId!==gid)return;
+                    const pSlot=p.slotNum?Number(p.slotNum):1;
+                    if(pSlot!==Number(sn))return;
+                    if(eid&&p.enrollmentId&&p.enrollmentId!==''){if(p.enrollmentId!==eid)return;}
+                    if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                    else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                });
+                if(chitAmount>0&&totalPaidForMonth>=chitAmount){
+                    status=' ✅ Paid';
+                }else if(chitAmount>0&&totalPaidForMonth>0){
+                    status=' ⚠ Partial';
+                }else{
+                    status=' ✅ Paid';
+                }
+            }else if(isPast){
+                status=' ⚠ Overdue';
+            }else{
+                status=' (Upcoming)';
+            }
+        }
+        const label = fmtDate(dd) + status;
+        return `<option value="${i}">${label}</option>`;
     }).join('');
     
     sel.value = '';
