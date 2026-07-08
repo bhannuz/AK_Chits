@@ -160,7 +160,24 @@ async function printMemberStatement(mid){
         if(g.startDate||g.gStart){const _s=new Date(g.startDate||g.gStart),_n=new Date();elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));}
         const left=Math.max(0,totalMonths-elapsed);
         const pct=Math.min(100,Math.round(elapsed/totalMonths*100));
-        const allDueDates=getGroupDueDates(g);
+        let allDueDates=getGroupDueDates(g);
+        // BUGFIX: If allDueDates is incomplete, regenerate using totalMonths
+        if(!allDueDates || allDueDates.length < totalMonths){
+            const start=g.startDate||g.gStart;
+            const dueDay=parseInt(g.dueDay)||new Date(start).getDate();
+            const s=new Date(start+'T00:00:00');
+            const startYear=s.getFullYear();
+            const startMonth=s.getMonth();
+            const pad=n=>String(n).padStart(2,'0');
+            allDueDates=[];
+            for(let i=0;i<totalMonths;i++){
+                const yr=startYear+Math.floor((startMonth+i)/12);
+                const mo=(startMonth+i)%12;
+                const maxDay=new Date(yr,mo+1,0).getDate();
+                const day=Math.min(dueDay,maxDay);
+                allDueDates.push(`${yr}-${pad(mo+1)}-${pad(day)}`);
+            }
+        }
         const gStartDisp=fmtDate(g.startDate||g.gStart||'');
         const gDueDayDisp=g.dueDay?`${g.dueDay}${['st','nd','rd'][((g.dueDay%100-11)%10)-1]||'th'} of month`:'—';
 
@@ -288,7 +305,24 @@ async function generateGroupPDF(gid){
     }
     const left = Math.max(0, totalMonths - elapsed);
     const pct  = Math.min(100, Math.round(elapsed / totalMonths * 100));
-    const allDueDates = getGroupDueDates(g);
+    let allDueDates = getGroupDueDates(g);
+    // BUGFIX: If allDueDates is incomplete, regenerate using totalMonths
+    if(!allDueDates || allDueDates.length < totalMonths){
+        const start=g.startDate||g.gStart;
+        const dueDay=parseInt(g.dueDay)||new Date(start).getDate();
+        const s=new Date(start+'T00:00:00');
+        const startYear=s.getFullYear();
+        const startMonth=s.getMonth();
+        const pad=n=>String(n).padStart(2,'0');
+        allDueDates=[];
+        for(let i=0;i<totalMonths;i++){
+            const yr=startYear+Math.floor((startMonth+i)/12);
+            const mo=(startMonth+i)%12;
+            const maxDay=new Date(yr,mo+1,0).getDate();
+            const day=Math.min(dueDay,maxDay);
+            allDueDates.push(`${yr}-${pad(mo+1)}-${pad(day)}`);
+        }
+    }
     const gStartDisp  = fmtDate(g.startDate || g.gStart || '');
     const gDueDayDisp = g.dueDay ? `${g.dueDay}${['st','nd','rd'][((g.dueDay%100-11)%10)-1]||'th'} of every month` : '—';
     const today = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
