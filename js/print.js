@@ -222,7 +222,7 @@ async function printMemberStatement(mid){
             #printStatement .grp-totals { font-size:11px; text-align:right; margin-bottom:6px; }
             #printStatement .prog-outer { background:#eee; height:6px; border-radius:3px; margin-bottom:5px; overflow:hidden; }
             #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-            #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; margin-bottom:6px; }
+            #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto; margin-bottom:6px; }
             #printStatement thead { display:table-header-group; }
             #printStatement th { background:#f5f5f5; border:1px solid #ccc; padding:7px 6px; font-size:10px; text-transform:uppercase; color:#555; font-weight:700; }
             #printStatement td { border:1px solid #e0e0e0; padding:7px 6px; vertical-align:middle; word-break:break-word; font-size:11px; }
@@ -233,7 +233,11 @@ async function printMemberStatement(mid){
             #printStatement .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
             @media print {
                 body > *:not(#printOverlay) { display:none !important; }
-                #printOverlay { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; background:white !important; z-index:99999 !important; }
+                #printOverlay { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; height:auto !important; background:white !important; z-index:99999 !important; padding:0 !important; overflow:visible !important; }
+                #printStatement { max-width:100% !important; padding:0 !important; margin:0 !important; }
+                #printStatement table { table-layout:auto !important; width:100% !important; page-break-inside:auto !important; }
+                #printStatement tr { page-break-inside:avoid !important; page-break-after:auto !important; }
+                #printStatement td, #printStatement th { word-break:break-word !important; overflow-wrap:break-word !important; }
                 #printStatement .print-btn-bar { display:none !important; }
                 @page { size:A4; margin:10mm; }
             }
