@@ -232,14 +232,61 @@ async function printMemberStatement(mid){
             #printStatement .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
             #printStatement .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
             @media print {
-                body > *:not(#printOverlay) { display:none !important; }
-                #printOverlay { position:fixed !important; top:0 !important; left:0 !important; width:100% !important; height:auto !important; background:white !important; z-index:99999 !important; padding:0 !important; overflow:visible !important; }
-                #printStatement { max-width:100% !important; padding:0 !important; margin:0 !important; }
-                #printStatement table { table-layout:auto !important; width:100% !important; page-break-inside:auto !important; }
-                #printStatement tr { page-break-inside:avoid !important; page-break-after:auto !important; }
-                #printStatement td, #printStatement th { word-break:break-word !important; overflow-wrap:break-word !important; }
-                #printStatement .print-btn-bar { display:none !important; }
-                @page { size:A4; margin:10mm; }
+                * { margin:0 !important; padding:0 !important; }
+                html, body { width:100% !important; height:100% !important; background:white !important; }
+                body > * { display:none !important; }
+                #printOverlay { 
+                    position:static !important; 
+                    top:0 !important; 
+                    left:0 !important; 
+                    width:100% !important; 
+                    height:auto !important; 
+                    background:white !important; 
+                    z-index:99999 !important; 
+                    padding:0 !important; 
+                    margin:0 !important;
+                    overflow:visible !important;
+                    display:block !important;
+                }
+                #printStatement { 
+                    max-width:100% !important; 
+                    padding:0 !important; 
+                    margin:0 !important;
+                    width:100% !important;
+                }
+                #printStatement .print-btn-bar { 
+                    display:none !important; 
+                    visibility:hidden !important; 
+                    width:0 !important; 
+                    height:0 !important; 
+                    margin:0 !important; 
+                    padding:0 !important; 
+                }
+                #printStatement .print-btn { display:none !important; }
+                #printStatement .close-btn { display:none !important; }
+                #printStatement .hdr { page-break-inside:avoid !important; }
+                #printStatement .mbox { page-break-inside:avoid !important; }
+                #printStatement .sec-title { page-break-after:avoid !important; }
+                #printStatement .grp-block { page-break-inside:avoid !important; }
+                #printStatement table { 
+                    table-layout:auto !important; 
+                    width:100% !important; 
+                    page-break-inside:auto !important;
+                    margin-bottom:8mm !important;
+                }
+                #printStatement tr { 
+                    page-break-inside:avoid !important; 
+                    page-break-after:auto !important; 
+                }
+                #printStatement td, #printStatement th { 
+                    word-break:break-word !important; 
+                    overflow-wrap:break-word !important; 
+                }
+                #printStatement .ftr { page-break-inside:avoid !important; }
+                @page { 
+                    size:A4; 
+                    margin:12mm 10mm; 
+                }
             }
         </style>
         <div class="print-btn-bar">
@@ -438,13 +485,57 @@ async function generateGroupPDF(gid){
         #groupPrintDoc .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
         #groupPrintDoc .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
         @media print {
-            body > *:not(#printOverlay) { display:none !important; }
-            #printOverlay { position:static !important; top:0 !important; left:0 !important; width:100% !important; height:auto !important; background:white !important; z-index:99999 !important; padding:0 !important; overflow:visible !important; }
-            #groupPrintDoc { max-width:100% !important; padding:0 !important; margin:0 !important; }
-            #groupPrintDoc .print-btn-bar { display:none !important; }
-            #groupPrintDoc table { table-layout:auto !important; width:100% !important; margin-bottom:8mm !important; }
-            #groupPrintDoc td, #groupPrintDoc th { word-break:break-word !important; overflow-wrap:break-word !important; }
-            @page { size:A4; margin:8mm 10mm; }
+            * { margin:0 !important; padding:0 !important; }
+            html, body { width:100% !important; height:100% !important; background:white !important; }
+            body > * { display:none !important; }
+            #printOverlay { 
+                position:static !important; 
+                top:0 !important; 
+                left:0 !important; 
+                width:100% !important; 
+                height:auto !important; 
+                background:white !important; 
+                z-index:99999 !important; 
+                padding:0 !important; 
+                margin:0 !important;
+                overflow:visible !important;
+                display:block !important;
+            }
+            #groupPrintDoc { 
+                max-width:100% !important; 
+                padding:0 !important; 
+                margin:0 !important;
+                width:100% !important;
+            }
+            #groupPrintDoc .print-btn-bar { 
+                display:none !important; 
+                visibility:hidden !important; 
+                width:0 !important; 
+                height:0 !important; 
+                margin:0 !important; 
+                padding:0 !important; 
+            }
+            #groupPrintDoc .print-btn { display:none !important; }
+            #groupPrintDoc .close-btn { display:none !important; }
+            #groupPrintDoc .hdr { page-break-inside:avoid !important; }
+            #groupPrintDoc .info-box { page-break-inside:avoid !important; }
+            #groupPrintDoc .sec-title { page-break-after:avoid !important; }
+            #groupPrintDoc table { 
+                table-layout:auto !important; 
+                width:100% !important; 
+                page-break-inside:auto !important;
+                margin-bottom:8mm !important; 
+            }
+            #groupPrintDoc tr { 
+                page-break-inside:avoid !important; 
+                page-break-after:auto !important; 
+            }
+            #groupPrintDoc td, #groupPrintDoc th { 
+                word-break:break-word !important; 
+                overflow-wrap:break-word !important; 
+            }
+            #groupPrintDoc .ftr { page-break-inside:avoid !important; }
+            @page { size:A4; margin:12mm 10mm; }
         }
     </style>
     <div class="print-btn-bar">
