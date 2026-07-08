@@ -217,7 +217,8 @@ async function loadMemberLedger(){
             
             // MULTIPLE PAYMENTS (Partial) - Show main row FIRST, then detail rows
             const totalMonthPayments = monthPayments.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
-            const mainIBal = parseFloat(monthPayments[monthPayments.length-1].balance)||0;
+            // BUGFIX: Recalculate balance from scratch instead of using last payment's balance
+            const mainIBal = Math.max(0, chitAmount - totalMonthPayments);
             
             // Determine if partial is actually fully paid
             const isPartialFullyPaid = totalMonthPayments >= chitAmount;
