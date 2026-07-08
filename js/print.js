@@ -16,7 +16,19 @@ async function printMemberStatement(mid){
     const totalBal=mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
     const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
     let enrollments=m.enrollments;
-    if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:''}));
+    if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
+    
+    // BUGFIX: Ensure we capture ALL groups - merge enrollments with groupIds
+    // If member has groupIds that aren't in enrollments, add them
+    const enrolledGroupIds = new Set(enrollments.map(e=>e.groupId));
+    const missingGroups = (m.groupIds||[]).filter(gid => !enrolledGroupIds.has(gid));
+    if(missingGroups.length > 0) {
+        enrollments = [...enrollments, ...missingGroups.map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}))];
+    }
+    
+    // DEBUG: Log enrollments count
+    console.log(`Member ${m.name} has ${enrollments.length} total enrollments:`, enrollments);
+    
     const memberGroups=gs.filter(g=>m.groupIds&&m.groupIds.includes(g.id));
     const today=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
 
@@ -220,6 +232,10 @@ async function printMemberStatement(mid){
             #printStatement .grp-title { font-size:14px; font-weight:800; margin-bottom:4px; }
             #printStatement .grp-meta { font-size:11px; color:#666; margin-bottom:5px; line-height:1.6; }
             #printStatement .grp-totals { font-size:11px; text-align:right; margin-bottom:6px; }
+            #printStatement > div:not(.print-btn-bar):not(.hdr):not(.mbox):not(.sec-title):not(.ftr) { 
+                margin-bottom:16px; 
+                page-break-inside:auto !important;
+            }
             #printStatement .prog-outer { background:#eee; height:6px; border-radius:3px; margin-bottom:5px; overflow:hidden; }
             #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
             #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto; margin-bottom:6px; }
@@ -268,6 +284,11 @@ async function printMemberStatement(mid){
                 #printStatement .mbox { page-break-inside:avoid !important; }
                 #printStatement .sec-title { page-break-after:avoid !important; }
                 #printStatement .grp-block { page-break-inside:avoid !important; }
+                #printStatement > div > div > div { 
+                    page-break-inside:auto !important; 
+                    display:block !important;
+                    visibility:visible !important;
+                }
                 #printStatement table { 
                     table-layout:auto !important; 
                     width:100% !important; 
