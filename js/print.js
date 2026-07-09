@@ -302,9 +302,18 @@ async function printMemberStatement(mid){
                 }
                 #printStatement { 
                     max-width:100% !important; 
-                    padding:0 !important; 
+                    padding:10px !important; 
                     margin:0 !important;
                     width:100% !important;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
+                /* Force all colors and backgrounds to print */
+                #printStatement * {
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
                 }
                 #printStatement .print-btn-bar { 
                     display:none !important; 
@@ -318,14 +327,62 @@ async function printMemberStatement(mid){
                 #printStatement .close-btn { display:none !important; }
                 #printStatement .hdr { page-break-inside:avoid !important; }
                 #printStatement .mbox { page-break-inside:avoid !important; }
-                #printStatement .sec-title { page-break-after:avoid !important; }
+                #printStatement .sec-title { 
+                    page-break-after:avoid !important; 
+                    background: #fef3c7 !important;
+                    border-bottom: 3px solid #f39c12 !important;
+                }
                 #printStatement .grp-block { 
                     page-break-inside:avoid !important; 
                     margin-bottom: 28px !important;
+                    background: #ffffff !important;
+                    border: 1px solid #d0d0d0 !important;
+                    padding: 16px !important;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
                 }
-                #printStatement .grp-block:nth-child(n+2) {
-                    page-break-before: auto !important;
-                    margin-top: 24px !important;
+                #printStatement .grp-title {
+                    border-bottom: 1px solid #e5e5e5 !important;
+                    padding-bottom: 8px !important;
+                }
+                #printStatement .grp-title span:last-child {
+                    background: #f39c12 !important;
+                    color: white !important;
+                    border-radius: 5px !important;
+                    padding: 5px 12px !important;
+                }
+                #printStatement .grp-meta {
+                    background: #f9f9f9 !important;
+                    border-left: 4px solid #f39c12 !important;
+                    padding: 10px 12px !important;
+                    margin: 12px 0 10px 0 !important;
+                }
+                #printStatement .prog-outer {
+                    background: #e5e5e5 !important;
+                    height: 7px !important;
+                }
+                #printStatement .prog-inner {
+                    background: linear-gradient(90deg, #f39c12, #f57c00) !important;
+                    height: 100% !important;
+                }
+                #printStatement .grp-totals {
+                    background: linear-gradient(135deg, #f0fdf4 0%, #dbeafe 100%) !important;
+                    border: 1px solid #dcfce7 !important;
+                    padding: 12px !important;
+                    font-weight: 800 !important;
+                    color: #111 !important;
+                }
+                /* Group header for multiple chits */
+                #printStatement > div > div:nth-child(1) {
+                    background: #fef3c7 !important;
+                    border-left: 6px solid #f39c12 !important;
+                    padding: 14px 16px !important;
+                    margin-bottom: 24px !important;
+                }
+                #printStatement > div > div:nth-child(1) span:last-child {
+                    background: #f39c12 !important;
+                    color: white !important;
+                    border-radius: 4px !important;
+                    padding: 5px 12px !important;
                 }
                 #printStatement > div > div > div { 
                     page-break-inside:auto !important; 
@@ -337,14 +394,33 @@ async function printMemberStatement(mid){
                     width:100% !important; 
                     page-break-inside:auto !important;
                     margin-bottom:8mm !important;
+                    border: 1px solid #e0e0e0 !important;
+                    border-collapse: collapse !important;
                 }
-                #printStatement tr { 
-                    page-break-inside:avoid !important; 
-                    page-break-after:auto !important; 
+                #printStatement thead {
+                    display: table-header-group !important;
                 }
-                #printStatement td, #printStatement th { 
-                    word-break:break-word !important; 
-                    overflow-wrap:break-word !important; 
+                #printStatement th {
+                    background: #f5f5f5 !important;
+                    border-bottom: 2px solid #f39c12 !important;
+                    padding: 9px 8px !important;
+                    color: #333 !important;
+                    font-weight: 800 !important;
+                }
+                #printStatement tbody tr:nth-child(odd) td {
+                    background: #ffffff !important;
+                }
+                #printStatement tbody tr:nth-child(even) td {
+                    background: #f9f9f9 !important;
+                }
+                #printStatement tbody tr:last-child td {
+                    background: #fff8e1 !important;
+                    border-bottom: 1px solid #f39c12 !important;
+                    font-weight: 800 !important;
+                }
+                #printStatement td {
+                    border-bottom: 1px solid #e0e0e0 !important;
+                    padding: 8px 7px !important;
                 }
                 #printStatement .ftr { page-break-inside:avoid !important; }
                 @page { 
@@ -568,9 +644,17 @@ async function generateGroupPDF(gid){
             }
             #groupPrintDoc { 
                 max-width:100% !important; 
-                padding:0 !important; 
+                padding:10px !important; 
                 margin:0 !important;
                 width:100% !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+            #groupPrintDoc * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
             }
             #groupPrintDoc .print-btn-bar { 
                 display:none !important; 
@@ -584,20 +668,47 @@ async function generateGroupPDF(gid){
             #groupPrintDoc .close-btn { display:none !important; }
             #groupPrintDoc .hdr { page-break-inside:avoid !important; }
             #groupPrintDoc .info-box { page-break-inside:avoid !important; }
-            #groupPrintDoc .sec-title { page-break-after:avoid !important; }
+            #groupPrintDoc .sec-title { 
+                page-break-after:avoid !important;
+                background: #fef3c7 !important;
+                border-bottom: 3px solid #f39c12 !important;
+            }
             #groupPrintDoc table { 
                 table-layout:auto !important; 
                 width:100% !important; 
                 page-break-inside:auto !important;
-                margin-bottom:8mm !important; 
+                margin-bottom:8mm !important;
+                border: 1px solid #e0e0e0 !important;
+                border-collapse: collapse !important;
+            }
+            #groupPrintDoc thead {
+                display: table-header-group !important;
+            }
+            #groupPrintDoc th {
+                background: #f5f5f5 !important;
+                border-bottom: 2px solid #f39c12 !important;
+                padding: 9px 8px !important;
+                color: #333 !important;
+                font-weight: 800 !important;
+            }
+            #groupPrintDoc tbody tr:nth-child(odd) td {
+                background: #ffffff !important;
+            }
+            #groupPrintDoc tbody tr:nth-child(even) td {
+                background: #f9f9f9 !important;
+            }
+            #groupPrintDoc tbody tr:last-child td {
+                background: #fff8e1 !important;
+                border-bottom: 1px solid #f39c12 !important;
+                font-weight: 800 !important;
+            }
+            #groupPrintDoc td {
+                border-bottom: 1px solid #e0e0e0 !important;
+                padding: 8px 7px !important;
             }
             #groupPrintDoc tr { 
                 page-break-inside:avoid !important; 
                 page-break-after:auto !important; 
-            }
-            #groupPrintDoc td, #groupPrintDoc th { 
-                word-break:break-word !important; 
-                overflow-wrap:break-word !important; 
             }
             #groupPrintDoc .ftr { page-break-inside:avoid !important; }
             @page { size:A4; margin:12mm 10mm; }
