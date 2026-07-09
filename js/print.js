@@ -141,19 +141,26 @@ async function printMemberStatement(mid){
             </tr>`;
         }).join('');
 
-        return `<div class="grp-block" style="${indentStyle}">
-            <div class="grp-title">&#128194; ${g.name}${labelBadge}${slotBadge}</div>
-            <div class="grp-meta">Start: <b>${gStartDisp}</b> &nbsp;|&nbsp; Due: <b>${gDueDayDisp}</b> &nbsp;|&nbsp; Month <b>${elapsed}/${totalMonths}</b> &nbsp;|&nbsp; Covered: <b>${monthsCovered}/${totalMonths}</b> &nbsp;|&nbsp; <b>${left} pending</b></div>
+        return `<div class="grp-block" style="${indentStyle}border:1px solid #d0d0d0;background:#ffffff;padding:16px;border-radius:6px;margin-bottom:28px;page-break-after:auto;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+            <div class="grp-title" style="font-size:14px;font-weight:900;color:#111;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:8px;border-bottom:1px solid #e5e5e5;">
+                <span>${g.name}${labelBadge}</span>
+                <span style="background:#f39c12;color:white;border-radius:5px;padding:5px 12px;font-size:11px;font-weight:800;white-space:nowrap;">Chit ${slotNum} of ${totalSlots}</span>
+            </div>
+            <div class="grp-meta" style="font-size:11px;color:#555;margin:12px 0 10px 0;line-height:1.7;background:#f9f9f9;padding:10px 12px;border-radius:4px;border-left:4px solid #f39c12;">
+                Start: <b>${gStartDisp}</b> &nbsp;•&nbsp; Due: <b>${gDueDayDisp}</b> &nbsp;•&nbsp; Month <b>${elapsed}/${totalMonths}</b> &nbsp;•&nbsp; Covered: <b>${monthsCovered}/${totalMonths}</b> &nbsp;•&nbsp; <b>${left} pending</b>
+            </div>
             <div class="prog-outer"><div class="prog-inner" style="width:${pct}%"></div></div>
-            <div class="grp-totals">Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> &nbsp;&nbsp; Balance: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b></div>
+            <div class="grp-totals" style="font-size:12px;text-align:right;margin-bottom:12px;padding:12px;background:linear-gradient(135deg,#f0fdf4 0%,#dbeafe 100%);border:1px solid #dcfce7;border-radius:4px;font-weight:800;color:#111;">
+                Paid: <span style="color:#065f46;font-size:13px;">Rs.${gPaid.toLocaleString('en-IN')}</span> &nbsp;&nbsp; Balance: <span style="color:#92400e;font-size:13px;">Rs.${gBal.toLocaleString('en-IN')}</span>
+            </div>
             <table>
                 <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
-                <thead><tr><th>#</th><th>Due Date</th><th>Chit/Mo</th><th>Pay Date</th><th>Paid</th><th>Balance</th><th>Status</th><th>Mode</th><th>Chit?</th></tr></thead>
+                <thead><tr style="background:#f5f5f5;border-bottom:2px solid #f39c12;"><th style="font-size:10px;font-weight:800;color:#333;">#</th><th style="font-size:10px;font-weight:800;color:#333;">Due Date</th><th style="font-size:10px;font-weight:800;color:#333;">Chit/Mo</th><th style="font-size:10px;font-weight:800;color:#333;">Pay Date</th><th style="font-size:10px;font-weight:800;color:#333;">Paid</th><th style="font-size:10px;font-weight:800;color:#333;">Balance</th><th style="font-size:10px;font-weight:800;color:#333;">Status</th><th style="font-size:10px;font-weight:800;color:#333;">Mode</th><th style="font-size:10px;font-weight:800;color:#333;">Chit?</th></tr></thead>
                 <tbody>${rows}
-                <tr style="background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;">
+                <tr style="background:#fff8e1;font-weight:800;border-top:3px solid #f39c12;font-size:11px;color:#333;">
                     <td colspan="4" style="text-align:right;padding-right:8px;">Total</td>
-                    <td style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</td>
-                    <td style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</td>
+                    <td style="color:#065f46;font-weight:900;">Rs.${gPaid.toLocaleString('en-IN')}</td>
+                    <td style="color:#92400e;font-weight:900;">Rs.${gBal.toLocaleString('en-IN')}</td>
                     <td colspan="3"></td>
                 </tr></tbody>
             </table>
@@ -201,11 +208,14 @@ async function printMemberStatement(mid){
                 const slotPays=allPays.filter(p=> p.slotNum ? p.slotNum===sn : true);
                 return buildPrintSlot(g, enr, slotPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, sn, qty);
             }).join('');
-            return `<div style="margin-bottom:14px;">
-                <div style="font-size:11px;font-weight:900;color:#92400e;padding:5px 0 6px;border-bottom:2px solid #f5c842;margin-bottom:8px;">
-                    &#128194; ${g.name}${enr.label?' — '+enr.label:''} &nbsp;<span style="background:#fef3c7;border-radius:3px;padding:2px 6px;font-size:9px;">×${qty} chits</span>
+            return `<div style="margin-bottom:0;page-break-inside:auto;">
+                <div style="font-size:14px;font-weight:900;color:#111;padding:14px 16px;background:#fef3c7;border-left:6px solid #f39c12;margin-bottom:24px;border-radius:2px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
+                    <span>📂 ${g.name}${enr.label?' — '+enr.label:''}</span>
+                    <span style="background:#f39c12;color:white;border-radius:4px;padding:5px 12px;font-size:11px;font-weight:800;white-space:nowrap;">×${qty} Chits</span>
                 </div>
-                ${slotBlocks}
+                <div style="position:relative;">
+                    ${slotBlocks}
+                </div>
             </div>`;
         }
     }).join('');
@@ -213,37 +223,63 @@ async function printMemberStatement(mid){
     const printHTML = `
     <div id="printStatement">
         <style>
-            #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; font-size: 13px; }
-            #printStatement .hdr { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #f39c12; padding-bottom:12px; margin-bottom:16px; }
-            #printStatement .brand { font-size:20px; font-weight:900; color:#f39c12; }
-            #printStatement .brand-sub { font-size:11px; color:#888; margin-top:2px; }
-            #printStatement .doc-title { font-size:16px; font-weight:800; text-align:right; }
-            #printStatement .doc-sub { font-size:11px; color:#888; text-align:right; margin-top:3px; }
-            #printStatement .mbox { background:#fffbf0; border:2px solid #f39c12; border-radius:10px; padding:14px 18px; margin-bottom:16px; }
-            #printStatement .mname { font-size:18px; font-weight:800; margin-bottom:5px; }
-            #printStatement .msub { font-size:12px; color:#555; margin-top:4px; }
-            #printStatement .stats { display:flex; gap:0; margin-top:14px; border:1px solid #e5c76b; border-radius:8px; overflow:hidden; width:100%; }
-            #printStatement .stat { flex:1; border-right:1px solid #e5c76b; padding:10px 8px; text-align:center; background:#fffdf0; }
+            #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; font-size: 13px; line-height: 1.5; }
+            #printStatement .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:14px; margin-bottom:18px; }
+            #printStatement .brand { font-size:22px; font-weight:900; color:#f39c12; letter-spacing:-0.5px; }
+            #printStatement .brand-sub { font-size:10px; color:#999; margin-top:3px; font-weight:600; letter-spacing:0.5px; }
+            #printStatement .doc-title { font-size:17px; font-weight:900; text-align:right; color:#111; letter-spacing:1px; }
+            #printStatement .doc-sub { font-size:10px; color:#999; text-align:right; margin-top:4px; font-weight:600; }
+            #printStatement .mbox { background:#fafafa; border:1px solid #e0e0e0; border-left:6px solid #f39c12; border-radius:4px; padding:16px 18px; margin-bottom:20px; }
+            #printStatement .mname { font-size:19px; font-weight:900; color:#111; margin-bottom:8px; }
+            #printStatement .msub { font-size:11px; color:#666; margin-top:5px; font-weight:500; }
+            #printStatement .stats { display:flex; gap:0; margin-top:16px; border:1px solid #e0e0e0; border-radius:4px; overflow:hidden; width:100%; }
+            #printStatement .stat { flex:1; border-right:1px solid #e0e0e0; padding:12px 10px; text-align:center; background:#ffffff; }
+            #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
+            #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
             #printStatement .stat:last-child { border-right:none; }
-            #printStatement .stat-v { font-size:15px; font-weight:800; }
-            #printStatement .stat-l { font-size:10px; color:#888; text-transform:uppercase; margin-top:3px; }
-            #printStatement .sec-title { font-size:11px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:16px 0 8px; border-bottom:2px solid #eee; padding-bottom:4px; }
-            #printStatement .grp-block { margin-bottom:18px; page-break-inside:avoid; }
+            #printStatement .stat-v { font-size:16px; font-weight:800; }
+            #printStatement .stat-l { font-size:9px; color:#888; text-transform:uppercase; margin-top:3px; font-weight:700; letter-spacing:0.5px; }
+            #printStatement .sec-title { font-size:12px; font-weight:900; color:#111; text-transform:uppercase; letter-spacing:1.5px; margin:20px 0 12px; border-bottom:3px solid #f39c12; padding-bottom:8px; }
+            #printStatement table tbody tr:nth-child(odd) { background:#ffffff; }
+            #printStatement table tbody tr:nth-child(even) { background:#f9f9f9; }
+            #printStatement table tbody tr.paid { background:#f0fdf4; }
+            #printStatement table tbody tr.pending { background:#fffbf0; }
+            #printStatement table tbody tr.partial { background:#fef3c7; }
+            #printStatement .grp-block { margin-bottom:28px; page-break-inside:avoid; }
+            #printStatement .grp-block + .grp-block { page-break-before:auto; margin-top:20px; }
+            #printStatement .grp-block:nth-child(odd) { background:#ffffff; }
+            #printStatement .grp-block:nth-child(even) { background:#f9f9f9; }
             #printStatement .grp-title { font-size:14px; font-weight:800; margin-bottom:4px; }
             #printStatement .grp-meta { font-size:11px; color:#666; margin-bottom:5px; line-height:1.6; }
-            #printStatement .grp-totals { font-size:11px; text-align:right; margin-bottom:6px; }
-            #printStatement > div:not(.print-btn-bar):not(.hdr):not(.mbox):not(.sec-title):not(.ftr) { 
-                margin-bottom:16px; 
-                page-break-inside:auto !important;
+            #printStatement .grp-totals { 
+                font-size: 12px; 
+                text-align: right; 
+                margin-bottom: 12px; 
+                padding: 12px 14px;
+                background: linear-gradient(135deg, #f0fdf4 0%, #dbeafe 100%);
+                border: 1px solid #dcfce7;
+                border-radius: 4px; 
+                font-weight: 800;
+                color: #111;
             }
-            #printStatement .prog-outer { background:#eee; height:6px; border-radius:3px; margin-bottom:5px; overflow:hidden; }
+            #printStatement > div:not(.print-btn-bar):not(.hdr):not(.mbox):not(.sec-title):not(.ftr) { 
+                margin-bottom: 24px;
+                page-break-inside: auto !important;
+                padding-bottom: 12px;
+                border-bottom: 1px solid #eee;
+            }
+            #printStatement > div:not(.print-btn-bar):not(.hdr):not(.mbox):not(.sec-title):not(.ftr):last-of-type {
+                border-bottom: none;
+            }
+            #printStatement .prog-outer { background:#e5e5e5; height:7px; border-radius:3px; margin-bottom:8px; overflow:hidden; }
             #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-            #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto; margin-bottom:6px; }
+            #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto; margin-bottom:8px; border:1px solid #e0e0e0; }
             #printStatement thead { display:table-header-group; }
-            #printStatement th { background:#f5f5f5; border:1px solid #ccc; padding:7px 6px; font-size:10px; text-transform:uppercase; color:#555; font-weight:700; }
-            #printStatement td { border:1px solid #e0e0e0; padding:7px 6px; vertical-align:middle; word-break:break-word; font-size:11px; }
+            #printStatement th { background:#f5f5f5; border-bottom:2px solid #f39c12; padding:9px 8px; font-size:10px; text-transform:uppercase; color:#555; font-weight:800; letter-spacing:0.5px; }
+            #printStatement td { border-bottom:1px solid #e0e0e0; padding:8px 7px; vertical-align:middle; word-break:break-word; font-size:11px; }
+            #printStatement tbody tr:last-child td { border-bottom:1px solid #f39c12; font-weight:700; }
             #printStatement tr { page-break-inside:avoid; }
-            #printStatement .ftr { margin-top:16px; border-top:1px solid #ddd; padding-top:8px; display:flex; justify-content:space-between; font-size:10px; color:#aaa; }
+            #printStatement .ftr { margin-top:24px; border-top:2px solid #e5e5e5; padding-top:10px; display:flex; justify-content:space-between; font-size:9px; color:#999; font-weight:500; }
             #printStatement .print-btn-bar { display:flex; gap:10px; margin-bottom:16px; }
             #printStatement .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
             #printStatement .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
@@ -283,7 +319,14 @@ async function printMemberStatement(mid){
                 #printStatement .hdr { page-break-inside:avoid !important; }
                 #printStatement .mbox { page-break-inside:avoid !important; }
                 #printStatement .sec-title { page-break-after:avoid !important; }
-                #printStatement .grp-block { page-break-inside:avoid !important; }
+                #printStatement .grp-block { 
+                    page-break-inside:avoid !important; 
+                    margin-bottom: 28px !important;
+                }
+                #printStatement .grp-block:nth-child(n+2) {
+                    page-break-before: auto !important;
+                    margin-top: 24px !important;
+                }
                 #printStatement > div > div > div { 
                     page-break-inside:auto !important; 
                     display:block !important;
@@ -492,10 +535,11 @@ async function generateGroupPDF(gid){
         #groupPrintDoc .prog-outer { background:#eee; height:6px; border-radius:3px; margin:8px 0 4px; overflow:hidden; }
         #groupPrintDoc .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
         #groupPrintDoc .sec-title { font-size:8px; font-weight:800; color:#888; text-transform:uppercase; letter-spacing:1px; margin:16px 0 6px; border-bottom:1px solid #eee; padding-bottom:3px; page-break-after:avoid; }
-        #groupPrintDoc table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto !important; margin-bottom:4px; page-break-inside:avoid; }
+        #groupPrintDoc table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto !important; margin-bottom:8px; page-break-inside:avoid; border:1px solid #e0e0e0; }
         #groupPrintDoc thead { display:table-header-group; background:#f5f5f5; }
-        #groupPrintDoc th { background:#f5f5f5; border:1px solid #ccc; padding:6px 7px; font-size:9px; text-transform:uppercase; color:#555; font-weight:700; }
-        #groupPrintDoc td { border:1px solid #e0e0e0; padding:6px 7px; vertical-align:middle; word-break:break-word; overflow-wrap:break-word; }
+        #groupPrintDoc th { background:#f5f5f5; border-bottom:2px solid #f39c12; padding:9px 8px; font-size:10px; text-transform:uppercase; color:#555; font-weight:800; letter-spacing:0.5px; }
+        #groupPrintDoc td { border-bottom:1px solid #e0e0e0; padding:8px 7px; vertical-align:middle; word-break:break-word; overflow-wrap:break-word; }
+        #groupPrintDoc tbody tr:last-child td { border-bottom:2px solid #f39c12; font-weight:700; }
         #groupPrintDoc tr { page-break-inside:avoid; page-break-after:auto; }
         #groupPrintDoc .stats { display:flex; gap:8px; margin-top:10px; page-break-inside:avoid; }
         #groupPrintDoc .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:6px; text-align:center; page-break-inside:avoid; }
