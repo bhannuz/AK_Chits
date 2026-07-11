@@ -200,7 +200,7 @@ async function printMemberStatement(mid){
                 <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;">
                         <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
-                        <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;">Chit 1-${totalSlots}</span>
+                        <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;">Chit 1-${qty}</span>
                     </div>
                     <div style="font-size:9px;color:#666;">
                         Start: ${gStartDisp} • Due: ${gDueDayDisp} • <b style="color:#065f46;">${monthsCovered}/${totalMonths} Paid</b> • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
