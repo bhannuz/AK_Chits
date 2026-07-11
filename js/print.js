@@ -201,7 +201,7 @@ async function printMemberStatement(mid){
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
                         <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
                         <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                            <span style="background:#065f46;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">Paid: ${monthsCovered}/${totalMonths}</span>
+                            <span style="background:#065f46;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">Paid: ${elapsed}/${totalMonths}</span>
                             <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">End: ${gDueDayDisp}</span>
                         </div>
                     </div>
