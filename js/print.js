@@ -141,22 +141,11 @@ async function printMemberStatement(mid){
             </tr>`;
         }).join('');
 
-        return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:8px;border-radius:2px;margin-bottom:8px;page-break-after:auto;box-shadow:none;">
-            <div class="grp-title" style="font-size:11px;font-weight:900;color:#111;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;gap:6px;padding-bottom:2px;border-bottom:1px solid #f39c12;">
-                <span>${g.name}${labelBadge}</span>
-                <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:9px;font-weight:800;white-space:nowrap;border:none;">Chit ${slotNum}/${totalSlots}</span>
-            </div>
-            <div class="grp-meta" style="font-size:9px;color:#666;margin:3px 0 3px 0;line-height:1.3;background:#f9f9f9;padding:4px 6px;border-radius:1px;border-left:2px solid #f39c12;">
-                Start: <b>${gStartDisp}</b> • Due: <b>${gDueDayDisp}</b> • Mo <b>${elapsed}/${totalMonths}</b> • Cov: <b>${monthsCovered}</b> • <b>${left}P</b>
-            </div>
-            <div class="prog-outer"><div class="prog-inner" style="width:${pct}%"></div></div>
-            <div class="grp-totals" style="font-size:10px;text-align:right;margin-bottom:4px;padding:4px;background:#f0fdf4;border:1px solid #f39c12;border-radius:1px;font-weight:800;color:#111;">
-                Paid: <span style="color:#065f46;font-size:11px;font-weight:900;">Rs.${gPaid.toLocaleString('en-IN')}</span> • Bal: <span style="color:#92400e;font-size:11px;font-weight:900;">Rs.${gBal.toLocaleString('en-IN')}</span>
-            </div>
+        return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:6px;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
             <table style="border:1px solid #f39c12;border-collapse:collapse;">\n                <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
                 <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Mode</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;">C?</th></tr></thead>
                 <tbody>${rows}
-                <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:10px;color:#333;">
+                <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:9px;color:#333;">
                     <td colspan="4" style="text-align:right;padding:3px 2px;padding-right:4px;border-right:1px solid #f39c12;">Total</td>
                     <td style="color:#065f46;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gPaid.toLocaleString('en-IN')}</td>
                     <td style="color:#92400e;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gBal.toLocaleString('en-IN')}</td>
@@ -208,9 +197,14 @@ async function printMemberStatement(mid){
                 return buildPrintSlot(g, enr, slotPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, sn, qty);
             }).join('');
             return `<div style="margin-bottom:0;page-break-inside:auto;">
-                <div style="font-size:12px;font-weight:900;color:#111;padding:8px 10px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:8px;border-radius:2px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                    <span>📂 ${g.name}${enr.label?' - '+enr.label:''}</span>
-                    <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:9px;font-weight:800;white-space:nowrap;border:none;">×${qty}</span>
+                <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;">
+                        <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
+                        <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;">Chit 1-${totalSlots}</span>
+                    </div>
+                    <div style="font-size:9px;color:#666;">
+                        Start: ${gStartDisp} • Due: ${gDueDayDisp} • <b style="color:#065f46;">${monthsCovered}/${totalMonths} Paid</b> • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
+                    </div>
                 </div>
                 <div style="position:relative;">
                     ${slotBlocks}
