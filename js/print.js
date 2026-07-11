@@ -200,10 +200,10 @@ async function printMemberStatement(mid){
                 <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;">
                         <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
-                        <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;">Chit 1-${qty}</span>
+                        <span style="background:#065f46;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">${monthsCovered}/${totalMonths} Paid</span>
                     </div>
                     <div style="font-size:9px;color:#666;">
-                        Start: ${gStartDisp} • Due: ${gDueDayDisp} • <b style="color:#065f46;">${monthsCovered}/${totalMonths} Paid</b> • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
+                        Start: ${gStartDisp} • End: ${gDueDayDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
                     </div>
                 </div>
                 <div style="position:relative;">
@@ -267,28 +267,25 @@ async function printMemberStatement(mid){
                 background:#f9f9f9; 
                 border:1px solid #f39c12; 
                 border-radius:2px; 
-                padding:8px; 
-                margin-bottom:8px;
+                padding:6px; 
+                margin-bottom:6px;
                 box-shadow: none;
             }
             #printStatement .mname { 
-                font-size:14px; 
-                font-weight:900; 
+                font-size:13px; 
+                font-weight:700; 
                 color:#111; 
-                margin-bottom:3px;
+                margin-bottom:6px;
+                line-height: 1.3;
             }
             #printStatement .msub { 
-                font-size:10px; 
-                color:#666; 
-                margin-top:2px; 
-                font-weight:600;
-                line-height: 1.2;
+                display: none;
             }
             #printStatement .stats { display:flex; gap:0; margin-top:4px; border:1px solid #f39c12; border-radius:2px; overflow:hidden; width:100%; box-shadow: none; }
             #printStatement .stat { flex:1; border-right:1px solid #f39c12; padding:6px 4px; text-align:center; background:#ffffff; }
             #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
             #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
-            #printStatement .stat:nth-child(3) .stat-v { color:#0891b2; }
+            #printStatement .stat:nth-child(3) { display:none; }
             #printStatement .stat:nth-child(4) .stat-v { color:#dc2626; }
             #printStatement .stat:last-child { border-right:none; }
             #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
@@ -505,9 +502,7 @@ async function printMemberStatement(mid){
             <div><div class="doc-title">MEMBER STATEMENT</div><div class="doc-sub">Generated: ${today}</div></div>
         </div>
         <div class="mbox">
-            <div class="mname">${m.name}</div>
-            <div class="msub">&#128222; ${m.phone||'—'}</div>
-            <div class="msub">Groups: ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q+' chits':'')):'?';}).join(', ')||'—'}</div>
+            <div class="mname">${m.name} • &#128222; ${m.phone||'—'} • ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q:'')):'?';}).join(', ')||'—'}</div>
             <div class="stats">
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
                 <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
