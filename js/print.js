@@ -141,26 +141,25 @@ async function printMemberStatement(mid){
             </tr>`;
         }).join('');
 
-        return `<div class="grp-block" style="${indentStyle}border:3px solid #f39c12;background:#ffffff;padding:16px;border-radius:6px;margin-bottom:28px;page-break-after:auto;box-shadow:0 2px 6px rgba(243,156,18,0.2);">
-            <div class="grp-title" style="font-size:14px;font-weight:900;color:#111;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:8px;border-bottom:2px solid #f39c12;">
+        return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:8px;border-radius:2px;margin-bottom:8px;page-break-after:auto;box-shadow:none;">
+            <div class="grp-title" style="font-size:11px;font-weight:900;color:#111;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;gap:6px;padding-bottom:2px;border-bottom:1px solid #f39c12;">
                 <span>${g.name}${labelBadge}</span>
-                <span style="background:#f39c12;color:white;border-radius:5px;padding:5px 12px;font-size:11px;font-weight:800;white-space:nowrap;border:2px solid #f57c00;">Chit ${slotNum} of ${totalSlots}</span>
+                <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:9px;font-weight:800;white-space:nowrap;border:none;">Chit ${slotNum}/${totalSlots}</span>
             </div>
-            <div class="grp-meta" style="font-size:11px;color:#555;margin:12px 0 10px 0;line-height:1.7;background:#f9f9f9;padding:10px 12px;border-radius:4px;border-left:4px solid #f39c12;border-right:2px solid #f39c12;">
-                Start: <b>${gStartDisp}</b> &nbsp;•&nbsp; Due: <b>${gDueDayDisp}</b> &nbsp;•&nbsp; Month <b>${elapsed}/${totalMonths}</b> &nbsp;•&nbsp; Covered: <b>${monthsCovered}/${totalMonths}</b> &nbsp;•&nbsp; <b>${left} pending</b>
+            <div class="grp-meta" style="font-size:9px;color:#666;margin:3px 0 3px 0;line-height:1.3;background:#f9f9f9;padding:4px 6px;border-radius:1px;border-left:2px solid #f39c12;">
+                Start: <b>${gStartDisp}</b> • Due: <b>${gDueDayDisp}</b> • Mo <b>${elapsed}/${totalMonths}</b> • Cov: <b>${monthsCovered}</b> • <b>${left}P</b>
             </div>
             <div class="prog-outer"><div class="prog-inner" style="width:${pct}%"></div></div>
-            <div class="grp-totals" style="font-size:12px;text-align:right;margin-bottom:12px;padding:12px;background:#f0fdf4;border:2px solid #f39c12;border-radius:4px;font-weight:800;color:#111;">
-                Paid: <span style="color:#065f46;font-size:13px;font-weight:900;">Rs.${gPaid.toLocaleString('en-IN')}</span> &nbsp;&nbsp; Balance: <span style="color:#92400e;font-size:13px;font-weight:900;">Rs.${gBal.toLocaleString('en-IN')}</span>
+            <div class="grp-totals" style="font-size:10px;text-align:right;margin-bottom:4px;padding:4px;background:#f0fdf4;border:1px solid #f39c12;border-radius:1px;font-weight:800;color:#111;">
+                Paid: <span style="color:#065f46;font-size:11px;font-weight:900;">Rs.${gPaid.toLocaleString('en-IN')}</span> • Bal: <span style="color:#92400e;font-size:11px;font-weight:900;">Rs.${gBal.toLocaleString('en-IN')}</span>
             </div>
-            <table style="border:3px solid #f39c12;border-collapse:collapse;">
-                <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
-                <thead><tr style="background:#f5f5f5;border-bottom:3px solid #f39c12;"><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">#</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Due Date</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Chit/Mo</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Pay Date</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Paid</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Balance</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Status</th><th style="font-size:10px;font-weight:800;color:#333;border-right:1px solid #f39c12;">Mode</th><th style="font-size:10px;font-weight:800;color:#333;">Chit?</th></tr></thead>
+            <table style="border:1px solid #f39c12;border-collapse:collapse;">\n                <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
+                <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Mode</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;">C?</th></tr></thead>
                 <tbody>${rows}
-                <tr style="background:#fff8e1;font-weight:800;border-top:3px solid #f39c12;font-size:11px;color:#333;">
-                    <td colspan="4" style="text-align:right;padding-right:8px;border-right:1px solid #f39c12;">Total</td>
-                    <td style="color:#065f46;font-weight:900;border-right:1px solid #f39c12;">Rs.${gPaid.toLocaleString('en-IN')}</td>
-                    <td style="color:#92400e;font-weight:900;border-right:1px solid #f39c12;">Rs.${gBal.toLocaleString('en-IN')}</td>
+                <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:10px;color:#333;">
+                    <td colspan="4" style="text-align:right;padding:3px 2px;padding-right:4px;border-right:1px solid #f39c12;">Total</td>
+                    <td style="color:#065f46;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gPaid.toLocaleString('en-IN')}</td>
+                    <td style="color:#92400e;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gBal.toLocaleString('en-IN')}</td>
                     <td colspan="3"></td>
                 </tr></tbody>
             </table>
@@ -209,9 +208,9 @@ async function printMemberStatement(mid){
                 return buildPrintSlot(g, enr, slotPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, sn, qty);
             }).join('');
             return `<div style="margin-bottom:0;page-break-inside:auto;">
-                <div style="font-size:14px;font-weight:900;color:#111;padding:14px 16px;background:#fef3c7;border:3px solid #f39c12;margin-bottom:24px;border-radius:2px;display:flex;justify-content:space-between;align-items:center;gap:16px;">
-                    <span>📂 ${g.name}${enr.label?' — '+enr.label:''}</span>
-                    <span style="background:#f39c12;color:white;border-radius:4px;padding:5px 12px;font-size:11px;font-weight:800;white-space:nowrap;border:2px solid #f57c00;">×${qty} Chits</span>
+                <div style="font-size:12px;font-weight:900;color:#111;padding:8px 10px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:8px;border-radius:2px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <span>📂 ${g.name}${enr.label?' - '+enr.label:''}</span>
+                    <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:9px;font-weight:800;white-space:nowrap;border:none;">×${qty}</span>
                 </div>
                 <div style="position:relative;">
                     ${slotBlocks}
@@ -223,63 +222,137 @@ async function printMemberStatement(mid){
     const printHTML = `
     <div id="printStatement">
         <style>
-            #printStatement { font-family: Arial, sans-serif; color: #111; max-width: 800px; margin: 0 auto; padding: 16px; font-size: 13px; line-height: 1.5; }
-            #printStatement .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:14px; margin-bottom:18px; }
-            #printStatement .brand { font-size:22px; font-weight:900; color:#f39c12; letter-spacing:-0.5px; }
-            #printStatement .brand-sub { font-size:10px; color:#999; margin-top:3px; font-weight:600; letter-spacing:0.5px; }
-            #printStatement .doc-title { font-size:17px; font-weight:900; text-align:right; color:#111; letter-spacing:1px; }
-            #printStatement .doc-sub { font-size:10px; color:#999; text-align:right; margin-top:4px; font-weight:600; }
-            #printStatement .mbox { background:#fafafa; border:3px solid #f39c12; border-radius:4px; padding:16px 18px; margin-bottom:20px; }
-            #printStatement .mname { font-size:19px; font-weight:900; color:#111; margin-bottom:8px; }
-            #printStatement .msub { font-size:11px; color:#666; margin-top:5px; font-weight:500; }
-            #printStatement .stats { display:flex; gap:0; margin-top:16px; border:3px solid #f39c12; border-radius:4px; overflow:hidden; width:100%; }
-            #printStatement .stat { flex:1; border-right:1px solid #f39c12; padding:12px 10px; text-align:center; background:#ffffff; }
+            #printStatement { 
+                font-family: Arial, sans-serif; 
+                color: #111; 
+                max-width: 800px; 
+                margin: 0 auto; 
+                padding: 6px; 
+                font-size: 11px; 
+                line-height: 1.3;
+            }
+            #printStatement .hdr { 
+                display:flex; 
+                justify-content:space-between; 
+                align-items:flex-start; 
+                border-bottom:2px solid #f39c12; 
+                padding-bottom:4px; 
+                margin-bottom:8px;
+                padding-top: 2px;
+            }
+            #printStatement .brand { 
+                font-size:18px; 
+                font-weight:900; 
+                color:#f39c12;
+                letter-spacing:-0.5px;
+            }
+            #printStatement .brand-sub { 
+                font-size:8px; 
+                color:#666; 
+                margin-top:1px; 
+                font-weight:600; 
+                letter-spacing:0px;
+                text-transform: uppercase;
+            }
+            #printStatement .doc-title { 
+                font-size:14px; 
+                font-weight:900; 
+                text-align:right; 
+                color:#111; 
+                letter-spacing:0.5px;
+                text-transform: uppercase;
+            }
+            #printStatement .doc-sub { 
+                font-size:8px; 
+                color:#999; 
+                text-align:right; 
+                margin-top:1px; 
+                font-weight:600;
+            }
+            #printStatement .mbox { 
+                background:#f9f9f9; 
+                border:1px solid #f39c12; 
+                border-radius:2px; 
+                padding:8px; 
+                margin-bottom:8px;
+                box-shadow: none;
+            }
+            #printStatement .mname { 
+                font-size:14px; 
+                font-weight:900; 
+                color:#111; 
+                margin-bottom:3px;
+            }
+            #printStatement .msub { 
+                font-size:10px; 
+                color:#666; 
+                margin-top:2px; 
+                font-weight:600;
+                line-height: 1.2;
+            }
+            #printStatement .stats { display:flex; gap:0; margin-top:4px; border:1px solid #f39c12; border-radius:2px; overflow:hidden; width:100%; box-shadow: none; }
+            #printStatement .stat { flex:1; border-right:1px solid #f39c12; padding:6px 4px; text-align:center; background:#ffffff; }
             #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
             #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
+            #printStatement .stat:nth-child(3) .stat-v { color:#0891b2; }
+            #printStatement .stat:nth-child(4) .stat-v { color:#dc2626; }
             #printStatement .stat:last-child { border-right:none; }
-            #printStatement .stat-v { font-size:16px; font-weight:800; }
-            #printStatement .stat-l { font-size:9px; color:#888; text-transform:uppercase; margin-top:3px; font-weight:700; letter-spacing:0.5px; }
-            #printStatement .sec-title { font-size:12px; font-weight:900; color:#111; text-transform:uppercase; letter-spacing:1.5px; margin:20px 0 12px; border-bottom:3px solid #f39c12; padding-bottom:8px; }
+            #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
+            #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-top:1px; font-weight:800; letter-spacing:0px; }
+            #printStatement .sec-title { 
+                font-size:10px; 
+                font-weight:900; 
+                color:#111; 
+                text-transform:uppercase; 
+                letter-spacing:0.5px; 
+                margin:6px 0 4px; 
+                border-bottom:1px solid #f39c12; 
+                padding-bottom:3px;
+                padding-left: 2px;
+            }
             #printStatement table tbody tr:nth-child(odd) { background:#ffffff; }
             #printStatement table tbody tr:nth-child(even) { background:#f9f9f9; }
             #printStatement table tbody tr.paid { background:#f0fdf4; }
             #printStatement table tbody tr.pending { background:#fffbf0; }
             #printStatement table tbody tr.partial { background:#fef3c7; }
-            #printStatement .grp-block { margin-bottom:28px; page-break-inside:avoid; }
-            #printStatement .grp-block + .grp-block { page-break-before:auto; margin-top:20px; }
+            #printStatement .grp-block { margin-bottom:12px; page-break-inside:avoid; }
+            #printStatement .grp-block + .grp-block { page-break-before:auto; margin-top:8px; }
             #printStatement .grp-block:nth-child(odd) { background:#ffffff; }
             #printStatement .grp-block:nth-child(even) { background:#f9f9f9; }
-            #printStatement .grp-title { font-size:14px; font-weight:800; margin-bottom:4px; }
-            #printStatement .grp-meta { font-size:11px; color:#666; margin-bottom:5px; line-height:1.6; }
+            #printStatement .grp-title { font-size:12px; font-weight:800; margin-bottom:3px; }
+            #printStatement .grp-meta { font-size:10px; color:#666; margin-bottom:4px; line-height:1.4; }
             #printStatement .grp-totals { 
-                font-size: 12px; 
+                font-size: 10px; 
                 text-align: right; 
-                margin-bottom: 12px; 
-                padding: 12px 14px;
-                background: linear-gradient(135deg, #f0fdf4 0%, #dbeafe 100%);
+                margin-bottom: 6px; 
+                padding: 6px 8px;
+                background: #f0fdf4;
                 border: 1px solid #dcfce7;
-                border-radius: 4px; 
+                border-radius: 3px; 
                 font-weight: 800;
                 color: #111;
             }
             #printStatement > div:not(.print-btn-bar):not(.hdr):not(.mbox):not(.sec-title):not(.ftr) { 
-                margin-bottom: 24px;
+                margin-bottom: 8px;
                 page-break-inside: auto !important;
-                padding-bottom: 12px;
+                padding-bottom: 6px;
                 border-bottom: 1px solid #eee;
             }
             #printStatement > div:not(.print-btn-bar):not(.hdr):not(.mbox):not(.sec-title):not(.ftr):last-of-type {
                 border-bottom: none;
             }
-            #printStatement .prog-outer { background:#e5e5e5; height:7px; border-radius:3px; margin-bottom:8px; overflow:hidden; border:1px solid #f39c12; }
-            #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-            #printStatement table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto; margin-bottom:8px; border:1px solid #e0e0e0; }
+            #printStatement .prog-outer { background:#e5e5e5; height:4px; border-radius:1px; margin-bottom:3px; overflow:hidden; border:none; }
+            #printStatement .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:2px; }
+            #printStatement table { width:100%; border-collapse:collapse; font-size:9px; table-layout:auto; margin-bottom:3px; border:1px solid #f39c12; }
             #printStatement thead { display:table-header-group; }
-            #printStatement th { background:#f5f5f5; border-bottom:2px solid #f39c12; padding:9px 8px; font-size:10px; text-transform:uppercase; color:#555; font-weight:800; letter-spacing:0.5px; }
-            #printStatement td { border-bottom:1px solid #e0e0e0; padding:8px 7px; vertical-align:middle; word-break:break-word; font-size:11px; }
-            #printStatement tbody tr:last-child td { border-bottom:1px solid #f39c12; font-weight:700; }
+            #printStatement th { background:#f5f5f5; border-bottom:1px solid #f39c12; border-right:1px solid #f39c12; padding:4px 3px; font-size:8px; text-transform:uppercase; color:#333; font-weight:800; letter-spacing:0px; }
+            #printStatement th:last-child { border-right:none; }
+            #printStatement td { border-bottom:1px solid #e0e0e0; padding:4px 3px; vertical-align:middle; word-break:break-word; font-size:9px; }
+            #printStatement tbody tr:nth-child(odd) td { background:#ffffff; }
+            #printStatement tbody tr:nth-child(even) td { background:#fafafa; }
+            #printStatement tbody tr:last-child td { background:#fff8e1 !important; border-top:1px solid #f39c12; font-weight:800; }
             #printStatement tr { page-break-inside:avoid; }
-            #printStatement .ftr { margin-top:24px; border-top:3px solid #f39c12; border-bottom:1px solid #f39c12; padding-top:10px; padding-bottom:8px; display:flex; justify-content:space-between; font-size:9px; color:#555; font-weight:600; }
+            #printStatement .ftr { margin-top:6px; border-top:1px solid #f39c12; border-bottom:none; padding-top:3px; padding-bottom:2px; display:flex; justify-content:space-between; font-size:7px; color:#999; font-weight:600; }
             #printStatement .print-btn-bar { display:flex; gap:10px; margin-bottom:16px; }
             #printStatement .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
             #printStatement .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
