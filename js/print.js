@@ -198,12 +198,15 @@ async function printMemberStatement(mid){
             }).join('');
             return `<div style="margin-bottom:0;page-break-inside:auto;">
                 <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
                         <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
-                        <span style="background:#065f46;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">${monthsCovered}/${totalMonths} Paid</span>
+                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                            <span style="background:#065f46;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">Paid: ${monthsCovered}/${totalMonths}</span>
+                            <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">End: ${gDueDayDisp}</span>
+                        </div>
                     </div>
                     <div style="font-size:9px;color:#666;">
-                        Start: ${gStartDisp} • End: ${gDueDayDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
+                        Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
                     </div>
                 </div>
                 <div style="position:relative;">
@@ -286,7 +289,7 @@ async function printMemberStatement(mid){
             #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
             #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
             #printStatement .stat:nth-child(3) { display:none; }
-            #printStatement .stat:nth-child(4) .stat-v { color:#dc2626; }
+            #printStatement .stat:nth-child(4) { display:none; }
             #printStatement .stat:last-child { border-right:none; }
             #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
             #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-top:1px; font-weight:800; letter-spacing:0px; }
@@ -634,8 +637,8 @@ async function generateGroupPDF(gid){
                 <td>${monthLabel}${isMulti?` <span style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:9px;">${p.numMonths}mo</span>`:''}</td>
                 <td>${fmtDate(p.date)}</td>
                 <td>₹${(parseFloat(p.chit)||0).toLocaleString('en-IN')}${isMulti?`/mo×${p.numMonths}`:''}</td>
-                <td style="color:#065f46;font-weight:700;">₹${(parseFloat(p.paid)||0).toLocaleString('en-IN')}</td>
-                <td style="color:${(parseFloat(p.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;">₹${(parseFloat(p.balance)||0).toLocaleString('en-IN')}</td>
+                <td style="color:#065f46;font-weight:700;">Rs.${(parseFloat(p.paid)||0).toLocaleString('en-IN')}</td>
+                <td style="color:${(parseFloat(p.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;min-width:40px;">Rs.${(parseFloat(p.balance)||0).toLocaleString('en-IN')}</td>
                 <td style="color:#888;">${p.paidBy||'—'}</td>
                 <td style="text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">✅</span>':'—'}</td>
             </tr>`;
