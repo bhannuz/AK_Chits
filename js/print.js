@@ -187,9 +187,42 @@ async function printMemberStatement(mid){
         }
         const gStartDisp=fmtDate(g.startDate||g.gStart||'');
         const gDueDayDisp=g.dueDay?`${g.dueDay}${['st','nd','rd'][((g.dueDay%100-11)%10)-1]||'th'} of month`:'—';
+        
+        // Calculate group totals for display
+        const chitAmount=parseInt(enr.amount||g.amount||0);
+        const gPaid=allPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+        const gBal=Math.max(0,chitAmount*qty-gPaid);
+        const monthsCovered=allPays.reduce((s,p)=>s+(p.numMonths||1),0);
 
         if(qty<=1){
-            return buildPrintSlot(g, enr, allPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, 1, 1);
+            const slotBlock = buildPrintSlot(g, enr, allPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, 1, 1);
+            return `<div style="margin-bottom:0;page-break-inside:auto;">
+                <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
+                        <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''}</span>
+                    </div>
+                    <div style="font-size:9px;color:#666;">
+                        Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
+                    </div>
+                </div>
+                <div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
+                    <span style="background:#f9f9f9;color:#111;border:1px solid #f39c12;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:700;flex:1;text-align:center;">
+                        <div style="font-size:11px;font-weight:900;color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</div>
+                        <div style="font-size:7px;color:#666;text-transform:uppercase;margin-top:2px;">Balance</div>
+                    </span>
+                    <span style="background:#065f46;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
+                        <div style="font-size:11px;font-weight:900;">${monthsCovered}/${totalMonths}</div>
+                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">Paid</div>
+                    </span>
+                    <span style="background:#f39c12;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
+                        <div style="font-size:11px;font-weight:900;">${gDueDayDisp}</div>
+                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">End</div>
+                    </span>
+                </div>
+                <div style="position:relative;">
+                    ${slotBlock}
+                </div>
+            </div>`;
         } else {
             const slotBlocks = Array.from({length:qty},(_,i)=>{
                 const sn=i+1;
@@ -200,14 +233,24 @@ async function printMemberStatement(mid){
                 <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
                         <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
-                        <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                            <span style="background:#065f46;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">Paid: ${elapsed}/${totalMonths}</span>
-                            <span style="background:#f39c12;color:white;border-radius:2px;padding:2px 6px;font-size:8px;font-weight:800;white-space:nowrap;">End: ${gDueDayDisp}</span>
-                        </div>
                     </div>
                     <div style="font-size:9px;color:#666;">
                         Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
                     </div>
+                </div>
+                <div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
+                    <span style="background:#f9f9f9;color:#111;border:1px solid #f39c12;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:700;flex:1;text-align:center;">
+                        <div style="font-size:11px;font-weight:900;color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</div>
+                        <div style="font-size:7px;color:#666;text-transform:uppercase;margin-top:2px;">Balance</div>
+                    </span>
+                    <span style="background:#065f46;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
+                        <div style="font-size:11px;font-weight:900;">${monthsCovered}/${totalMonths}</div>
+                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">Paid</div>
+                    </span>
+                    <span style="background:#f39c12;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
+                        <div style="font-size:11px;font-weight:900;">${gDueDayDisp}</div>
+                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">End</div>
+                    </span>
                 </div>
                 <div style="position:relative;">
                     ${slotBlocks}
