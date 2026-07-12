@@ -142,6 +142,10 @@ async function printMemberStatement(mid){
         }).join('');
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:6px;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
+            <div style="font-size:10px;font-weight:900;color:#111;padding:4px 4px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;">
+                <span>📂 <b>${g.name}</b> ${totalSlots>1?'• Chit '+slotNum+' of '+totalSlots:''}</span>
+                <span style="font-size:9px;color:#666;">${slotPays.reduce((s,p)=>s+(p.numMonths||1),0)}/${totalMonths} Paid • <b style="color:#065f46;">${gDueDayDisp}</b></span>
+            </div>
             <table style="border:1px solid #f39c12;border-collapse:collapse;">\n                <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
                 <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Mode</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;">C?</th></tr></thead>
                 <tbody>${rows}
@@ -196,38 +200,14 @@ async function printMemberStatement(mid){
 
         if(qty<=1){
             const slotBlock = buildPrintSlot(g, enr, allPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, 1, 1);
-            return `<div style="margin-bottom:0;page-break-inside:auto;">
-                <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
-                        <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''}</span>
-                    </div>
-                    <div style="font-size:9px;color:#666;">
-                        Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
-                    </div>
-                </div>
-                <div style="position:relative;">
-                    ${slotBlock}
-                </div>
-            </div>`;
+            return slotBlock;
         } else {
             const slotBlocks = Array.from({length:qty},(_,i)=>{
                 const sn=i+1;
                 const slotPays=allPays.filter(p=> p.slotNum ? p.slotNum===sn : true);
                 return buildPrintSlot(g, enr, slotPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, sn, qty);
             }).join('');
-            return `<div style="margin-bottom:0;page-break-inside:auto;">
-                <div style="font-size:10px;font-weight:900;color:#111;padding:6px 8px;background:#fef3c7;border:1px solid #f39c12;margin-bottom:4px;border-radius:1px;line-height:1.4;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
-                        <span>📂 <b>${g.name}</b> ${enr.label?'('+enr.label+')':''} • <b>×${qty}</b></span>
-                    </div>
-                    <div style="font-size:9px;color:#666;">
-                        Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
-                    </div>
-                </div>
-                <div style="position:relative;">
-                    ${slotBlocks}
-                </div>
-            </div>`;
+            return slotBlocks;
         }
     }).join('');
 
