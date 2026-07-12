@@ -205,20 +205,6 @@ async function printMemberStatement(mid){
                         Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
                     </div>
                 </div>
-                <div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
-                    <span style="background:#f9f9f9;color:#111;border:1px solid #f39c12;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:700;flex:1;text-align:center;">
-                        <div style="font-size:11px;font-weight:900;color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</div>
-                        <div style="font-size:7px;color:#666;text-transform:uppercase;margin-top:2px;">Balance</div>
-                    </span>
-                    <span style="background:#065f46;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
-                        <div style="font-size:11px;font-weight:900;">${monthsCovered}/${totalMonths}</div>
-                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">Paid</div>
-                    </span>
-                    <span style="background:#f39c12;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
-                        <div style="font-size:11px;font-weight:900;">${gDueDayDisp}</div>
-                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">End</div>
-                    </span>
-                </div>
                 <div style="position:relative;">
                     ${slotBlock}
                 </div>
@@ -237,20 +223,6 @@ async function printMemberStatement(mid){
                     <div style="font-size:9px;color:#666;">
                         Start: ${gStartDisp} • ${left} Pending | Paid: <b style="color:#065f46;">Rs.${gPaid.toLocaleString('en-IN')}</b> • Bal: <b style="color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</b>
                     </div>
-                </div>
-                <div style="display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;">
-                    <span style="background:#f9f9f9;color:#111;border:1px solid #f39c12;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:700;flex:1;text-align:center;">
-                        <div style="font-size:11px;font-weight:900;color:#92400e;">Rs.${gBal.toLocaleString('en-IN')}</div>
-                        <div style="font-size:7px;color:#666;text-transform:uppercase;margin-top:2px;">Balance</div>
-                    </span>
-                    <span style="background:#065f46;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
-                        <div style="font-size:11px;font-weight:900;">${monthsCovered}/${totalMonths}</div>
-                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">Paid</div>
-                    </span>
-                    <span style="background:#f39c12;color:white;border-radius:2px;padding:4px 8px;font-size:9px;font-weight:800;flex:1;text-align:center;">
-                        <div style="font-size:11px;font-weight:900;">${gDueDayDisp}</div>
-                        <div style="font-size:7px;text-transform:uppercase;margin-top:2px;">End</div>
-                    </span>
                 </div>
                 <div style="position:relative;">
                     ${slotBlocks}
@@ -331,8 +303,8 @@ async function printMemberStatement(mid){
             #printStatement .stat { flex:1; border-right:1px solid #f39c12; padding:6px 4px; text-align:center; background:#ffffff; }
             #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
             #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
-            #printStatement .stat:nth-child(3) { display:none; }
-            #printStatement .stat:nth-child(4) { display:none; }
+            #printStatement .stat:nth-child(3) { display:none !important; }
+            #printStatement .stat:nth-child(4) { display:none !important; }
             #printStatement .stat:last-child { border-right:none; }
             #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
             #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-top:1px; font-weight:800; letter-spacing:0px; }
