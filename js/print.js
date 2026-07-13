@@ -107,11 +107,25 @@ async function printMemberStatement(mid){
                 if(p.monthSlot!=null) return p.monthSlot===i;
                 return getMonthSlot(allDueDates,p.date)===i;
             });
+            
+            // Find ALL payments for this month (for status calculation)
+            const monthPayments = slotPays.filter(p=>{
+                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
+                if(p.monthSlot!=null) return p.monthSlot===i;
+                return getMonthSlot(allDueDates,p.date)===i;
+            });
+            
+            // Calculate total paid and balance for the month
+            const totalMonthPaid = monthPayments.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+            const totalMonthBal = monthPayments.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+            
             const paidAmt       = matchPay ? (parseFloat(matchPay.paid)||0)    : 0;
             const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
             const balAmt        = matchPay ? (parseFloat(matchPay.balance)||0)  : 0;
-            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && paidAmt>=chitAmt;
-            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && paidAmt>0 && paidAmt<chitAmt;
+            
+            // Status based on TOTAL balance for the month
+            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && totalMonthBal<=0;
+            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && totalMonthPaid>0 && totalMonthBal>0;
             const isAnyPaid     = paidSlotSet.has(i);
             const isOverdue     = !isAnyPaid && dueDate<todayStr;
             const cp            = matchPay && matchPay.chitPicked==='Yes';
@@ -120,6 +134,9 @@ async function printMemberStatement(mid){
             const isSubOfMulti  = isMulti && matchPay && payFirstSlot[matchPay.id]!==i;
             const span          = isFirstOfMulti ? payRowSpan[matchPay.id] : 1;
             const rs            = span>1 ? ` rowspan="${span}"` : '';
+            
+            // Check if multiple payments for same month
+            const hasMultiPayments = monthPayments.length > 1;
 
             // Status
             let status;
@@ -156,7 +173,8 @@ async function printMemberStatement(mid){
 
             const statusColor = isFullPaid?'#065f46':isPartialPaid?'#92400e':isOverdue?'#b91c1c':'#888';
 
-            return `<tr style="background:${bg};${bl}">
+
+            let mainRow = `<tr style="background:${bg};${bl}">
                 <td style="text-align:center;color:#888;">${i+1}</td>
                 <td>${fmtDate(dueDate)}${multiTag}</td>
                 <td style="color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
@@ -167,6 +185,30 @@ async function printMemberStatement(mid){
                 <td${rs} style="vertical-align:middle;color:#555;">${matchPay&&matchPay.paidBy?matchPay.paidBy:'—'}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
             </tr>`;
+            
+            // Add sub-rows for additional payments of the same month
+            let subRows = '';
+            if(hasMultiPayments && monthPayments.length > 1){
+                monthPayments.forEach((pay, idx)=>{
+                    if(idx === 0) return; // Skip first, already shown above
+                    const payDate = fmtDate(pay.date);
+                    const paidBy = pay.paidBy || '—';
+                    const cp2 = pay.chitPicked === 'Yes';
+                    subRows += `<tr style="background:#fafafa;border-left:3px solid #e0e7ff;">
+                        <td style="text-align:center;color:#bbb;">└</td>
+                        <td style="color:#999;font-size:9px;">(L${idx+1})</td>
+                        <td style="color:#bbb;">—</td>
+                        <td style="color:#065f46;font-weight:700;">${payDate}</td>
+                        <td style="color:#065f46;font-weight:700;">Rs.${(parseFloat(pay.paid)||0).toLocaleString('en-IN')}</td>
+                        <td style="color:${(parseFloat(pay.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;">Rs.${(parseFloat(pay.balance)||0).toLocaleString('en-IN')}</td>
+                        <td style="color:#bbb;font-size:9px;">—</td>
+                        <td style="color:#555;font-size:9px;">${paidBy}</td>
+                        <td style="text-align:center;font-size:9px;">${cp2?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
+                    </tr>`;
+                });
+            }
+            
+            return mainRow + subRows;
         }).join('');
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:6px;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
