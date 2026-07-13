@@ -532,8 +532,8 @@ async function printMemberStatement(mid){
             <div class="stats">
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
                 <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
-                <div class="stat"><div class="stat-v" style="color:#0891b2;">${startDateDisp}</div><div class="stat-l">Start / End</div><div style="font-size:8px;color:#666;margin-top:2px;">${endDateDisp}</div></div>
-                <div class="stat"><div class="stat-v" style="color:#065f46;">${enrollments.length > 0 ? (() => {let totalMonths=0,monthsPaid=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);monthsPaid=Math.max(monthsPaid,gPays.reduce((s,p)=>s+(p.numMonths||1),0));}});return monthsPaid+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid Months</div></div>
+                <div class="stat"><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} / ${endDateDisp}</div><div class="stat-l">Start Date / End</div></div>
+                <div class="stat"><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,monthsPaid=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);monthsPaid=Math.max(monthsPaid,gPays.reduce((s,p)=>s+(p.numMonths||1),0));}});return monthsPaid+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid / Total Months</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
