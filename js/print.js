@@ -15,8 +15,36 @@ async function printMemberStatement(mid){
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
     const totalBal=mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
     const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
+    
+    // Calculate start and end dates across all enrollments
+    let startDateVal = null;
+    let endDateVal = null;
     let enrollments=m.enrollments;
     if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
+    
+    // Find earliest start and latest end date
+    enrollments.forEach(enr => {
+        const g = gs.find(x => x.id === enr.groupId);
+        if(g) {
+            const gStart = g.startDate || g.gStart;
+            if(gStart && (!startDateVal || gStart < startDateVal)) {
+                startDateVal = gStart;
+            }
+            
+            // Calculate end date from duration
+            const totalMonths = parseInt(g.duration || g.gDuration) || 21;
+            if(gStart) {
+                const startDate = new Date(gStart + 'T00:00:00');
+                const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + totalMonths, startDate.getDate());
+                if(!endDateVal || endDate > endDateVal) {
+                    endDateVal = endDate;
+                }
+            }
+        }
+    });
+    
+    const startDateDisp = startDateVal ? new Date(startDateVal + 'T00:00:00').toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '—';
+    const endDateDisp = endDateVal ? endDateVal.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '—';
     
     // BUGFIX: Ensure we capture ALL groups - merge enrollments with groupIds
     // If member has groupIds that aren't in enrollments, add them
@@ -283,8 +311,8 @@ async function printMemberStatement(mid){
             #printStatement .stat { flex:1; border-right:1px solid #f39c12; padding:6px 4px; text-align:center; background:#ffffff; }
             #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
             #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
-            #printStatement .stat:nth-child(3) { display:none !important; }
-            #printStatement .stat:nth-child(4) { display:none !important; }
+            #printStatement .stat:nth-child(3) .stat-v { color:#0891b2; }
+            #printStatement .stat:nth-child(4) .stat-v { color:#ea580c; }
             #printStatement .stat:last-child { border-right:none; }
             #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
             #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-top:1px; font-weight:800; letter-spacing:0px; }
@@ -504,8 +532,8 @@ async function printMemberStatement(mid){
             <div class="stats">
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
                 <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
-                <div class="stat"><div class="stat-v">${mPays.length}</div><div class="stat-l">Payments</div></div>
-                <div class="stat"><div class="stat-v" style="color:#065f46;">${chitsPicked}</div><div class="stat-l">Chits Picked</div></div>
+                <div class="stat"><div class="stat-v" style="color:#0891b2;">${startDateDisp}</div><div class="stat-l">Start Date</div></div>
+                <div class="stat"><div class="stat-v" style="color:#ea580c;">${endDateDisp}</div><div class="stat-l">End Date</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
