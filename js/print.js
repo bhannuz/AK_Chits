@@ -312,7 +312,7 @@ async function printMemberStatement(mid){
             #printStatement .stat:nth-child(1) .stat-v { color:#065f46; }
             #printStatement .stat:nth-child(2) .stat-v { color:#92400e; }
             #printStatement .stat:nth-child(3) .stat-v { color:#0891b2; }
-            #printStatement .stat:nth-child(4) .stat-v { color:#ea580c; }
+            #printStatement .stat:nth-child(4) .stat-v { color:#065f46; }
             #printStatement .stat:last-child { border-right:none; }
             #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
             #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-top:1px; font-weight:800; letter-spacing:0px; }
@@ -532,8 +532,8 @@ async function printMemberStatement(mid){
             <div class="stats">
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
                 <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
-                <div class="stat"><div class="stat-v" style="color:#0891b2;">${startDateDisp}</div><div class="stat-l">Start Date</div></div>
-                <div class="stat"><div class="stat-v" style="color:#ea580c;">${endDateDisp}</div><div class="stat-l">End Date</div></div>
+                <div class="stat"><div class="stat-v" style="color:#0891b2;">${startDateDisp}</div><div class="stat-l">Start / End</div><div style="font-size:8px;color:#666;margin-top:2px;">${endDateDisp}</div></div>
+                <div class="stat"><div class="stat-v" style="color:#065f46;">${enrollments.length > 0 ? (() => {let totalMonths=0,monthsPaid=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);monthsPaid=Math.max(monthsPaid,gPays.reduce((s,p)=>s+(p.numMonths||1),0));}});return monthsPaid+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid Months</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
