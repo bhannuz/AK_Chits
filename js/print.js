@@ -14,6 +14,10 @@ async function printMemberStatement(mid){
     const mPays=ps.filter(p=>p.memberId===mid);
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
     
+    // Initialize enrollments first
+    let enrollments=m.enrollments;
+    if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
+    
     // Calculate total chit commitment needed
     let totalChitNeeded = 0;
     enrollments.forEach(enr => {
@@ -31,8 +35,6 @@ async function printMemberStatement(mid){
     // Calculate start and end dates across all enrollments
     let startDateVal = null;
     let endDateVal = null;
-    let enrollments=m.enrollments;
-    if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
     
     // Find earliest start and latest end date
     enrollments.forEach(enr => {
