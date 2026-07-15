@@ -213,7 +213,7 @@ async function printMemberStatement(mid){
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:6px;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
             <div style="font-size:10px;font-weight:900;color:#111;padding:4px 4px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center;">
-                <span>📂 <b>${g.name}</b> ${totalSlots>1?'• Chit '+slotNum+' of '+totalSlots:''}</span>
+                <span><b>${g.name}</b> ${totalSlots>1?'• Chit '+slotNum+' of '+totalSlots:''}</span>
                 <span style="background:#f5a623;color:white;padding:4px 10px;border-radius:4px;font-size:9px;font-weight:800;white-space:nowrap;display:flex;gap:6px;align-items:center;"><span>${slotPays.reduce((s,p)=>s+(p.numMonths||1),0)}/${totalMonths} Paid</span><span style="color:#fff">•</span><span style="color:#065f46;background:rgba(255,255,255,0.2);padding:1px 4px;border-radius:2px;">${gDueDayDisp}</span></span>
             </div>
             <table style="border:1px solid #f39c12;border-collapse:collapse;">\n                <colgroup><col style="width:4%"><col style="width:16%"><col style="width:12%"><col style="width:11%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:11%"><col style="width:10%"></colgroup>
