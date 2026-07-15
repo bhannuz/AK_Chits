@@ -177,7 +177,7 @@ async function printMemberStatement(mid){
             let mainRow = `<tr style="background:${bg};${bl}">
                 <td style="text-align:center;color:#888;">${i+1}</td>
                 <td>${fmtDate(dueDate)}${multiTag}</td>
-                <td style="color:#555;">Rs.${monthlyChitAmount>0?monthlyChitAmount.toLocaleString('en-IN'):'—'}</td>
+                <td style="color:#555;">Rs.${chitAmount>0?chitAmount.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:${balAmt>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+balAmt.toLocaleString('en-IN'):'—'}</td>
