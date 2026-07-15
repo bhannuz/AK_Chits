@@ -13,7 +13,19 @@ async function printMemberStatement(mid){
     const m=ms.find(x=>x.id===mid); if(!m){showToast('❌ Member not found',false);return;}
     const mPays=ps.filter(p=>p.memberId===mid);
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-    const totalBal=mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+    
+    // Calculate total chit commitment needed
+    let totalChitNeeded = 0;
+    enrollments.forEach(enr => {
+        const g = gs.find(x => x.id === enr.groupId);
+        if(g) {
+            const duration = parseInt(g.duration || g.gDuration) || 21;
+            const monthlyAmt = parseFloat(g.monthly || g.gMonthly) || 0;
+            totalChitNeeded += (monthlyAmt * duration);
+        }
+    });
+    
+    const totalBal = Math.max(0, totalChitNeeded - totalPaid);
     const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
     
     // Calculate start and end dates across all enrollments
@@ -63,7 +75,6 @@ async function printMemberStatement(mid){
     // Build merged schedule+history rows with rowspan for multi-month payments
     function buildPrintSlot(g, enr, slotPays, allDueDates, elapsed, totalMonths, left, pct, gStartDisp, gDueDayDisp, slotNum, totalSlots){
         const gPaid   = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const gBal    = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
         const monthsCovered = slotPays.reduce((s,p)=>s+(p.numMonths||1),0);
         const slotBadge  = totalSlots>1 ? `<span style="background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 6px;font-size:9px;font-weight:800;margin-left:4px;">Chit ${slotNum} of ${totalSlots}</span>` : '';
         const labelBadge = enr.label ? `<span style="background:#fff3cd;color:#92400e;border-radius:3px;padding:1px 5px;font-size:9px;margin-left:4px;">${enr.label}</span>` : '';
@@ -77,6 +88,9 @@ async function printMemberStatement(mid){
         const chitAmount   = lastPay && parseFloat(lastPay.chit)>0
             ? parseFloat(lastPay.chit)
             : (membersCount>0 && groupAmount>0 ? Math.round(groupAmount/membersCount) : 0);
+        
+        // Calculate total balance for this slot
+        const gBal = Math.max(0, (totalMonths * chitAmount) - gPaid);
 
         // Build paidSlotSet
         const paidSlotSet = new Set();
@@ -117,7 +131,7 @@ async function printMemberStatement(mid){
             
             // Calculate total paid and balance for the month
             const totalMonthPaid = monthPayments.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-            const totalMonthBal = monthPayments.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+            const monthlyBalance = Math.max(0, chitAmount - totalMonthPaid);
             
             const paidAmt       = matchPay ? (parseFloat(matchPay.paid)||0)    : 0;
             const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
@@ -125,7 +139,7 @@ async function printMemberStatement(mid){
             
             // SIMPLE STATUS: Compare total paid for month to chit amount
             const isFullPaid    = paidSlotSet.has(i) && totalMonthPaid >= chitAmount;
-            const isPartialPaid = paidSlotSet.has(i) && totalMonthPaid > 0 && totalMonthPaid < chitAmount;
+            const isPartialPaid = paidSlotSet.has(i) && totalMonthPaid > 0 && monthlyBalance > 0;
             const isAnyPaid     = paidSlotSet.has(i);
             const isOverdue     = !isAnyPaid && dueDate<todayStr;
             const cp            = matchPay && matchPay.chitPicked==='Yes';
@@ -180,7 +194,7 @@ async function printMemberStatement(mid){
                 <td style="color:#555;">Rs.${chitAmount>0?chitAmount.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;color:${totalMonthBal>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+totalMonthBal.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;color:${monthlyBalance>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+monthlyBalance.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;font-weight:700;color:${statusColor};">${status}</td>
                 <td${rs} style="vertical-align:middle;color:#555;">${matchPay&&matchPay.paidBy?matchPay.paidBy:'—'}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
@@ -612,15 +626,16 @@ async function generateGroupPDF(gid){
 
     const gPays = ps.filter(p => p.groupId === gid);
     const tPaid = gPays.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
-    const tBal  = gPays.reduce((s,p) => s + (parseFloat(p.balance)||0), 0);
-    const picked = gPays.filter(p => p.chitPicked === 'Yes').length;
     const totalMonths = parseInt(g.duration || g.gDuration) || 21;
+    const monthlyAmt = parseFloat(g.monthly || g.gMonthly) || 0;
+    const totalChitNeeded = monthlyAmt * totalMonths;
+    const tBal = Math.max(0, totalChitNeeded - tPaid);
+    const picked = gPays.filter(p => p.chitPicked === 'Yes').length;
     let elapsed = 0;
     if(g.startDate || g.gStart){
         const _s = new Date(g.startDate || g.gStart), _n = new Date();
         elapsed = Math.max(0, Math.min(totalMonths, (_n.getFullYear()-_s.getFullYear())*12 + (_n.getMonth()-_s.getMonth()) + 1));
     }
-    const left = Math.max(0, totalMonths - elapsed);
     const pct  = Math.min(100, Math.round(elapsed / totalMonths * 100));
     let allDueDates = getGroupDueDates(g);
     // BUGFIX: If allDueDates is incomplete, regenerate using totalMonths
