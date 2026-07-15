@@ -180,7 +180,7 @@ async function printMemberStatement(mid){
                 <td style="color:#555;">Rs.${chitAmount>0?chitAmount.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;color:${balAmt>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+balAmt.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;color:${totalMonthBal>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+totalMonthBal.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;font-weight:700;color:${statusColor};">${status}</td>
                 <td${rs} style="vertical-align:middle;color:#555;">${matchPay&&matchPay.paidBy?matchPay.paidBy:'—'}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
