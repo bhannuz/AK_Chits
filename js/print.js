@@ -3,6 +3,17 @@
 // Edit only this file when changing member statement print, group PDF generation
 // ═══════════════════════════════════════════════════════════
 
+// Normalize payment mode display
+function normalizePaidBy(paidBy) {
+    if(!paidBy) return '—';
+    const mode = String(paidBy).toLowerCase();
+    if(mode.includes('phone') || mode.includes('pe')) return 'Phone Pe';
+    if(mode.includes('gpay')) return 'Gpay';
+    if(mode.includes('bank')) return 'Bank';
+    if(mode.includes('cash')) return 'Cash';
+    return paidBy;
+}
+
 // PRINT MEMBER STATEMENT
 // ══════════════════════════════════════════
 async function printMemberStatement(mid){
@@ -198,7 +209,7 @@ async function printMemberStatement(mid){
                 <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:${monthlyBalance>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+monthlyBalance.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;font-weight:700;color:${statusColor};">${status}</td>
-                <td${rs} style="vertical-align:middle;color:#555;">${matchPay&&matchPay.paidBy?matchPay.paidBy:'—'}</td>
+                <td${rs} style="vertical-align:middle;color:#555;">${matchPay?normalizePaidBy(matchPay.paidBy):'—'}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
             </tr>`;
             
@@ -208,7 +219,7 @@ async function printMemberStatement(mid){
                 monthPayments.forEach((pay, idx)=>{
                     if(idx === 0) return; // Skip first, already shown above
                     const payDate = fmtDate(pay.date);
-                    const paidBy = pay.paidBy || '—';
+                    const paidBy = normalizePaidBy(pay.paidBy);
                     const cp2 = pay.chitPicked === 'Yes';
                     subRows += `<tr style="background:#fafafa;border-left:3px solid #e0e7ff;">
                         <td style="text-align:center;color:#bbb;">└</td>
@@ -717,7 +728,7 @@ async function generateGroupPDF(gid){
                 <td>₹${(parseFloat(p.chit)||0).toLocaleString('en-IN')}${isMulti?`/mo×${p.numMonths}`:''}</td>
                 <td style="color:#065f46;font-weight:700;">Rs.${(parseFloat(p.paid)||0).toLocaleString('en-IN')}</td>
                 <td style="color:${(parseFloat(p.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;min-width:40px;">Rs.${(parseFloat(p.balance)||0).toLocaleString('en-IN')}</td>
-                <td style="color:#888;">${p.paidBy||'—'}</td>
+                <td style="color:#888;">${normalizePaidBy(p.paidBy)}</td>
                 <td style="text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">✅</span>':'—'}</td>
             </tr>`;
         }).join('');
