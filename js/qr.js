@@ -613,11 +613,13 @@ async function generateWaReminders(){
                 .replace(/\[memberName\]/gi,             member.name)
                 .replace(/\[Name\]/gi,                   member.name)
                 .replace(/\[memberPhone\]/gi,            member.phone||'—')
-                .replace(/\[balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
-                .replace(/\[Balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
-                .replace(/\[totalPaid\]/gi,              '₹' + totalPaid.toLocaleString('en-IN'))
                 .replace(/\[contact\]/gi,                contact||'Admin')
                 .replace(/\[Contact\]/gi,                contact||'Admin')
+                // ── Financial placeholders ──
+                .replace(/\[totalPaid\]/gi,              '₹' + totalPaid.toLocaleString('en-IN'))
+                .replace(/\[balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
+                .replace(/\[Balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
+                .replace(/\[totalBalance\]/gi,           '₹' + totalBal.toLocaleString('en-IN'))
                 // ── Group placeholders ──
                 .replace(/\[groupName\]/gi,              firstGroup.name||allGroupNames||'—')
                 .replace(/\[allGroups\]/gi,              allGroupNames||'—')
@@ -625,11 +627,15 @@ async function generateWaReminders(){
                 .replace(/\[groupLines\]/gi,             groupLines)
                 .replace(/\[monthlyAmount\]/gi,          firstGroup.monthly ? '₹'+firstGroup.monthly.toLocaleString('en-IN') : '—')
                 .replace(/\[nextDueDate\]/gi,            firstGroup.nextDue||'—')
-                // ── Progress placeholders ──
+                // ── Progress & Timeline placeholders ──
+                .replace(/\[paidMonths\]/gi,             String(totalInstCompleted))
                 .replace(/\[installmentsCompleted\]/gi,  String(totalInstCompleted))
                 .replace(/\[totalMonths\]/gi,            String(totalMonthsAll))
                 .replace(/\[monthsRemaining\]/gi,        String(totalPendingAll))
-                .replace(/\[completionPercentage\]/gi,   completionPct + '%');
+                .replace(/\[progressPercent\]/gi,        completionPct + '%')
+                .replace(/\[completionPercentage\]/gi,   completionPct + '%')
+                .replace(/\[startDate\]/gi,              mGroups.length > 0 && mGroups[0].startDate ? (() => {const d = new Date(mGroups[0].startDate + 'T00:00:00'); return fmtDateObj(d);})() : '—')
+                .replace(/\[endDate\]/gi,                mGroups.length > 0 && mGroups[0].startDate ? (() => {const d = new Date(mGroups[0].startDate + 'T00:00:00'); d.setMonth(d.getMonth() + 21); return fmtDateObj(d);})() : '—');
         } else {
             message =
                 'Dear ' + member.name + ',\n\n' +
