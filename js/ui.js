@@ -3,6 +3,17 @@
 // Edit only this file when changing tab switching, toasts, modals, search, updateUI
 // ═══════════════════════════════════════════════════════════
 
+// Normalize payment mode display
+function normalizePaidBy(paidBy) {
+    if(!paidBy) return '—';
+    const mode = String(paidBy).toLowerCase();
+    if(mode.includes('phone') || mode.includes('pe')) return 'Phone Pe';
+    if(mode.includes('gpay')) return 'Gpay';
+    if(mode.includes('bank')) return 'Bank';
+    if(mode.includes('cash')) return 'Cash';
+    return paidBy;
+}
+
 function switchTab(t){
     document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
@@ -210,7 +221,7 @@ async function renderMemberStats(filterGid, filterMonth) {
             return `<tr style="border-bottom:${i<sorted.length-1?'1px solid rgba(255,255,255,0.04)':'none'};">
                 <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${p.date||'—'}</td>
                 <td style="padding:6px 12px;font-size:0.72rem;font-weight:800;color:#34d399;text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.paid)||0)}</td>
-                <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);">${p.paidBy||'—'}</td>
+                <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);">${normalizePaidBy(p.paidBy)}</td>
                 <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g?.name||'—'}</td>
                 <td style="padding:6px 12px;font-size:0.65rem;color:${p.chitPicked==='Yes'?'#34d399':'var(--text-dim)'};">${p.chitPicked==='Yes'?'✅':''}</td>
             </tr>`;
@@ -267,7 +278,7 @@ async function renderMemberPayHistory() {
                         <td style="padding:7px 10px;font-size:0.72rem;color:white;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g?.name||'—'}${months}</td>
                         <td style="padding:7px 10px;font-size:0.75rem;font-weight:800;color:#34d399;text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.paid)||0)}</td>
                         <td style="padding:7px 10px;font-size:0.72rem;color:${parseFloat(p.balance)>0?'#f87171':'#34d399'};text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.balance)||0)}</td>
-                        <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">${p.paidBy||'—'}</td>
+                        <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">${normalizePaidBy(p.paidBy)}</td>
                         <td style="padding:7px 10px;font-size:0.72rem;text-align:center;">${p.chitPicked==='Yes'?'✅':'—'}</td>
                     </tr>`;
                 }).join('')}</tbody>
@@ -366,7 +377,7 @@ async function renderMemberStats(skipFilterInit) {
             return `<tr style="border-bottom:${i<sorted.length-1?'1px solid rgba(255,255,255,0.04)':'none'};">
                 <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${p.date||'—'}</td>
                 <td style="padding:6px 10px;font-size:0.75rem;font-weight:800;color:#34d399;text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.paid)||0)}${months}</td>
-                <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);">${p.paidBy||'—'}</td>
+                <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);">${normalizePaidBy(p.paidBy)}</td>
                 <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);max-width:75px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g?.name||'—'}</td>
                 <td style="padding:6px 10px;font-size:0.7rem;text-align:center;">${p.chitPicked==='Yes'?'✅':''}</td>
             </tr>`;
