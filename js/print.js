@@ -108,7 +108,7 @@ async function printMemberStatement(mid){
                 return getMonthSlot(allDueDates,p.date)===i;
             });
             
-            // Find ALL payments for this month (for status calculation)
+            // Find ALL payments for this month
             const monthPayments = slotPays.filter(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
                 if(p.monthSlot!=null) return p.monthSlot===i;
@@ -123,9 +123,9 @@ async function printMemberStatement(mid){
             const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
             const balAmt        = matchPay ? (parseFloat(matchPay.balance)||0)  : 0;
             
-            // Status based on TOTAL balance for the month
-            const isFullPaid    = paidSlotSet.has(i) && chitAmt>0 && totalMonthBal<=0;
-            const isPartialPaid = paidSlotSet.has(i) && chitAmt>0 && totalMonthPaid>0 && totalMonthBal>0;
+            // Status based on TOTAL balance for this month - if balance is 0 or less, it's paid
+            const isFullPaid    = paidSlotSet.has(i) && totalMonthBal <= 0;
+            const isPartialPaid = paidSlotSet.has(i) && totalMonthPaid > 0 && totalMonthBal > 0;
             const isAnyPaid     = paidSlotSet.has(i);
             const isOverdue     = !isAnyPaid && dueDate<todayStr;
             const cp            = matchPay && matchPay.chitPicked==='Yes';
@@ -140,7 +140,7 @@ async function printMemberStatement(mid){
 
             // Status
             let status;
-            if(isFullPaid||(isAnyPaid&&chitAmt===0)) status='✅ Paid';
+            if(isFullPaid) status='✅ Paid';
             else if(isPartialPaid) status='⚡ Partial';
             else if(isOverdue)     status='🔴 Overdue';
             else                   status='⏳ Pending';
@@ -177,7 +177,7 @@ async function printMemberStatement(mid){
             let mainRow = `<tr style="background:${bg};${bl}">
                 <td style="text-align:center;color:#888;">${i+1}</td>
                 <td>${fmtDate(dueDate)}${multiTag}</td>
-                <td style="color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
+                <td style="color:#555;">Rs.${monthlyChitAmount>0?monthlyChitAmount.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;color:${balAmt>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+balAmt.toLocaleString('en-IN'):'—'}</td>
@@ -575,7 +575,7 @@ async function printMemberStatement(mid){
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
                 <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
                 <div class="stat"><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} / ${endDateDisp}</div><div class="stat-l">Start Date / End</div></div>
-                <div class="stat"><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,monthsPaid=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);monthsPaid=Math.max(monthsPaid,gPays.reduce((s,p)=>s+(p.numMonths||1),0));}});return monthsPaid+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid / Total Months</div></div>
+                <div class="stat"><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,paidMonths=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);const uniqueDueDates=new Set();gPays.forEach(p=>{if(p.date){const sd=new Date(p.date+'T00:00:00');const sdn=sd.toISOString().split('T')[0];uniqueDueDates.add(sdn);}});paidMonths=Math.max(paidMonths,uniqueDueDates.size);}});return paidMonths+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid / Total Months</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
