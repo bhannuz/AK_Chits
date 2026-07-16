@@ -215,7 +215,8 @@ async function renderCollectionsTab(){
             const isPast    = dueDate < todayStr;
             const isToday   = dueDate === todayStr;
             const isFuture  = dueDate > todayStr;
-            const status    = received===0&&isFuture ? 'upcoming'
+            const status    = membersPaidThisMonth>0&&membersPaidThisMonth===totalSlots ? 'full'
+                            : received===0&&isFuture ? 'upcoming'
                             : received===0&&(isPast||isToday) ? 'overdue'
                             : balance<0 ? 'deficit'
                             : payout>0&&balance===0 ? 'full'
