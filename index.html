@@ -572,10 +572,10 @@
         <!-- ── Statistics Sub-tab ── -->
         <div id="bkStatsPanel">
 
-            <!-- Filters: 2x2 grid, member is dropdown filtered by group -->
+            <!-- Filters: 2x3 grid, member is dropdown filtered by group -->
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px;">
                 <div style="font-size:0.65rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">🔍 Filters</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
                     <div>
                         <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">🏦 Group</label>
                         <select id="statGroupFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="onStatGroupFilterChange()">
@@ -586,6 +586,12 @@
                         <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">👤 Member</label>
                         <select id="statMemberFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="applyStatSubFilter()">
                             <option value="">All Members</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">📅 Month</label>
+                        <select id="statMonthFilter" class="form-input" style="margin-bottom:0;font-size:0.78rem;padding:7px 9px;" onchange="applyStatSubFilter()">
+                            <option value="">All Months</option>
                         </select>
                     </div>
                     <div>
@@ -614,6 +620,7 @@
             <input type="hidden" id="sfActiveMode">
             <input type="hidden" id="sfActiveChit">
             <input type="hidden" id="sfActiveMember">
+            <input type="hidden" id="sfActiveMonth">
             <div style="display:none">
                 <select id="statFilterType"></select>
                 <div id="statSubFilterWrap"><div id="sfGroup"></div><div id="sfMode"></div><div id="sfChit"></div><div id="sfMember"></div></div>
