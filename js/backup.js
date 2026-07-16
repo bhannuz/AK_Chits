@@ -130,7 +130,7 @@ function hexToRgb(hex) {
 }
 
 function clearStatFilters() {
-    ['statGroupFilter','statModeFilter','statChitFilter','statMemberFilter'].forEach(id => {
+    ['statGroupFilter','statModeFilter','statChitFilter','statMemberFilter','statMonthFilter'].forEach(id => {
         const el = document.getElementById(id); if(el) el.value='';
     });
     loadStatistics();
@@ -174,6 +174,8 @@ async function loadStatistics() {
     const grpSel  = document.getElementById('statGroupFilter');
     const modeSel = document.getElementById('statModeFilter');
     const mbrSel  = document.getElementById('statMemberFilter');
+    const monthSel = document.getElementById('statMonthFilter');
+    
     if (grpSel) {
         const curG = grpSel.value;
         grpSel.innerHTML = '<option value="">All Groups</option>' +
@@ -185,11 +187,25 @@ async function loadStatistics() {
         modeSel.innerHTML = '<option value="">All Modes</option>' +
             modes.map(m=>`<option value="${m}"${m===curM?' selected':''}>${m}</option>`).join('');
     }
+    if (monthSel) {
+        const curMo = monthSel.value;
+        const months = [...new Set(allPays.map(p=>p.date).filter(Boolean))].map(d=>{
+            const date = new Date(d+'T00:00:00');
+            const monthStr = date.toLocaleDateString('en-IN', {month:'short', year:'numeric'});
+            const monthKey = date.toISOString().substring(0, 7);
+            return {key: monthKey, display: monthStr};
+        }).sort((a,b)=>b.key.localeCompare(a.key));
+        
+        const uniqueMonths = [...new Map(months.map(m=>[m.key, m])).values()];
+        monthSel.innerHTML = '<option value="">All Months</option>' +
+            uniqueMonths.map(m=>`<option value="${m.key}"${m.key===curMo?' selected':''}>${m.display}</option>`).join('');
+    }
 
     // ── Read filters directly from inputs
     const grpFilter  = (document.getElementById('statGroupFilter')  || {}).value || '';
     const modeFilter = (document.getElementById('statModeFilter')   || {}).value || '';
     const chitFilter = (document.getElementById('statChitFilter')   || {}).value || '';
+    const monthFilter = (document.getElementById('statMonthFilter')  || {}).value || '';
     const memFilter  = ((document.getElementById('statMemberFilter')|| {}).value || '').trim();
 
     // Populate member dropdown scoped to selected group
@@ -213,6 +229,10 @@ async function loadStatistics() {
         if (modeFilter && (p.paidBy || '') !== modeFilter) return false;
         if (chitFilter && (p.chitPicked || 'No') !== chitFilter) return false;
         if (filteredMemberIds && !filteredMemberIds.includes(p.memberId)) return false;
+        if (monthFilter && p.date) {
+            const pDateMonth = p.date.substring(0, 7);
+            if (pDateMonth !== monthFilter) return false;
+        }
         return true;
     });
 
