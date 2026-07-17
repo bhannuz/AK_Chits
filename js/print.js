@@ -234,7 +234,7 @@ async function printMemberStatement(mid){
         }).join('');
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:0;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
-            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">\n                <colgroup><col style="width:5%"><col style="width:15%"><col style="width:12%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:9%"></colgroup>
+            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">\n                <colgroup><col style="width:3%"><col style="width:10%"><col style="width:13%"><col style="width:10%"><col style="width:13%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:6%"></colgroup>
                 <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Mode</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;">Chit Picked</th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:9px;color:#333;">
@@ -733,7 +733,7 @@ async function generateGroupPDF(gid){
                 <span style="float:right;font-size:11px;">Paid: <b style="color:#065f46;">₹${mPaid.toLocaleString('en-IN')}</b> &nbsp; Bal: <b style="color:#92400e;">₹${mBal.toLocaleString('en-IN')}</b></span>
             </div>
             <table style="border:3px solid #f39c12;border-collapse:collapse;">
-                <colgroup><col style="width:4%"><col style="width:22%"><col style="width:12%"><col style="width:15%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:8%"></colgroup>
+                <colgroup><col style="width:3%"><col style="width:12%"><col style="width:13%"><col style="width:11%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:12%"></colgroup>
                 <thead><tr style="background:#f5f5f5;border-bottom:3px solid #f39c12;"><th style="border-right:1px solid #f39c12;font-weight:800;">​#</th><th style="border-right:1px solid #f39c12;font-weight:800;">Month Covered</th><th style="border-right:1px solid #f39c12;font-weight:800;">Pay Date</th><th style="border-right:1px solid #f39c12;font-weight:800;">Chit Amt</th><th style="border-right:1px solid #f39c12;font-weight:800;">Paid</th><th style="border-right:1px solid #f39c12;font-weight:800;">Balance</th><th style="border-right:1px solid #f39c12;font-weight:800;">Mode</th><th style="font-weight:800;">Chit?</th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:3px solid #f39c12;">
@@ -895,7 +895,7 @@ async function generateGroupPDF(gid){
     </div>
     <div class="sec-title">Member Summary</div>
     <table>
-        <colgroup><col style="width:4%"><col style="width:26%"><col style="width:14%"><col style="width:14%"><col style="width:12%"><col style="width:14%"><col style="width:16%"></colgroup>
+        <colgroup><col style="width:3%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:14%"><col style="width:15%"><col style="width:13%"></colgroup>
         <thead><tr><th>#</th><th>Member</th><th>Total Paid</th><th>Balance</th><th>Months</th><th>Last Payment</th><th>Chit Picked</th></tr></thead>
         <tbody>${summaryRows}
         <tr style="background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;">
