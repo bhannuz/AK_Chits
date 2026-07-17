@@ -221,10 +221,10 @@ async function printMemberStatement(mid){
                         <td style="color:#999;font-size:9px;">(L${idx+1})</td>
                         <td style="color:#bbb;">—</td>
                         <td style="color:#065f46;font-weight:700;">${payDate}</td>
-                        <td style="color:#065f46;font-weight:700;">Rs.${(parseFloat(pay.paid)||0).toLocaleString('en-IN')}</td>
-                        <td style="color:${(parseFloat(pay.balance)||0)>0?'#92400e':'#065f46'};font-weight:700;">Rs.${(parseFloat(pay.balance)||0).toLocaleString('en-IN')}</td>
-                        <td style="color:#bbb;font-size:9px;">—</td>
-                        <td style="color:#555;font-size:9px;">${paidBy}</td>
+                        <td style="text-align:center;color:#065f46;font-weight:700;">Rs.${(parseFloat(pay.paid)||0).toLocaleString('en-IN')}</td>
+                        <td style="text-align:center;color:#bbb;font-size:9px;">—</td>
+                        <td style="text-align:center;color:#bbb;font-size:9px;">—</td>
+                        <td style="text-align:center;color:#555;font-size:9px;">${paidBy}</td>
                         <td style="text-align:center;font-size:9px;">${cp2?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
                     </tr>`;
                 });
