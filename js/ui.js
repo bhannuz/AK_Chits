@@ -218,11 +218,19 @@ async function renderMemberStats(filterGid, filterMonth) {
         const sorted = [...myPays].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
         monEl.innerHTML = sorted.length ? sorted.map((p,i)=>{
             const g = gs.find(x=>x.id===p.groupId);
+            const dateFormatted = p.date ? (() => {
+                const d = new Date(p.date+'T00:00:00');
+                const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const dd = String(d.getDate()).padStart(2,'0');
+                const mm = m[d.getMonth()];
+                const yy = String(d.getFullYear()).slice(-2);
+                return `${dd}/${mm}/${yy}`;
+            })() : '—';
             return `<tr style="border-bottom:${i<sorted.length-1?'1px solid rgba(255,255,255,0.04)':'none'};">
-                <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${p.date||'—'}</td>
+                <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${dateFormatted}</td>
                 <td style="padding:6px 12px;font-size:0.72rem;font-weight:800;color:#34d399;text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.paid)||0)}</td>
                 <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);">${normalizePaidBy(p.paidBy)}</td>
-                <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g?.name||'—'}</td>
+                <td style="padding:6px 12px;font-size:0.72rem;color:var(--text-dim);">${g?.name||'—'}</td>
                 <td style="padding:6px 12px;font-size:0.65rem;color:${p.chitPicked==='Yes'?'#34d399':'var(--text-dim)'};">${p.chitPicked==='Yes'?'✅':''}</td>
             </tr>`;
         }).join('') : '<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--text-dim);font-size:0.75rem;">No payments</td></tr>';
@@ -261,28 +269,38 @@ async function renderMemberPayHistory() {
         </div>
         <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
             <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">💳 All Payments (${myPays.length})</div>
-            <table style="width:100%;border-collapse:collapse;">
+            <div style="overflow-x:auto;">
+            <table style="width:100%;border-collapse:collapse;table-layout:auto;">
                 <thead><tr style="background:rgba(255,255,255,0.02);">
-                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Date</th>
-                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
-                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
-                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;">Bal</th>
-                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;">Mode</th>
-                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:center;">🎯</th>
+                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;white-space:nowrap;">Date</th>
+                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;white-space:nowrap;">Group</th>
+                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;white-space:nowrap;">Paid</th>
+                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:right;white-space:nowrap;">Bal</th>
+                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:left;white-space:nowrap;">Mode</th>
+                    <th style="padding:6px 10px;font-size:0.6rem;color:var(--text-dim);font-weight:700;text-align:center;white-space:nowrap;">🎯</th>
                 </tr></thead>
                 <tbody>${myPays.map((p,i)=>{
                     const g = gs.find(x=>x.id===p.groupId);
                     const months = Array.isArray(p.monthSlots)&&p.monthSlots.length>1 ? ` (${p.monthSlots.length}mo)` : '';
+                    const dateFormatted = p.date ? (() => {
+                        const d = new Date(p.date+'T00:00:00');
+                        const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                        const dd = String(d.getDate()).padStart(2,'0');
+                        const mm = m[d.getMonth()];
+                        const yy = String(d.getFullYear()).slice(-2);
+                        return `${dd}/${mm}/${yy}`;
+                    })() : '—';
                     return `<tr style="border-bottom:${i<myPays.length-1?'1px solid rgba(255,255,255,0.04)':'none'};">
-                        <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${p.date||'—'}</td>
-                        <td style="padding:7px 10px;font-size:0.72rem;color:white;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g?.name||'—'}${months}</td>
+                        <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${dateFormatted}</td>
+                        <td style="padding:7px 10px;font-size:0.72rem;color:white;">${g?.name||'—'}${months}</td>
                         <td style="padding:7px 10px;font-size:0.75rem;font-weight:800;color:#34d399;text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.paid)||0)}</td>
                         <td style="padding:7px 10px;font-size:0.72rem;color:${parseFloat(p.balance)>0?'#f87171':'#34d399'};text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.balance)||0)}</td>
                         <td style="padding:7px 10px;font-size:0.72rem;color:var(--text-dim);">${normalizePaidBy(p.paidBy)}</td>
-                        <td style="padding:7px 10px;font-size:0.72rem;text-align:center;">${p.chitPicked==='Yes'?'✅':'—'}</td>
+                        <td style="padding:7px 10px;font-size:0.72rem;text-align:center;white-space:nowrap;">${p.chitPicked==='Yes'?'✅':'—'}</td>
                     </tr>`;
                 }).join('')}</tbody>
             </table>
+            </div>
         </div>`;
 }
 
@@ -374,11 +392,19 @@ async function renderMemberStats(skipFilterInit) {
         monEl.innerHTML = sorted.length ? sorted.map((p,i)=>{
             const g = gs.find(x=>x.id===p.groupId);
             const months = Array.isArray(p.monthSlots)&&p.monthSlots.length>1?` ×${p.monthSlots.length}`:'';
+            const dateFormatted = p.date ? (() => {
+                const d = new Date(p.date+'T00:00:00');
+                const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                const dd = String(d.getDate()).padStart(2,'0');
+                const mm = m[d.getMonth()];
+                const yy = String(d.getFullYear()).slice(-2);
+                return `${dd}/${mm}/${yy}`;
+            })() : '—';
             return `<tr style="border-bottom:${i<sorted.length-1?'1px solid rgba(255,255,255,0.04)':'none'};">
-                <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${p.date||'—'}</td>
+                <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);white-space:nowrap;">${dateFormatted}</td>
                 <td style="padding:6px 10px;font-size:0.75rem;font-weight:800;color:#34d399;text-align:right;white-space:nowrap;">${fmtAmt(parseFloat(p.paid)||0)}${months}</td>
                 <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);">${normalizePaidBy(p.paidBy)}</td>
-                <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);max-width:75px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${g?.name||'—'}</td>
+                <td style="padding:6px 10px;font-size:0.72rem;color:var(--text-dim);">${g?.name||'—'}</td>
                 <td style="padding:6px 10px;font-size:0.7rem;text-align:center;">${p.chitPicked==='Yes'?'✅':''}</td>
             </tr>`;
         }).join('') : '<tr><td colspan="5" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.75rem;">No payments for this filter</td></tr>';
