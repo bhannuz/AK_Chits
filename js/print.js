@@ -199,12 +199,12 @@ async function printMemberStatement(mid){
             let mainRow = `<tr style="background:${bg};${bl}">
                 <td style="text-align:center;color:#888;">${i+1}</td>
                 <td>${fmtDate(dueDate)}${multiTag}</td>
-                <td style="color:#555;">Rs.${chitAmount>0?chitAmount.toLocaleString('en-IN'):'—'}</td>
+                <td style="text-align:center;color:#555;">Rs.${chitAmount>0?chitAmount.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
-                <td${rs} style="vertical-align:middle;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;color:${monthlyBalance>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+monthlyBalance.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;font-weight:700;color:${statusColor};">${status}</td>
-                <td${rs} style="vertical-align:middle;color:#555;">${matchPay?normalizePaidBy(matchPay.paidBy):'—'}</td>
+                <td${rs} style="vertical-align:middle;text-align:center;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;text-align:center;color:${monthlyBalance>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+monthlyBalance.toLocaleString('en-IN'):'—'}</td>
+                <td${rs} style="vertical-align:middle;text-align:center;font-weight:700;color:${statusColor};">${status}</td>
+                <td${rs} style="vertical-align:middle;text-align:center;color:#555;">${matchPay?normalizePaidBy(matchPay.paidBy):'—'}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
             </tr>`;
             
@@ -234,14 +234,14 @@ async function printMemberStatement(mid){
         }).join('');
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:0;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
-            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">\n                <colgroup><col style="width:3%"><col style="width:10%"><col style="width:13%"><col style="width:10%"><col style="width:13%"><col style="width:13%"><col style="width:11%"><col style="width:11%"><col style="width:6%"></colgroup>
-                <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;">Mode</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;">Chit Picked</th></tr></thead>
+            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">\n                <colgroup><col style="width:3%"><col style="width:9%"><col style="width:11%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:13%"></colgroup>
+                <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Mode</th><th style="font-size:7px;font-weight:800;color:#333;padding:3px 2px;text-align:center;line-height:1.2;"><div style="display:block;margin-bottom:1px;">Chit</div><div style="display:block;">Picked</div></th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:9px;color:#333;">
-                    <td colspan="4" style="text-align:right;padding:3px 2px;padding-right:4px;border-right:1px solid #f39c12;">Total</td>
-                    <td style="color:#065f46;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gPaid.toLocaleString('en-IN')}</td>
-                    <td style="color:#92400e;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gBal.toLocaleString('en-IN')}</td>
-                    <td colspan="3"></td>
+                    <td colspan="4" style="text-align:center;padding:3px 2px;border-right:1px solid #f39c12;font-weight:800;">Total</td>
+                    <td style="text-align:center;color:#065f46;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gPaid.toLocaleString('en-IN')}</td>
+                    <td style="text-align:center;color:#92400e;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gBal.toLocaleString('en-IN')}</td>
+                    <td colspan="3" style="text-align:center;"></td>
                 </tr></tbody>
             </table>
         </div>`;
