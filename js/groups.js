@@ -364,9 +364,21 @@ async function renderGroupsTab(){
         const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
         const gPays=ps.filter(p=>p.groupId===g.id);
         const tPaid=gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal=gPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
-        const picked=gPays.filter(p=>p.chitPicked==='Yes').length;
+        
+        // Calculate total balance: total commitment - total paid
         const totalMonths=parseInt(g.duration||g.gDuration)||21;
+        const monthlyAmount=parseFloat(g.monthly||g.gMonthly)||0;
+        // Count total slots (members with multiple chits count as multiple slots)
+        let totalSlots = 0;
+        gMs.forEach(m => {
+            const enr = (m.enrollments||[]).find(e => e.groupId === g.id);
+            const qty = enr ? parseInt(enr.qty||1) : 1;
+            totalSlots += qty;
+        });
+        const totalCommitment = totalSlots * totalMonths * monthlyAmount;
+        const tBal = Math.max(0, totalCommitment - tPaid);
+        
+        const picked=gPays.filter(p=>p.chitPicked==='Yes').length;
         let elapsed=0;
         if(g.startDate||g.gStart){const _s=new Date(g.startDate||g.gStart),_n=new Date();elapsed=Math.max(0,Math.min(totalMonths,(_n.getFullYear()-_s.getFullYear())*12+(_n.getMonth()-_s.getMonth())+1));}
         const left=Math.max(0,totalMonths-elapsed);const pct=Math.min(100,Math.round(elapsed/totalMonths*100));
