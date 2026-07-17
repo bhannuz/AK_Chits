@@ -176,7 +176,11 @@ async function renderCollectionsTab(){
         const totalReceived = gPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
         const elapsed = allDD.filter(d=>d<=todayStr).length;
         const totalPayout = allDD.reduce((s,_,idx)=>s+(payouts[g.id+'_'+idx]||0),0);
-        const totalBalance = totalReceived - totalPayout;
+        
+        // Calculate total commitment: all members × all months × monthly amount
+        const monthlyAmount = parseFloat(g.monthly||g.gMonthly||0);
+        const totalCommitment = totalSlots * totalMonths * monthlyAmount;
+        const totalBalance = Math.max(0, totalCommitment - totalReceived);
 
         const rows = allDD.map((dueDate, idx)=>{
             const slotPays = gPays.filter(p=>{
@@ -210,8 +214,9 @@ async function renderCollectionsTab(){
                 const perMonth = p.numMonths&&p.numMonths>1 ? (parseFloat(p.paidPerMonth)||0) : (parseFloat(p.paid)||0);
                 return s + perMonth;
             },0);
+            const monthlyCommitment = totalSlots * monthlyAmount;
             const payout    = payouts[g.id+'_'+idx]||0;
-            const balance   = received - payout;
+            const balance   = Math.max(0, monthlyCommitment - received);
             const isPast    = dueDate < todayStr;
             const isToday   = dueDate === todayStr;
             const isFuture  = dueDate > todayStr;
