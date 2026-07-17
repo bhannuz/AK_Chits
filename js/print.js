@@ -1,17 +1,12 @@
-// ═══════════════════════════════════════════════════════════
-// AK Chit Funds — PRINT & PDF
-// Edit only this file when changing member statement print, group PDF generation
-// ═══════════════════════════════════════════════════════════
-
-// Normalize payment mode display
-function normalizePaidBy(paidBy) {
-    if(!paidBy) return '—';
-    const mode = String(paidBy).toLowerCase();
-    if(mode.includes('phone') || mode.includes('pe')) return 'Phone Pe';
-    if(mode.includes('gpay')) return 'Gpay';
-    if(mode.includes('bank')) return 'Bank';
-    if(mode.includes('cash')) return 'Cash';
-    return paidBy;
+// Date formatters
+function fmtDate(dateStr) {
+    if(!dateStr) return '—';
+    const d = new Date(dateStr + 'T00:00:00');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = months[d.getMonth()];
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
 }
 
 // PRINT MEMBER STATEMENT
