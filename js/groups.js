@@ -401,7 +401,6 @@ async function renderGroupsTab(){
                 for(let q=0;q<qty;q++) expandedSlots.push({m, slotNum:q+1, totalSlots:qty, isJoint:false, coM:null, coMid:''});
             }
         });
-        const totalSlots = expandedSlots.length;
         const todayStr = new Date().toISOString().split('T')[0];
 
         // ── Per-group member sort
