@@ -266,7 +266,6 @@ async function renderCollectionsTab(){
                     <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
                         <span style="font-size:0.68rem;color:#34d399;">Rcvd: ${fmtAmt(totalReceived)}</span>
                         <span style="font-size:0.68rem;color:#a5b4fc;">Paid out: ${fmtAmt(totalPayout)}</span>
-                        <span style="font-size:0.68rem;color:${balColor};">Bal: ${totalBalance!==0?(totalBalance>0?'+':'')+fmtAmt(Math.abs(totalBalance)):'—'}</span>
                         <span style="font-size:0.68rem;color:var(--text-dim);">${elapsed}/${totalMonths} mo</span>
                     </div>
                 </div>
@@ -544,7 +543,6 @@ async function renderGroupsTab(){
                 </div>
                 <div class="row g-2 mt-2">
                     <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Collected</div><div class="mini-stat-val" style="color:#34d399;font-size:clamp(0.7rem,2.2vw,0.9rem);">${fmtAmt(tPaid)}</div></div></div>
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #f59e0b;"><div class="mini-stat-lbl">Balance</div><div class="mini-stat-val" style="color:#f59e0b;">${fmtAmt(tBal)}</div></div></div>
                     <div class="col-3"><div class="mini-stat" style="border-top:2px solid #a5b4fc;"><div class="mini-stat-lbl">Pending</div><div class="mini-stat-val" style="color:#a5b4fc;">${left}/${totalMonths}</div></div></div>
                     <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Picked</div><div class="mini-stat-val" style="color:#34d399;">${picked}</div></div></div>
                 </div>
