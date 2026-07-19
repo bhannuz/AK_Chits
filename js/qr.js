@@ -567,7 +567,9 @@ async function generateWaReminders(){
         // Calculate pending months across all groups
         var mPays     = ps.filter(function(p){ return p.memberId === member.id; });
         var totalPaid = mPays.reduce(function(s,p){ return s+(parseFloat(p.paid)||0); }, 0);
-        var totalBal  = mPays.reduce(function(s,p){ return s+(parseFloat(p.balance)||0); }, 0);
+        var totalBal  = (typeof computeCorrectedTotalBalance === 'function')
+            ? computeCorrectedTotalBalance(mPays, gs)
+            : mPays.reduce(function(s,p){ return s+(parseFloat(p.balance)||0); }, 0);
         var mGroups   = gs.filter(function(g){ return member.groupIds && member.groupIds.includes(g.id); });
 
         // Build pending summary
@@ -608,11 +610,38 @@ async function generateWaReminders(){
             var totalPendingAll = Math.max(0, totalMonthsAll - totalInstCompleted);
             var completionPct = totalMonthsAll > 0 ? Math.round(totalInstCompleted/totalMonthsAll*100) : 0;
 
+            // Find the underlying group object behind firstGroup (for dueDay/amount lookups)
+            var firstGroupObj = mGroups.find(function(g){ return g.name === firstGroup.name; }) || {};
+            var dueAmount = firstGroup.monthly || 0;
+
+            // Most recent payment made by this member (across all their groups)
+            var sortedPays = mPays.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+            var lastPay = sortedPays[0] || null;
+
+            // Total chit value of the first pending group
+            var chitValue = firstGroupObj.amount ? parseFloat(firstGroupObj.amount) : 0;
+
+            // Days remaining until this member's next due date (first pending group)
+            var daysUntilDue = '—';
+            if(firstGroup.nextDue){
+                var dueParts = firstGroup.nextDue.split('/'); // dd/Mon/yy style from fmtDateObj — fall back to raw diff via Date parsing below if needed
+                var dueDateObj = mGroups.length && firstGroupObj.dueDay ? (function(){
+                    var d = new Date(); d.setHours(0,0,0,0); d.setDate(parseInt(firstGroupObj.dueDay));
+                    if(d < new Date(new Date().setHours(0,0,0,0))) d.setMonth(d.getMonth()+1);
+                    return d;
+                })() : null;
+                if(dueDateObj){
+                    var diffMs = dueDateObj - new Date(new Date().setHours(0,0,0,0));
+                    daysUntilDue = String(Math.max(0, Math.round(diffMs/86400000)));
+                }
+            }
+
             message = template
                 // ── Member placeholders ──
                 .replace(/\[memberName\]/gi,             member.name)
                 .replace(/\[Name\]/gi,                   member.name)
                 .replace(/\[memberPhone\]/gi,            member.phone||'—')
+                .replace(/\[memberId\]/gi,               member.id||'—')
                 .replace(/\[contact\]/gi,                contact||'Admin')
                 .replace(/\[Contact\]/gi,                contact||'Admin')
                 // ── Financial placeholders ──
@@ -620,6 +649,10 @@ async function generateWaReminders(){
                 .replace(/\[balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
                 .replace(/\[Balance\]/gi,                '₹' + totalBal.toLocaleString('en-IN'))
                 .replace(/\[totalBalance\]/gi,           '₹' + totalBal.toLocaleString('en-IN'))
+                .replace(/\[dueAmount\]/gi,              '₹' + dueAmount.toLocaleString('en-IN'))
+                .replace(/\[chitValue\]/gi,              chitValue ? '₹' + chitValue.toLocaleString('en-IN') : '—')
+                .replace(/\[lastPaidAmount\]/gi,          lastPay ? '₹' + (parseFloat(lastPay.paid)||0).toLocaleString('en-IN') : '—')
+                .replace(/\[lastPaidDate\]/gi,            lastPay && lastPay.date ? (() => {const d = new Date(lastPay.date + 'T00:00:00'); return fmtDateObj(d);})() : '—')
                 // ── Group placeholders ──
                 .replace(/\[groupName\]/gi,              firstGroup.name||allGroupNames||'—')
                 .replace(/\[allGroups\]/gi,              allGroupNames||'—')
@@ -627,6 +660,8 @@ async function generateWaReminders(){
                 .replace(/\[groupLines\]/gi,             groupLines)
                 .replace(/\[monthlyAmount\]/gi,          firstGroup.monthly ? '₹'+firstGroup.monthly.toLocaleString('en-IN') : '—')
                 .replace(/\[nextDueDate\]/gi,            firstGroup.nextDue||'—')
+                .replace(/\[dueDay\]/gi,                 firstGroupObj.dueDay ? String(firstGroupObj.dueDay) : '—')
+                .replace(/\[daysUntilDue\]/gi,           daysUntilDue)
                 // ── Progress & Timeline placeholders ──
                 .replace(/\[paidMonths\]/gi,             String(totalInstCompleted))
                 .replace(/\[installmentsCompleted\]/gi,  String(totalInstCompleted))
@@ -635,7 +670,8 @@ async function generateWaReminders(){
                 .replace(/\[progressPercent\]/gi,        completionPct + '%')
                 .replace(/\[completionPercentage\]/gi,   completionPct + '%')
                 .replace(/\[startDate\]/gi,              mGroups.length > 0 && mGroups[0].startDate ? (() => {const d = new Date(mGroups[0].startDate + 'T00:00:00'); return fmtDateObj(d);})() : '—')
-                .replace(/\[endDate\]/gi,                mGroups.length > 0 && mGroups[0].startDate ? (() => {const d = new Date(mGroups[0].startDate + 'T00:00:00'); d.setMonth(d.getMonth() + 21); return fmtDateObj(d);})() : '—');
+                .replace(/\[endDate\]/gi,                mGroups.length > 0 && mGroups[0].startDate ? (() => {const d = new Date(mGroups[0].startDate + 'T00:00:00'); d.setMonth(d.getMonth() + 21); return fmtDateObj(d);})() : '—')
+                .replace(/\[todayDate\]/gi,              fmtDateObj(new Date()));
         } else {
             message =
                 'Dear ' + member.name + ',\n\n' +
