@@ -175,6 +175,9 @@ function applyUserSession(user){
         updateUI();
         pollPendingRequests();
         setTimeout(checkAndShowBackupReminder, 1200);
+        if(localStorage.getItem('akdf_balances_fixed_v1')!=='1' && typeof recalculateAllPaymentBalances==='function'){
+            recalculateAllPaymentBalances();
+        }
     } else {
         document.getElementById('adminHeader').style.display = 'none';
         document.getElementById('memberHeader').style.display = 'block';

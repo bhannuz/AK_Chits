@@ -14,20 +14,23 @@ async function exportFullBackup(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// BUGFIX — recalculate stored `balance`/`balPerMonth` on existing payment docs.
+// BUGFIX — auto-recalculate stored `balance`/`balPerMonth` on existing payment docs.
 // Root cause: each payment's balance was historically computed against only that
 // single payment's own amount (chitPerMonth - thisPayment.paid), ignoring any other
 // partial payments already made for the same month. When a month was paid across
 // two or more installments, this made the stored balance overstate what was really
 // owed (e.g. a month split into 11,000 + 12,077 against a 23,077 due amount stored
 // balances of 12,077 and 11,000 instead of 0 + 0). Since almost every dashboard/
-// export screen simply sums `payment.balance`, this one-time pass recalculates the
-// true cumulative remaining balance per (member, group, enrollment, slot, month) and
-// writes it back, fixing all those screens without editing each one individually.
+// export screen simply sums `payment.balance`, this recalculates the true cumulative
+// remaining balance per (member, group, enrollment, slot, month) and writes it back,
+// fixing all those screens automatically.
+//
+// Runs automatically and silently once per admin session on login (see auth.js) —
+// no button or confirmation needed. It only ever touches the `balance`/`balPerMonth`
+// fields (never paid amounts, dates, or chit picks), so it's always safe to re-run,
+// and a localStorage flag keeps it from re-running unnecessarily on every login.
 async function recalculateAllPaymentBalances(){
-    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
-    if(!confirm('This will recalculate the balance stored on every existing payment record based on actual amounts paid per month. This does not change any paid amounts, chit picks, or dates — only the balance figures. Continue?')) return;
-    showToast('⏳ Recalculating balances…',true);
+    if(!isAdmin()) return;
     try{
         const groups = await getCollection('groups');
         const payments = await getCollection('payments');
@@ -84,14 +87,17 @@ async function recalculateAllPaymentBalances(){
             await db.collection('payments').doc(u.id).update({balance:u.balance, balPerMonth:u.balPerMonth});
         }
 
-        bustCache('payments');
-        showToast(`✅ Fixed ${updates.length} payment record(s)`);
-        await updateUI();
-        const summaryView=document.getElementById('summaryView');
-        if(summaryView && summaryView.value) await loadMemberLedger();
+        if(updates.length>0){
+            bustCache('payments');
+            await updateUI();
+            const summaryView=document.getElementById('summaryView');
+            if(summaryView && summaryView.value) await loadMemberLedger();
+        }
+        localStorage.setItem('akdf_balances_fixed_v1','1');
     } catch(err){
-        console.error(err);
-        showToast('❌ Failed to recalculate balances',false);
+        console.error('Balance recalculation failed:', err);
+        // Silent failure — this is a background fix, don't interrupt the admin's session.
+        // It will simply retry on the next login since the localStorage flag isn't set.
     }
 }
 
