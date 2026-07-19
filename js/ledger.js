@@ -12,6 +12,48 @@ function getOrdinal(n) {
     return n + (s[(v-20)%10] || s[v] || s[0]);
 }
 
+// BUGFIX: A payment's stored `balance` field is only ever computed against that single
+// payment's own amount (see savePayment in payments.js). When a month is paid in more than
+// one installment, each installment's stored balance ignores the other installments made for
+// the same month, so simply summing `payment.balance` across payments overstates the true
+// outstanding balance (e.g. two payments of 11,000 and 12,077 fully covering a 23,077 month
+// would wrongly sum to a combined "balance" of 23,077 instead of the correct 0).
+// This recomputes the true balance per (group, enrollment, slot, month) bucket from the
+// actual amounts paid, then sums those — so fully-paid months always contribute 0.
+function computeCorrectedTotalBalance(payments, groups){
+    const chitByGroup = {};
+    groups.forEach(g=>{
+        let amt = parseFloat(g.fixedAmt)||0;
+        if(!amt){
+            const fieldNames=['fixedMonthlyAmount','monthlyChitAmount','monthlyAmount','fixedAmount','amount','chitAmount'];
+            for(const f of fieldNames){ const v=parseFloat(g[f]); if(v){amt=v;break;} }
+        }
+        chitByGroup[g.id]=amt;
+    });
+    const slotMap = new Map();
+    payments.forEach(p=>{
+        const gid = p.groupId;
+        const enrId = p.enrollmentId||'';
+        const slotNum = p.slotNum!=null?p.slotNum:1;
+        const paid = parseFloat(p.paid)||0;
+        const slots = Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
+        const numMonths = slots.length||1;
+        const perMonthPaid = paid/numMonths;
+        slots.forEach(s=>{
+            const key = gid+'|'+enrId+'|'+slotNum+'|'+s;
+            const existing = slotMap.get(key)||{gid,paid:0};
+            existing.paid += perMonthPaid;
+            slotMap.set(key,existing);
+        });
+    });
+    let totalBal = 0;
+    slotMap.forEach(v=>{
+        const chitAmount = chitByGroup[v.gid]||0;
+        totalBal += Math.max(0, chitAmount - v.paid);
+    });
+    return totalBal;
+}
+
 async function loadMemberLedger(){
     const mid = CURRENT_USER && CURRENT_USER.role === 'member'
         ? CURRENT_USER.memberId
@@ -29,7 +71,7 @@ async function loadMemberLedger(){
     const mPays=ps.filter(p=>p.memberId===mid);
     const mComms=cs.filter(c=>c.memberId===mid);
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-    const totalBal =mPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+    const totalBal =computeCorrectedTotalBalance(mPays, gs);
     let enrollments = m.enrollments;
     if(!enrollments||!enrollments.length)
         enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
@@ -79,7 +121,10 @@ async function loadMemberLedger(){
         const monthsDone   = fullyPaidSlotSet.size;
         const pct          = Math.min(100,Math.round(monthsDone/totalMonths*100));
         const tPaid        = slotPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
-        const tBal         = slotPays.reduce((s,p)=>s+(parseFloat(p.balance)||0),0);
+        // BUGFIX: sum true per-slot shortfall (using _perSlotTotals, computed above from actual
+        // paid amounts) instead of summing each payment's independently-stored `balance` field,
+        // which double-counts when a month was paid via more than one partial payment.
+        const tBal         = Object.keys(_perSlotTotals).reduce((s,slotKey)=>s+Math.max(0, chitAmount-_perSlotTotals[slotKey]),0);
 
         // Build table rows — joint slots show combined row
         const mergedRows = allDueDates.map((dueDate, slotIndex) => {
@@ -252,9 +297,15 @@ async function loadMemberLedger(){
                 </tr>`;
             
             // Detail rows for each partial payment (hidden by default)
+            // BUGFIX: don't trust each payment's stored `balance` field — it was computed
+            // independently against the full month chit amount at save time, ignoring any
+            // other partial payments made for the same month. Recompute a running/cumulative
+            // balance instead so partial payments that add up to the full amount show 0/—.
+            let _cumPaidSoFar = 0;
             mainRows += monthPayments.map((pay, payIdx) => {
                 const iPaid = parseFloat(pay.paid)||0;
-                const iBal = parseFloat(pay.balance)||0;
+                _cumPaidSoFar += iPaid;
+                const iBal = Math.max(0, chitAmount - _cumPaidSoFar);
                 const iMode = pay.paidBy||'—';
                 const iCp = pay.chitPicked==='Yes';
                 const isPaid = iPaid > 0;

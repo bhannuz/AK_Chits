@@ -539,14 +539,29 @@ async function savePayment(){
             if(selectedSlot===null){showToast('❌ Select which month this payment is for',false);return;}
             
             const monthSlots = [selectedSlot];
-            const balance = Math.max(0, chitPerMonth - paid);
             const enrollmentId1 = document.getElementById('pEnrollmentId').value||'';
             const slotNum1 = parseInt(document.getElementById('pSlotNum').value||'1');
+
+            // BUGFIX: if this month already has other (partial) payments recorded, the
+            // remaining balance must be computed against everything paid for the month so
+            // far — not just this single payment — otherwise splitting a month's payment
+            // into installments makes the stored balance overstate what's actually owed.
+            const psForBal = await getCollection('payments');
+            const alreadyPaidThisMonth = psForBal
+                .filter(p=>p.memberId===mid && p.groupId===gid &&
+                    (p.enrollmentId||'')===enrollmentId1 &&
+                    (p.slotNum?Number(p.slotNum):1)===slotNum1 &&
+                    (Array.isArray(p.monthSlots) ? p.monthSlots.includes(selectedSlot) : p.monthSlot===selectedSlot))
+                .reduce((s,p)=>{
+                    const slots = Array.isArray(p.monthSlots) ? p.monthSlots : (p.monthSlot!=null?[p.monthSlot]:[]);
+                    const n = slots.length||1;
+                    return s + ((parseFloat(p.paid)||0)/n);
+                },0);
+            const balance = Math.max(0, chitPerMonth - alreadyPaidThisMonth - paid);
             
             // Check if THIS enrollment slot already picked chit
             if(chitPicked==='Yes'){
-                const ps=await getCollection('payments');
-                const alreadyPicked=await isChitAlreadyPicked(ps,mid,gid,enrollmentId1,slotNum1);
+                const alreadyPicked=await isChitAlreadyPicked(psForBal,mid,gid,enrollmentId1,slotNum1);
                 if(alreadyPicked){showToast('❌ Chit already picked for this slot',false);return;}
             }
             

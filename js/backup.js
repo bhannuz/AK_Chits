@@ -13,6 +13,88 @@ async function exportFullBackup(){
     showToast('✅ Backup downloaded!');
 }
 
+// ═══════════════════════════════════════════════════════════
+// BUGFIX — recalculate stored `balance`/`balPerMonth` on existing payment docs.
+// Root cause: each payment's balance was historically computed against only that
+// single payment's own amount (chitPerMonth - thisPayment.paid), ignoring any other
+// partial payments already made for the same month. When a month was paid across
+// two or more installments, this made the stored balance overstate what was really
+// owed (e.g. a month split into 11,000 + 12,077 against a 23,077 due amount stored
+// balances of 12,077 and 11,000 instead of 0 + 0). Since almost every dashboard/
+// export screen simply sums `payment.balance`, this one-time pass recalculates the
+// true cumulative remaining balance per (member, group, enrollment, slot, month) and
+// writes it back, fixing all those screens without editing each one individually.
+async function recalculateAllPaymentBalances(){
+    if(!isAdmin()){showToast('🚫 Access denied',false);return;}
+    if(!confirm('This will recalculate the balance stored on every existing payment record based on actual amounts paid per month. This does not change any paid amounts, chit picks, or dates — only the balance figures. Continue?')) return;
+    showToast('⏳ Recalculating balances…',true);
+    try{
+        const groups = await getCollection('groups');
+        const payments = await getCollection('payments');
+        const chitByGroup = {};
+        groups.forEach(g=>{
+            let amt = parseFloat(g.fixedAmt)||0;
+            if(!amt){
+                const fieldNames=['fixedMonthlyAmount','monthlyChitAmount','monthlyAmount','fixedAmount','amount','chitAmount'];
+                for(const f of fieldNames){ const v=parseFloat(g[f]); if(v){amt=v;break;} }
+            }
+            chitByGroup[g.id]=amt;
+        });
+
+        // Process payments in a stable, deterministic order (by date, then id) so that
+        // cumulative "amount paid so far this month" is consistent every time this runs.
+        const sorted=[...payments].sort((a,b)=>{
+            const d=(a.date||'').localeCompare(b.date||'');
+            if(d!==0) return d;
+            return (a.id||'').localeCompare(b.id||'');
+        });
+
+        const slotCumulative={}; // key -> running amount paid toward that month so far
+        const updates=[];
+
+        sorted.forEach(p=>{
+            const gid=p.groupId;
+            const enrId=p.enrollmentId||'';
+            const slotNum=p.slotNum!=null?Number(p.slotNum):1;
+            const slots=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
+            const numMonths=slots.length||1;
+            const paid=parseFloat(p.paid)||0;
+            const perSlotPaid=paid/numMonths;
+            const chitAmount=chitByGroup[gid]||parseFloat(p.chit)||0;
+
+            let remainingAfterThisPayment=0;
+            slots.forEach(s=>{
+                const key=p.memberId+'|'+gid+'|'+enrId+'|'+slotNum+'|'+s;
+                const before=slotCumulative[key]||0;
+                const after=before+perSlotPaid;
+                slotCumulative[key]=after;
+                remainingAfterThisPayment+=Math.max(0, chitAmount-after);
+            });
+
+            const newBalance=Math.round(remainingAfterThisPayment*100)/100;
+            const newBalPerMonth=Math.round((newBalance/numMonths)*100)/100;
+            const oldBalance=parseFloat(p.balance)||0;
+            const oldBalPerMonth=parseFloat(p.balPerMonth)||0;
+            if(Math.abs(oldBalance-newBalance)>0.5 || Math.abs(oldBalPerMonth-newBalPerMonth)>0.5){
+                updates.push({id:p.id, balance:newBalance, balPerMonth:newBalPerMonth});
+            }
+        });
+
+        for(const u of updates){
+            await db.collection('payments').doc(u.id).update({balance:u.balance, balPerMonth:u.balPerMonth});
+        }
+
+        bustCache('payments');
+        showToast(`✅ Fixed ${updates.length} payment record(s)`);
+        await updateUI();
+        const summaryView=document.getElementById('summaryView');
+        if(summaryView && summaryView.value) await loadMemberLedger();
+    } catch(err){
+        console.error(err);
+        showToast('❌ Failed to recalculate balances',false);
+    }
+}
+
 async function exportToExcel(){
     if(!isAdmin()){showToast('🚫 Access denied',false);return;}
     showToast('⏳ Generating Excel…',true);
