@@ -220,11 +220,15 @@ async function renderCollectionsTab(){
             const isPast    = dueDate < todayStr;
             const isToday   = dueDate === todayStr;
             const isFuture  = dueDate > todayStr;
+            // "Settled" (full) must strictly require every member/slot to have paid — a
+            // month's total received amount matching the commitment isn't enough proof
+            // on its own, since that total could come from uneven contributions (some
+            // members overpaying while others haven't paid at all). So this status is
+            // only ever derived from the per-member paid count, not from aggregate money.
             const status    = membersPaidThisMonth>0&&membersPaidThisMonth===totalSlots ? 'full'
                             : received===0&&isFuture ? 'upcoming'
                             : received===0&&(isPast||isToday) ? 'overdue'
                             : balance<0 ? 'deficit'
-                            : payout>0&&balance===0 ? 'full'
                             : received>0&&payout===0 ? 'received'
                             : received>0 ? 'partial' : 'upcoming';
             const statusBadge = status==='full'     ? '<span style="background:rgba(16,185,129,0.15);color:#34d399;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:99px;">✅ Settled</span>'
