@@ -193,10 +193,9 @@ async function renderCollectionsTab(){
             // If member with 3 chits pays, count as 3 payments
             let membersPaidThisMonth = 0;
             expandedSlots.forEach(({m, slotNum, totalSlots}) => {
-                // Find if this member paid for this month
-                const hasPaid = slotPays.some(p => {
+                // Find this member's payment(s) toward this slot for this month
+                const memberSlotPays = slotPays.filter(p => {
                     if(p.memberId !== m.id) return false;
-                    // Check if payment matches this slot
                     if(m.enrollments && m.enrollments.length > 0) {
                         const enr = m.enrollments.find(e => e.groupId === g.id);
                         if(enr && enr.enrollmentId && p.enrollmentId) {
@@ -206,6 +205,19 @@ async function renderCollectionsTab(){
                     if(p.slotNum != null) return p.slotNum === slotNum;
                     return slotNum === 1;  // Default to first slot if no slot info
                 });
+                // BUGFIX: a payment *record* existing for this month isn't proof the month
+                // is paid — a member can pay only part of what's due (e.g. ₹11,000 toward a
+                // ₹23,077 month) and still have a record. Sum what they've actually paid
+                // toward this specific month (using the per-month share for payments that
+                // span several months) and only count them as paid once that total meets
+                // the full amount due, so partially-paid members no longer count toward
+                // "all members paid" / the Settled status.
+                const paidForThisMonth = memberSlotPays.reduce((s,p) => {
+                    const perMonth = p.numMonths && p.numMonths>1 ? (parseFloat(p.paidPerMonth)||0) : (parseFloat(p.paid)||0);
+                    return s + perMonth;
+                }, 0);
+                const dueForThisMonth = monthlyAmount || 0;
+                const hasPaid = dueForThisMonth>0 ? paidForThisMonth >= (dueForThisMonth - 0.5) : paidForThisMonth>0;
                 if(hasPaid) membersPaidThisMonth++;
             });
             
