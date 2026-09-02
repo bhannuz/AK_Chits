@@ -178,7 +178,13 @@ async function renderCollectionsTab(){
         const totalPayout = allDD.reduce((s,_,idx)=>s+(payouts[g.id+'_'+idx]||0),0);
         
         // Calculate total commitment: all members × all months × monthly amount
-        const monthlyAmount = parseFloat(g.monthly||g.gMonthly||0);
+        // BUGFIX: g.monthly / g.gMonthly are never actually saved on a group (only
+        // g.fixedAmt is), so this was silently evaluating to 0 for every fixed-amount
+        // group — which broke totalCommitment/totalBalance below AND meant the
+        // "did this member actually pay in full" check further down always fell back
+        // to its loose behavior (any payment > 0 counted as fully paid). Falling back
+        // to fixedAmt fixes both.
+        const monthlyAmount = fixedAmt>0 ? fixedAmt : parseFloat(g.monthly||g.gMonthly||0);
         const totalCommitment = totalSlots * totalMonths * monthlyAmount;
         const totalBalance = Math.max(0, totalCommitment - totalReceived);
 
@@ -216,8 +222,14 @@ async function renderCollectionsTab(){
                     const perMonth = p.numMonths && p.numMonths>1 ? (parseFloat(p.paidPerMonth)||0) : (parseFloat(p.paid)||0);
                     return s + perMonth;
                 }, 0);
-                const dueForThisMonth = monthlyAmount || 0;
-                const hasPaid = dueForThisMonth>0 ? paidForThisMonth >= (dueForThisMonth - 0.5) : paidForThisMonth>0;
+                // For variable-amount groups (monthlyAmount is 0), fall back to the amount
+                // recorded directly on the member's own payment (each payment stores its
+                // own `chit` due amount) since there's no single group-wide monthly figure.
+                const dueForThisMonth = monthlyAmount>0 ? monthlyAmount : memberSlotPays.reduce((mx,p) => {
+                    const perMonth = p.numMonths && p.numMonths>1 ? (parseFloat(p.chit)||0)/p.numMonths : (parseFloat(p.chit)||0);
+                    return Math.max(mx, perMonth);
+                }, 0);
+                const hasPaid = paidForThisMonth>0 && dueForThisMonth>0 && paidForThisMonth >= (dueForThisMonth - 0.5);
                 if(hasPaid) membersPaidThisMonth++;
             });
             
@@ -382,7 +394,11 @@ async function renderGroupsTab(){
         
         // Calculate total balance: total commitment - total paid
         const totalMonths=parseInt(g.duration||g.gDuration)||21;
-        const monthlyAmount=parseFloat(g.monthly||g.gMonthly)||0;
+        // BUGFIX: same as the collection view above — g.monthly/g.gMonthly are never
+        // actually saved, so fall back to g.fixedAmt (the field that is saved) for
+        // fixed-amount groups, otherwise this always silently evaluated to 0.
+        const gFixedAmt = g.amtType!=='variable'&&g.fixedAmt ? parseFloat(g.fixedAmt)||0 : 0;
+        const monthlyAmount = gFixedAmt>0 ? gFixedAmt : (parseFloat(g.monthly||g.gMonthly)||0);
         // Count total slots (members with multiple chits count as multiple slots)
         let totalSlots = 0;
         gMs.forEach(m => {
