@@ -38,18 +38,26 @@ async function printMemberStatement(mid){
     const totalBal = Math.max(0, totalChitNeeded - totalPaid);
     const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
 
-    // Chit-picked info (replaces the removed Balance chip, and the removed
-    // Chit Picked column in the schedule tables below) — which group/slot was
-    // picked and the payout amount.
-    const pickedPaysForInfo = mPays.filter(p=>p.chitPicked==='Yes');
-    const pickedInfoHtml = pickedPaysForInfo.length
-        ? pickedPaysForInfo.map(p=>{
-            const pg = gs.find(x=>x.id===p.groupId);
-            const amt = (parseFloat(p.chit)||0)*(parseInt(p.numMonths)||1);
-            const slotTxt = p.slotNum ? ` (Chit ${p.slotNum})` : '';
-            return `<span style="display:inline-block;background:#f0fff8;border:1px solid #34d399;border-radius:4px;padding:2px 6px;margin:2px 3px 2px 0;font-size:9px;"><b>${pg?pg.name:'Group'}${slotTxt}</b> — Rs.${amt.toLocaleString('en-IN')}${p.chitPickedBy?` (${p.chitPickedBy})`:''}</span>`;
-        }).join('')
-        : '<span style="font-size:9px;color:#888;">No chits picked yet</span>';
+    // Chit-picked chip info (replaces the removed Balance chip) — shows the
+    // picked chit's payout value and which month it was picked in, or
+    // "Not picked" if this member hasn't picked any chit yet.
+    const pickedPayForChip = mPays.find(p=>p.chitPicked==='Yes');
+    let chitPickedChipVal = 'Not picked';
+    let chitPickedChipColor = '#888';
+    if(pickedPayForChip){
+        const pg = gs.find(x=>x.id===pickedPayForChip.groupId);
+        const amt = (parseFloat(pickedPayForChip.chit)||0)*(parseInt(pickedPayForChip.numMonths)||1);
+        let monthNum = null;
+        if(pickedPayForChip.monthSlot!=null){
+            monthNum = pickedPayForChip.monthSlot+1;
+        } else if(pg){
+            const dueDates = getGroupDueDates(pg);
+            const si = getMonthSlot(dueDates, pickedPayForChip.date);
+            if(si>=0) monthNum = si+1;
+        }
+        chitPickedChipVal = `Rs.${amt.toLocaleString('en-IN')}${monthNum?` (Month ${monthNum})`:''}`;
+        chitPickedChipColor = '#065f46';
+    }
     
     // Calculate start and end dates across all enrollments
     let startDateVal = null;
@@ -603,12 +611,9 @@ async function printMemberStatement(mid){
             <div class="mname">${m.name} • &#128222; ${m.phone||'—'} • ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q:'')):'?';}).join(', ')||'—'}</div>
             <div class="stats">
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
-                <div class="stat"><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} / ${endDateDisp}</div><div class="stat-l">Start Date / End</div></div>
+                <div class="stat"><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} &rarr; ${endDateDisp}</div><div class="stat-l">Start &rarr; End</div></div>
                 <div class="stat"><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,paidMonths=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);const uniqueMonths=new Set();gPays.forEach(p=>{if(p.monthSlot!=null){uniqueMonths.add(p.monthSlot);}else if(Array.isArray(p.monthSlots)){p.monthSlots.forEach(m=>uniqueMonths.add(m));}});paidMonths=Math.max(paidMonths,uniqueMonths.size);}});return paidMonths+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid / Total Months</div></div>
-            </div>
-            <div style="margin-top:6px;">
-                <div style="font-size:8px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">🎯 Chit Picked</div>
-                ${pickedInfoHtml}
+                <div class="stat"><div class="stat-v" style="color:${chitPickedChipColor};font-size:11px;">${chitPickedChipVal}</div><div class="stat-l">Chit Picked</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
