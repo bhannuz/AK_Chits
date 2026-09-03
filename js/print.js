@@ -727,16 +727,16 @@ async function generateGroupPDF(gid){
                 <td style="text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">✅</span>':'—'}</td>
             </tr>`;
         }).join('');
-        return `<div style="margin-bottom:16px;page-break-inside:avoid;">
-            <div style="background:#f5f5f5;border-left:4px solid #f39c12;padding:7px 12px;font-size:12px;font-weight:800;margin-bottom:4px;">
-                👤 ${m.name}${slotBadge} &nbsp;<span style="font-size:10px;color:#888;font-weight:400;">${m.phone||''}</span>
-                <span style="float:right;font-size:11px;">Paid: <b style="color:#065f46;">₹${mPaid.toLocaleString('en-IN')}</b> &nbsp; Bal: <b style="color:#92400e;">₹${mBal.toLocaleString('en-IN')}</b></span>
+        return `<div style="margin-bottom:8px;page-break-inside:avoid;">
+            <div style="background:#f5f5f5;border-left:4px solid #f39c12;padding:5px 8px;font-size:11px;font-weight:800;margin-bottom:3px;">
+                👤 ${m.name}${slotBadge} &nbsp;<span style="font-size:9px;color:#888;font-weight:400;">${m.phone||''}</span>
+                <span style="float:right;font-size:10px;">Paid: <b style="color:#065f46;">₹${mPaid.toLocaleString('en-IN')}</b> &nbsp; Bal: <b style="color:#92400e;">₹${mBal.toLocaleString('en-IN')}</b></span>
             </div>
-            <table style="border:3px solid #f39c12;border-collapse:collapse;">
-                <colgroup><col style="width:3%"><col style="width:12%"><col style="width:13%"><col style="width:11%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:12%"></colgroup>
-                <thead><tr style="background:#f5f5f5;border-bottom:3px solid #f39c12;"><th style="border-right:1px solid #f39c12;font-weight:800;">​#</th><th style="border-right:1px solid #f39c12;font-weight:800;">Month Covered</th><th style="border-right:1px solid #f39c12;font-weight:800;">Pay Date</th><th style="border-right:1px solid #f39c12;font-weight:800;">Chit Amt</th><th style="border-right:1px solid #f39c12;font-weight:800;">Paid</th><th style="border-right:1px solid #f39c12;font-weight:800;">Balance</th><th style="border-right:1px solid #f39c12;font-weight:800;">Mode</th><th style="font-weight:800;">Chit?</th></tr></thead>
+            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">
+                <colgroup><col style="width:4%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:14%"><col style="width:14%"><col style="width:15%"><col style="width:15%"></colgroup>
+                <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="border-right:1px solid #f39c12;font-weight:800;">​#</th><th style="border-right:1px solid #f39c12;font-weight:800;">Month Covered</th><th style="border-right:1px solid #f39c12;font-weight:800;">Pay Date</th><th style="border-right:1px solid #f39c12;font-weight:800;">Chit Amt</th><th style="border-right:1px solid #f39c12;font-weight:800;">Paid</th><th style="border-right:1px solid #f39c12;font-weight:800;">Balance</th><th style="border-right:1px solid #f39c12;font-weight:800;">Mode</th><th style="font-weight:800;">Chit?</th></tr></thead>
                 <tbody>${rows}
-                <tr style="background:#fff8e1;font-weight:800;border-top:3px solid #f39c12;">
+                <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;">
                     <td colspan="4" style="border-right:1px solid #f39c12;">Total</td>
                     <td style="color:#065f46;font-weight:900;border-right:1px solid #f39c12;">₹${mPaid.toLocaleString('en-IN')}</td>
                     <td style="color:#92400e;font-weight:900;border-right:1px solid #f39c12;">₹${mBal.toLocaleString('en-IN')}</td>
@@ -748,29 +748,29 @@ async function generateGroupPDF(gid){
 
     const printHTML = `<div id="groupPrintDoc">
     <style>
-        #groupPrintDoc { font-family:Arial,sans-serif; color:#111; max-width:860px; margin:0 auto; padding:16px; }
-        #groupPrintDoc .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:10px; margin-bottom:14px; page-break-inside:avoid; }
+        #groupPrintDoc { font-family:Arial,sans-serif; color:#111; max-width:860px; margin:0 auto; padding:10px; }
+        #groupPrintDoc .hdr { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #f39c12; padding-bottom:6px; margin-bottom:8px; page-break-inside:avoid; }
         #groupPrintDoc .brand { font-size:16px; font-weight:900; color:#f39c12; }
-        #groupPrintDoc .info-box { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:12px 16px; margin-bottom:14px; page-break-inside:avoid; }
-        #groupPrintDoc .chips { display:flex; gap:0; border:1px solid #e5c76b; border-radius:8px; overflow:hidden; margin-top:10px; }
-        #groupPrintDoc .chip { flex:1; padding:8px; text-align:center; border-right:1px solid #e5c76b; }
+        #groupPrintDoc .info-box { background:#fffbf0; border:2px solid #f39c12; border-radius:8px; padding:8px 12px; margin-bottom:8px; page-break-inside:avoid; }
+        #groupPrintDoc .chips { display:flex; gap:0; border:1px solid #e5c76b; border-radius:8px; overflow:hidden; margin-top:6px; }
+        #groupPrintDoc .chip { flex:1; padding:5px; text-align:center; border-right:1px solid #e5c76b; }
         #groupPrintDoc .chip:last-child { border-right:none; }
         #groupPrintDoc .chip-v { font-size:14px; font-weight:800; }
         #groupPrintDoc .chip-l { font-size:9px; color:#888; text-transform:uppercase; margin-top:2px; }
-        #groupPrintDoc .prog-outer { background:#eee; height:6px; border-radius:3px; margin:8px 0 4px; overflow:hidden; }
+        #groupPrintDoc .prog-outer { background:#eee; height:5px; border-radius:3px; margin:5px 0 3px; overflow:hidden; }
         #groupPrintDoc .prog-inner { height:100%; background:linear-gradient(90deg,#f39c12,#f57c00); border-radius:3px; }
-        #groupPrintDoc .sec-title { font-size:8px; font-weight:800; color:#111; text-transform:uppercase; letter-spacing:1px; margin:16px 0 6px; border-bottom:3px solid #f39c12; padding-bottom:3px; page-break-after:avoid; }
-        #groupPrintDoc table { width:100%; border-collapse:collapse; font-size:11px; table-layout:auto !important; margin-bottom:8px; page-break-inside:avoid; border:1px solid #e0e0e0; }
+        #groupPrintDoc .sec-title { font-size:8px; font-weight:800; color:#111; text-transform:uppercase; letter-spacing:1px; margin:10px 0 4px; border-bottom:3px solid #f39c12; padding-bottom:3px; page-break-after:avoid; }
+        #groupPrintDoc table { width:100%; border-collapse:collapse; font-size:10px; table-layout:fixed; margin-bottom:5px; page-break-inside:avoid; border:1px solid #e0e0e0; }
         #groupPrintDoc thead { display:table-header-group; background:#f5f5f5; }
-        #groupPrintDoc th { background:#f5f5f5; border-bottom:2px solid #f39c12; padding:9px 8px; font-size:10px; text-transform:uppercase; color:#555; font-weight:800; letter-spacing:0.5px; }
-        #groupPrintDoc td { border-bottom:1px solid #e0e0e0; padding:8px 7px; vertical-align:middle; word-break:break-word; overflow-wrap:break-word; }
+        #groupPrintDoc th { background:#f5f5f5; border-bottom:2px solid #f39c12; padding:5px 5px; font-size:9px; text-transform:uppercase; color:#555; font-weight:800; letter-spacing:0.3px; }
+        #groupPrintDoc td { border-bottom:1px solid #e0e0e0; padding:5px 5px; vertical-align:middle; word-break:break-word; overflow-wrap:break-word; }
         #groupPrintDoc tbody tr:last-child td { border-bottom:2px solid #f39c12; font-weight:700; }
         #groupPrintDoc tr { page-break-inside:avoid; page-break-after:auto; }
-        #groupPrintDoc .stats { display:flex; gap:8px; margin-top:10px; page-break-inside:avoid; }
-        #groupPrintDoc .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:6px; text-align:center; page-break-inside:avoid; }
-        #groupPrintDoc .stat-v { font-size:14px; font-weight:800; }
+        #groupPrintDoc .stats { display:flex; gap:6px; margin-top:6px; page-break-inside:avoid; }
+        #groupPrintDoc .stat { flex:1; border:1px solid #ddd; border-radius:6px; padding:4px; text-align:center; page-break-inside:avoid; }
+        #groupPrintDoc .stat-v { font-size:13px; font-weight:800; }
         #groupPrintDoc .stat-l { font-size:8px; color:#888; text-transform:uppercase; }
-        #groupPrintDoc .ftr { margin-top:14px; border-top:2px solid #f39c12; padding-top:6px; display:flex; justify-content:space-between; font-size:8px; color:#555; font-weight:600; page-break-inside:avoid; }
+        #groupPrintDoc .ftr { margin-top:8px; border-top:2px solid #f39c12; padding-top:4px; display:flex; justify-content:space-between; font-size:8px; color:#555; font-weight:600; page-break-inside:avoid; }
         #groupPrintDoc .print-btn-bar { display:flex; gap:10px; margin-bottom:16px; }
         #groupPrintDoc .print-btn { background:linear-gradient(90deg,#f39c12,#f57c00); color:#000; border:none; padding:10px 24px; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; }
         #groupPrintDoc .close-btn { background:#eee; color:#333; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; }
@@ -793,7 +793,7 @@ async function generateGroupPDF(gid){
             }
             #groupPrintDoc { 
                 max-width:100% !important; 
-                padding:10px !important; 
+                padding:8px !important; 
                 margin:0 !important;
                 width:100% !important;
                 -webkit-print-color-adjust: exact !important;
@@ -823,10 +823,10 @@ async function generateGroupPDF(gid){
                 border-bottom: 3px solid #f39c12 !important;
             }
             #groupPrintDoc table { 
-                table-layout:auto !important; 
+                table-layout:fixed !important; 
                 width:100% !important; 
-                page-break-inside:auto !important;
-                margin-bottom:8mm !important;
+                page-break-inside:avoid !important;
+                margin-bottom:5mm !important;
                 border: 1px solid #e0e0e0 !important;
                 border-collapse: collapse !important;
             }
@@ -836,7 +836,7 @@ async function generateGroupPDF(gid){
             #groupPrintDoc th {
                 background: #f5f5f5 !important;
                 border-bottom: 2px solid #f39c12 !important;
-                padding: 9px 8px !important;
+                padding: 5px 5px !important;
                 color: #333 !important;
                 font-weight: 800 !important;
             }
@@ -853,14 +853,14 @@ async function generateGroupPDF(gid){
             }
             #groupPrintDoc td {
                 border-bottom: 1px solid #e0e0e0 !important;
-                padding: 8px 7px !important;
+                padding: 5px 5px !important;
             }
             #groupPrintDoc tr { 
                 page-break-inside:avoid !important; 
                 page-break-after:auto !important; 
             }
             #groupPrintDoc .ftr { page-break-inside:avoid !important; }
-            @page { size:A4; margin:12mm 10mm; }
+            @page { size:A4; margin:10mm 8mm; }
         }
     </style>
     <div class="print-btn-bar">
@@ -895,7 +895,7 @@ async function generateGroupPDF(gid){
     </div>
     <div class="sec-title">Member Summary</div>
     <table>
-        <colgroup><col style="width:3%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:14%"><col style="width:15%"><col style="width:13%"></colgroup>
+        <colgroup><col style="width:4%"><col style="width:20%"><col style="width:14%"><col style="width:14%"><col style="width:10%"><col style="width:20%"><col style="width:18%"></colgroup>
         <thead><tr><th>#</th><th>Member</th><th>Total Paid</th><th>Balance</th><th>Months</th><th>Last Payment</th><th>Chit Picked</th></tr></thead>
         <tbody>${summaryRows}
         <tr style="background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;">
