@@ -507,48 +507,48 @@ async function renderGroupsTab(){
             const pickedPay = [...mp,...coMp].find(p=>p.chitPicked==='Yes');
             const pickedAmt = pickedPay?(parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1):0;
             const pickedBy  = pickedPay&&pickedPay.chitPickedBy?pickedPay.chitPickedBy:'';
-            const multiChitBadge = totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:5px;padding:1px 6px;font-size:0.98rem;font-weight:800;margin-left:4px;">x${totalSlots} chits</span>`:'';
-            const slotLabelBadge = totalSlots>1?`<span style="font-size:0.98rem;color:#f59e0b;"> (Chit ${slotNum})</span>`:'';
+            const multiChitBadge = totalSlots>1?`<span style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#fbbf24;border-radius:4px;padding:0px 4px;font-size:0.66rem;font-weight:800;margin-left:3px;">x${totalSlots}</span>`:'';
+            const slotLabelBadge = totalSlots>1?`<span style="font-size:0.66rem;color:#f59e0b;"> (C${slotNum})</span>`:'';
 
             // ── Name cell ────────────────────────────────────────────────────
             const nameCell = isJoint && coM
                 ? `<td>
-                    <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-                        <strong>${m.name}</strong>
-                        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:5px;padding:1px 6px;font-size:0.7rem;font-weight:800;">&#x1f465; Joint</span>
+                    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                        <strong style="font-size:0.75rem;">${m.name}</strong>
+                        <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;padding:0px 4px;font-size:0.62rem;font-weight:800;">Joint</span>
                         ${multiChitBadge}${slotLabelBadge}
                     </div>
-                    <div style="font-size:0.75rem;color:var(--text-dim);">${m.phone||''}</div>
-                    <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(99,102,241,0.2);">
-                        <strong style="font-size:0.88rem;color:#c4b5fd;">${coM.name}</strong>
-                        <span style="font-size:0.72rem;color:var(--text-dim);"> · ${coM.phone||''}</span>
+                    <div style="font-size:0.66rem;color:var(--text-dim);">${m.phone||''}</div>
+                    <div style="margin-top:2px;padding-top:2px;border-top:1px solid rgba(99,102,241,0.2);">
+                        <strong style="font-size:0.72rem;color:#c4b5fd;">${coM.name}</strong>
+                        <span style="font-size:0.62rem;color:var(--text-dim);"> · ${coM.phone||''}</span>
                     </div>
                   </td>`
-                : `<td><strong>${m.name}</strong>${multiChitBadge}${slotLabelBadge}<br><span style="font-size:0.92rem;color:var(--text-dim);">${m.phone||''}</span></td>`;
+                : `<td><strong style="font-size:0.75rem;">${m.name}</strong>${multiChitBadge}${slotLabelBadge}<br><span style="font-size:0.66rem;color:var(--text-dim);">${m.phone||''}</span></td>`;
 
             // ── Paid cell — stacked P1 / P2 for joint ───────────────────────
             const paidCell = isJoint && coM
                 ? `<td>
-                    <div style="color:#34d399;font-weight:700;">${fmtAmt(myPaid)}</div>
-                    <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(99,102,241,0.15);color:${coPaid>0?'#34d399':'#f87171'};font-weight:700;">${coPaid>0?fmtAmt(coPaid):'Pending'}</div>
+                    <div style="color:#34d399;font-weight:700;font-size:0.72rem;">${fmtAmt(myPaid)}</div>
+                    <div style="margin-top:2px;padding-top:2px;border-top:1px solid rgba(99,102,241,0.15);color:${coPaid>0?'#34d399':'#f87171'};font-weight:700;font-size:0.72rem;">${coPaid>0?fmtAmt(coPaid):'Pending'}</div>
                   </td>`
-                : `<td style="color:#34d399;">${fmtAmt(paid)}</td>`;
+                : `<td style="color:#34d399;font-size:0.75rem;">${fmtAmt(paid)}</td>`;
 
             // ── Balance cell — single combined balance ───────────────────────
-            const balCell = `<td style="color:${bal>0?'#f59e0b':'#34d399'};font-weight:700;">${bal>0?fmtAmt(bal):'—'}</td>`;
+            const balCell = `<td style="color:${bal>0?'#f59e0b':'#34d399'};font-weight:700;font-size:0.75rem;">${bal>0?fmtAmt(bal):'—'}</td>`;
 
             return [
                 `<tr${pickedPay?' class="chit-picked"':''}>`,
-                `<td>${i+1}</td>`,
+                `<td style="font-size:0.72rem;">${i+1}</td>`,
                 nameCell,
                 paidCell,
                 balCell,
-                `<td style="color:#a5b4fc;font-size:1.05rem;">${monthsCovered}/${totalMonths}</td>`,
-                (()=>{ const mComm=cs.find(c=>c.memberId===m.id&&c.groupId===g.id&&(c.slotNum==null?1:c.slotNum)===slotNum); const commVal=mComm?mComm.targetMonth:0; const commId=mComm?mComm.id:''; return '<td><input type="number" min="0" max="'+totalMonths+'" value="'+(commVal||'')+'" placeholder="—" data-mid="'+m.id+'" data-gid="'+g.id+'" data-slot="'+slotNum+'" data-commid="'+commId+'" onchange="updateGroupCommitment(this)" style="width:60px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#bb86fc;border-radius:7px;padding:4px 6px;font-size:0.78rem;font-weight:800;text-align:center;outline:none;" title="Commitment month for this slot"></td>'; })(),
+                `<td style="color:#a5b4fc;font-size:0.78rem;">${monthsCovered}/${totalMonths}</td>`,
+                (()=>{ const mComm=cs.find(c=>c.memberId===m.id&&c.groupId===g.id&&(c.slotNum==null?1:c.slotNum)===slotNum); const commVal=mComm?mComm.targetMonth:0; const commId=mComm?mComm.id:''; return '<td><input type="number" min="0" max="'+totalMonths+'" value="'+(commVal||'')+'" placeholder="—" data-mid="'+m.id+'" data-gid="'+g.id+'" data-slot="'+slotNum+'" data-commid="'+commId+'" onchange="updateGroupCommitment(this)" style="width:46px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#bb86fc;border-radius:6px;padding:3px 4px;font-size:0.7rem;font-weight:800;text-align:center;outline:none;" title="Commitment month for this slot"></td>'; })(),
                 `<td>${pickedPay
-                    ?`<div><span class="chit-yes-badge">&#x2705; Picked</span><div style="color:#34d399;font-weight:800;font-size:0.92rem;margin-top:3px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.98rem;color:var(--text-dim);">by ${pickedBy}</div>`:''}</div>`
-                    :'<span class="chit-no">—</span>'}</td>`,
-                `<td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')">✏️</button></td>`,
+                    ?`<div><span class="chit-yes-badge" style="font-size:0.62rem;padding:1px 5px;">&#x2705;</span><div style="color:#34d399;font-weight:800;font-size:0.7rem;margin-top:2px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.62rem;color:var(--text-dim);">${pickedBy}</div>`:''}</div>`
+                    :'<span class="chit-no" style="font-size:0.72rem;">—</span>'}</td>`,
+                `<td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')" style="padding:3px 6px;font-size:0.72rem;">✏️</button></td>`,
                 `</tr>`
             ].join('');
         }).join('');
@@ -583,15 +583,15 @@ async function renderGroupsTab(){
             </div>
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
 
-                ${gMs.length?`<div class="table-wrap"><table class="table-custom">
+                ${gMs.length?`<div class="table-wrap"><table class="table-custom group-member-table">
                     <thead><tr>
                         <th>#</th>
                         <th onclick="sortGroupMembers('${g.id}','member')" style="cursor:pointer;user-select:none;white-space:nowrap;">Member ${(gSort&&gSort.key==='member')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
                         <th>Paid</th>
-                        <th>Balance</th>
-                        <th onclick="sortGroupMembers('${g.id}','months')" style="cursor:pointer;user-select:none;white-space:nowrap;">Months ${(gSort&&gSort.key==='months')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th onclick="sortGroupMembers('${g.id}','commitment')" style="cursor:pointer;user-select:none;white-space:nowrap;">Commitment ${(gSort&&gSort.key==='commitment')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th>Chit Picked Amt</th><th></th>
+                        <th>Bal</th>
+                        <th onclick="sortGroupMembers('${g.id}','months')" style="cursor:pointer;user-select:none;white-space:nowrap;">Mo ${(gSort&&gSort.key==='months')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
+                        <th onclick="sortGroupMembers('${g.id}','commitment')" style="cursor:pointer;user-select:none;white-space:nowrap;">Commit ${(gSort&&gSort.key==='commitment')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
+                        <th>Picked</th><th></th>
                     </tr></thead>
                     <tbody>${memberRows}</tbody>
                 </table></div>`:'<div style="text-align:center;color:var(--text-dim);font-size:1rem;padding:10px;">No members yet</div>'}
