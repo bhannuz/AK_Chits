@@ -70,6 +70,31 @@
             .form-input { padding:12px 10px !important; font-size:0.95rem !important; }
             .form-label-small { font-size:0.7rem !important; }
         }
+
+        /* ── FIX: inputs (esp. type="date") overflowing/overlapping the next field
+           in a two-column grid row. By default, grid items won't shrink below their
+           content's intrinsic width, so a date input (which has a wide native
+           minimum render width) can push past its 50% column and visually overlap
+           the field beside it — worse on mobile once the rule above enlarges
+           .form-input's padding/font-size. min-width:0 lets grid items actually
+           shrink to fit their track, and this is scoped to all modal grid rows so
+           it protects every current and future two-column form row, not just one. ── */
+        .modal-content-custom [style*="display:grid"] > div { min-width:0; }
+        .modal-content-custom input,
+        .modal-content-custom select { min-width:0; max-width:100%; box-sizing:border-box; }
+        @media (max-width:480px) {
+            /* Keep date/search-style compact rows genuinely compact on small
+               screens instead of letting the enlarged .form-input rule above
+               force them wide enough to overlap their neighbor. */
+            .modal-content-custom [style*="display:grid"] input[type="date"],
+            .modal-content-custom [style*="display:grid"] input[type="text"],
+            .modal-content-custom [style*="display:grid"] input[type="number"],
+            .modal-content-custom [style*="display:grid"] select {
+                padding:8px 7px !important;
+                font-size:0.78rem !important;
+                min-height:40px !important;
+            }
+        }
         
         @media (max-width:360px) {
             .container { padding-left:4px !important; padding-right:4px !important; }
@@ -138,6 +163,20 @@
         .table-custom tr.due-row td { color:#f87171; font-style:italic; }
         .table-custom tr.multi-month-row { background:rgba(99,102,241,0.09); }
         .table-custom tr.multi-month-row td:first-child { border-left:3px solid #818cf8; }
+
+        /* ── COMPACT MEMBER TABLE (Groups tab) ── */
+        /* Scoped to .group-member-table only, so the ledger's schedule table
+           (which also uses .table-custom) is unaffected. !important is needed
+           to win over the base .table-custom mobile media-query rules further
+           below, which otherwise make mobile rows LARGER, not smaller. */
+        .group-member-table { min-width:460px !important; }
+        .group-member-table th { padding:6px 5px !important; font-size:0.6rem !important; }
+        .group-member-table td { padding:5px 5px !important; font-size:0.72rem !important; line-height:1.25 !important; }
+        @media (max-width:768px) {
+            .group-member-table { min-width:420px !important; }
+            .group-member-table th { padding:5px 4px !important; font-size:0.58rem !important; }
+            .group-member-table td { padding:4px 4px !important; font-size:0.68rem !important; }
+        }
 
         /* ── BADGES ── */
         .due-badge { display:inline-block; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); border-radius:4px; padding:2px 7px; font-size:0.68rem; font-weight:700; }
