@@ -675,6 +675,19 @@ async function generateGroupPDF(gid){
         for(let q=0; q<qty; q++) expandedSlots.push({m, slotNum:q+1, totalSlots:qty});
     });
 
+    // Chit-picked info (replaces the removed Balance chip, and the removed
+    // Chit Picked column in the summary table) — who picked, when, and the payout.
+    const pickedEntries = expandedSlots.map(({m, slotNum, totalSlots}) => {
+        const mp = ps.filter(p => p.memberId===m.id && p.groupId===g.id);
+        const pickedPay = mp.find(p=>p.chitPicked==='Yes');
+        if(!pickedPay) return null;
+        const slotLabel = totalSlots>1 ? ` (Chit ${slotNum}/${totalSlots})` : '';
+        return { name: m.name+slotLabel, amount: (parseFloat(pickedPay.chit)||0)*(parseInt(pickedPay.numMonths)||1), by: pickedPay.chitPickedBy||'', date: pickedPay.date };
+    }).filter(Boolean);
+    const pickedInfoHtml = pickedEntries.length
+        ? pickedEntries.map(e=>`<span style="display:inline-block;background:#f0fff8;border:1px solid #34d399;border-radius:4px;padding:2px 6px;margin:2px 3px 2px 0;font-size:8.5px;"><b>${e.name}</b> — ₹${e.amount.toLocaleString('en-IN')}${e.by?` (${e.by})`:''}</span>`).join('')
+        : '<span style="font-size:9px;color:#888;">No chits picked yet</span>';
+
     const summaryRows = expandedSlots.map(({m, slotNum, totalSlots}, i) => {
         const mp = ps.filter(p => p.memberId===m.id && p.groupId===g.id);
         const paid = mp.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
@@ -692,7 +705,6 @@ async function generateGroupPDF(gid){
             <td style="color:${bal>0?'#92400e':'#065f46'};font-weight:700;">₹${bal.toLocaleString('en-IN')}</td>
             <td style="text-align:center;">${monthsCovered}/${totalMonths}</td>
             <td style="color:#888;">${lastPay?fmtDate(lastPay):'—'}</td>
-            <td style="text-align:center;">${pickedPay?'<span style="color:#065f46;font-weight:800;">✅ YES</span>':'—'}</td>
         </tr>`;
     }).join('');
 
@@ -887,22 +899,25 @@ async function generateGroupPDF(gid){
         </div>
         <div class="stats">
             <div class="stat"><div class="stat-v" style="color:#065f46;">₹${tPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Collected</div></div>
-            <div class="stat"><div class="stat-v" style="color:#92400e;">₹${tBal.toLocaleString('en-IN')}</div><div class="stat-l">Total Balance</div></div>
             <div class="stat"><div class="stat-v">${expandedSlots.length}</div><div class="stat-l">Members</div></div>
             <div class="stat"><div class="stat-v" style="color:#065f46;">${picked}</div><div class="stat-l">Chits Picked</div></div>
             <div class="stat"><div class="stat-v">${gPays.length}</div><div class="stat-l">Payments</div></div>
         </div>
+        <div style="margin-top:6px;">
+            <div style="font-size:8px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">🎯 Chit Picked</div>
+            ${pickedInfoHtml}
+        </div>
     </div>
     <div class="sec-title">Member Summary</div>
     <table>
-        <colgroup><col style="width:4%"><col style="width:20%"><col style="width:14%"><col style="width:14%"><col style="width:10%"><col style="width:20%"><col style="width:18%"></colgroup>
-        <thead><tr><th>#</th><th>Member</th><th>Total Paid</th><th>Balance</th><th>Months</th><th>Last Payment</th><th>Chit Picked</th></tr></thead>
+        <colgroup><col style="width:5%"><col style="width:26%"><col style="width:18%"><col style="width:18%"><col style="width:13%"><col style="width:20%"></colgroup>
+        <thead><tr><th>#</th><th>Member</th><th>Total Paid</th><th>Balance</th><th>Months</th><th>Last Payment</th></tr></thead>
         <tbody>${summaryRows}
         <tr style="background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;">
             <td colspan="2">Grand Total</td>
             <td style="color:#065f46;">₹${tPaid.toLocaleString('en-IN')}</td>
             <td style="color:#92400e;">₹${tBal.toLocaleString('en-IN')}</td>
-            <td colspan="3"></td>
+            <td colspan="2"></td>
         </tr></tbody>
     </table>
     <div class="sec-title" style="margin-top:20px;">Detailed Payment History — Member Wise</div>
