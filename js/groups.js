@@ -546,7 +546,7 @@ async function renderGroupsTab(){
                 `<td style="color:#a5b4fc;font-size:0.78rem;">${monthsCovered}/${totalMonths}</td>`,
                 (()=>{ const mComm=cs.find(c=>c.memberId===m.id&&c.groupId===g.id&&(c.slotNum==null?1:c.slotNum)===slotNum); const commVal=mComm?mComm.targetMonth:0; const commId=mComm?mComm.id:''; return '<td><input type="number" min="0" max="'+totalMonths+'" value="'+(commVal||'')+'" placeholder="—" data-mid="'+m.id+'" data-gid="'+g.id+'" data-slot="'+slotNum+'" data-commid="'+commId+'" onchange="updateGroupCommitment(this)" style="width:46px;background:rgba(155,89,182,0.1);border:1px solid rgba(155,89,182,0.3);color:#bb86fc;border-radius:6px;padding:3px 4px;font-size:0.7rem;font-weight:800;text-align:center;outline:none;" title="Commitment month for this slot"></td>'; })(),
                 `<td>${pickedPay
-                    ?`<div><span class="chit-yes-badge" style="font-size:0.62rem;padding:1px 5px;">&#x2705;</span><div style="color:#34d399;font-weight:800;font-size:0.7rem;margin-top:2px;">${fmtAmt(pickedAmt)}</div>${pickedBy?`<div style="font-size:0.62rem;color:var(--text-dim);">${pickedBy}</div>`:''}</div>`
+                    ?`<div><span class="chit-yes-badge" style="font-size:0.62rem;padding:1px 5px;">&#x2705;</span>${pickedBy?`<div style="font-size:0.7rem;color:#34d399;font-weight:800;margin-top:2px;">${pickedBy}</div>`:''}</div>`
                     :'<span class="chit-no" style="font-size:0.72rem;">—</span>'}</td>`,
                 `<td><button class="btn-edit-sm" onclick="openEditMember('${m.id}')" style="padding:3px 6px;font-size:0.72rem;">✏️</button></td>`,
                 `</tr>`
@@ -560,26 +560,26 @@ async function renderGroupsTab(){
             <div class="group-card-header" onclick="toggleGroupCard('${bodyId}',this)">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                     <div>
-                        <div style="font-size:1rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
-                        <div style="font-size:0.98rem;color:var(--text-dim);">${(()=>{const slots=gMs.reduce((s,m)=>{const e=(m.enrollments||[]).find(x=>x.groupId===g.id);return s+(e?parseInt(e.qty||1):1);},0);const uniq=gMs.length;return slots===uniq?slots+' members':slots+' chit slots ('+uniq+' members)';})()}  · ${gPays.length} payment entries</div>
-                        <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap;">
-                            <span style="font-size:0.92rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:2px 7px;color:#a5b4fc;">🗓 Started: ${gStartDisp}</span>
-                            ${g.dueDay?`<span style="font-size:0.92rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:6px;padding:2px 7px;color:#f39c12;">📅 Due: ${gDueDayDisp}</span>`:''}
+                        <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">📂 ${g.name}</div>
+                        <div style="font-size:0.72rem;color:var(--text-dim);">${(()=>{const slots=gMs.reduce((s,m)=>{const e=(m.enrollments||[]).find(x=>x.groupId===g.id);return s+(e?parseInt(e.qty||1):1);},0);const uniq=gMs.length;return slots===uniq?slots+' members':slots+' chit slots ('+uniq+' members)';})()}  · ${gPays.length} entries</div>
+                        <div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;">
+                            <span style="font-size:0.66rem;background:rgba(99,102,241,.15);border:1px solid rgba(99,102,241,.3);border-radius:5px;padding:1px 5px;color:#a5b4fc;">🗓 ${gStartDisp}</span>
+                            ${g.dueDay?`<span style="font-size:0.66rem;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);border-radius:5px;padding:1px 5px;color:#f39c12;">📅 Due ${gDueDayDisp}</span>`:''}
                         </div>
                     </div>
-                    <div style="display:flex;gap:6px;align-items:center;">
-                        <button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:5px 10px;font-size:1rem;">📄 PDF</button>
-                        <button onclick="openEditGroup('${g.id}');event.stopPropagation();" class="btn-edit-sm">✏️ Edit</button>
+                    <div style="display:flex;gap:5px;align-items:center;">
+                        <button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:4px 8px;font-size:0.85rem;">📄</button>
+                        <button onclick="openEditGroup('${g.id}');event.stopPropagation();" class="btn-edit-sm" style="padding:4px 8px;font-size:0.85rem;">✏️</button>
                         <span class="chevron-icon closed">▼</span>
                     </div>
                 </div>
-                <div class="row g-2 mt-2">
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Collected</div><div class="mini-stat-val" style="color:#34d399;font-size:clamp(0.7rem,2.2vw,0.9rem);">${fmtAmt(tPaid)}</div></div></div>
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #a5b4fc;"><div class="mini-stat-lbl">Pending</div><div class="mini-stat-val" style="color:#a5b4fc;">${left}/${totalMonths}</div></div></div>
-                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;"><div class="mini-stat-lbl">Picked</div><div class="mini-stat-val" style="color:#34d399;">${picked}</div></div></div>
+                <div class="row g-2 mt-2" style="--bs-gutter-x:0.4rem;">
+                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;padding:6px 4px;"><div class="mini-stat-lbl" style="font-size:0.56rem;">Collected</div><div class="mini-stat-val" style="color:#34d399;font-size:clamp(0.65rem,2.2vw,0.82rem);">${fmtAmt(tPaid)}</div></div></div>
+                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #a5b4fc;padding:6px 4px;"><div class="mini-stat-lbl" style="font-size:0.56rem;">Pending</div><div class="mini-stat-val" style="color:#a5b4fc;font-size:0.78rem;">${left}/${totalMonths}</div></div></div>
+                    <div class="col-3"><div class="mini-stat" style="border-top:2px solid #34d399;padding:6px 4px;"><div class="mini-stat-lbl" style="font-size:0.56rem;">Picked</div><div class="mini-stat-val" style="color:#34d399;font-size:0.78rem;">${picked}</div></div></div>
                 </div>
                 <div class="prog-bar-outer mt-2"><div class="prog-bar-inner" style="width:${pct}%"></div></div>
-                <div class="prog-label" style="margin-top:3px;"><span>Month ${elapsed}/${totalMonths}</span><span>${left}/${totalMonths} months pending</span></div>
+                <div class="prog-label" style="margin-top:2px;font-size:0.66rem;"><span>Month ${elapsed}/${totalMonths}</span><span>${left}/${totalMonths} months pending</span></div>
             </div>
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
 
