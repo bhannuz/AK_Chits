@@ -41,6 +41,7 @@ async function printMemberStatement(mid){
     // Chit-picked chip info (replaces the removed Balance chip) — shows the
     // picked chit's payout value and which month it was picked in, or
     // "Not picked" if this member hasn't picked any chit yet.
+    const ordinal = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
     const pickedPayForChip = mPays.find(p=>p.chitPicked==='Yes');
     let chitPickedChipVal = 'Not picked';
     let chitPickedChipColor = '#888';
@@ -55,7 +56,7 @@ async function printMemberStatement(mid){
             const si = getMonthSlot(dueDates, pickedPayForChip.date);
             if(si>=0) monthNum = si+1;
         }
-        chitPickedChipVal = `Rs.${amt.toLocaleString('en-IN')}${monthNum?` (Month ${monthNum})`:''}`;
+        chitPickedChipVal = `${Math.round(amt)}${monthNum?` on ${ordinal(monthNum)} month`:''}`;
         chitPickedChipColor = '#065f46';
     }
     
