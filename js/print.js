@@ -37,6 +37,19 @@ async function printMemberStatement(mid){
     
     const totalBal = Math.max(0, totalChitNeeded - totalPaid);
     const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
+
+    // Chit-picked info (replaces the removed Balance chip, and the removed
+    // Chit Picked column in the schedule tables below) — which group/slot was
+    // picked and the payout amount.
+    const pickedPaysForInfo = mPays.filter(p=>p.chitPicked==='Yes');
+    const pickedInfoHtml = pickedPaysForInfo.length
+        ? pickedPaysForInfo.map(p=>{
+            const pg = gs.find(x=>x.id===p.groupId);
+            const amt = (parseFloat(p.chit)||0)*(parseInt(p.numMonths)||1);
+            const slotTxt = p.slotNum ? ` (Chit ${p.slotNum})` : '';
+            return `<span style="display:inline-block;background:#f0fff8;border:1px solid #34d399;border-radius:4px;padding:2px 6px;margin:2px 3px 2px 0;font-size:9px;"><b>${pg?pg.name:'Group'}${slotTxt}</b> — Rs.${amt.toLocaleString('en-IN')}${p.chitPickedBy?` (${p.chitPickedBy})`:''}</span>`;
+        }).join('')
+        : '<span style="font-size:9px;color:#888;">No chits picked yet</span>';
     
     // Calculate start and end dates across all enrollments
     let startDateVal = null;
@@ -205,7 +218,6 @@ async function printMemberStatement(mid){
                 <td${rs} style="vertical-align:middle;text-align:center;color:${monthlyBalance>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+monthlyBalance.toLocaleString('en-IN'):'—'}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;font-weight:700;color:${statusColor};">${status}</td>
                 <td${rs} style="vertical-align:middle;text-align:center;color:#555;">${matchPay?normalizePaidBy(matchPay.paidBy):'—'}</td>
-                <td${rs} style="vertical-align:middle;text-align:center;">${cp?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
             </tr>`;
             
             // Add sub-rows for additional payments of the same month
@@ -225,7 +237,6 @@ async function printMemberStatement(mid){
                         <td style="text-align:center;color:#bbb;font-size:9px;">—</td>
                         <td style="text-align:center;color:#bbb;font-size:9px;">—</td>
                         <td style="text-align:center;color:#555;font-size:9px;">${paidBy}</td>
-                        <td style="text-align:center;font-size:9px;">${cp2?'<span style="color:#065f46;font-weight:800;">YES</span>':'—'}</td>
                     </tr>`;
                 });
             }
@@ -234,14 +245,15 @@ async function printMemberStatement(mid){
         }).join('');
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:0;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
-            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">\n                <colgroup><col style="width:3%"><col style="width:9%"><col style="width:11%"><col style="width:9%"><col style="width:11%"><col style="width:11%"><col style="width:9%"><col style="width:9%"><col style="width:13%"></colgroup>
-                <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Status</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Mode</th><th style="font-size:7px;font-weight:800;color:#333;padding:3px 2px;text-align:center;line-height:1.2;"><div style="display:block;margin-bottom:1px;">Chit</div><div style="display:block;">Picked</div></th></tr></thead>
+            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">
+                <colgroup><col style="width:4%"><col style="width:13%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:19%"></colgroup>
+                <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Status</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;text-align:center;">Mode</th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:9px;color:#333;">
                     <td colspan="4" style="text-align:center;padding:3px 2px;border-right:1px solid #f39c12;font-weight:800;">Total</td>
                     <td style="text-align:center;color:#065f46;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gPaid.toLocaleString('en-IN')}</td>
                     <td style="text-align:center;color:#92400e;font-weight:900;border-right:1px solid #f39c12;padding:3px 2px;">Rs.${gBal.toLocaleString('en-IN')}</td>
-                    <td colspan="3" style="text-align:center;"></td>
+                    <td colspan="2" style="text-align:center;"></td>
                 </tr></tbody>
             </table>
         </div>`;
@@ -591,9 +603,12 @@ async function printMemberStatement(mid){
             <div class="mname">${m.name} • &#128222; ${m.phone||'—'} • ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q:'')):'?';}).join(', ')||'—'}</div>
             <div class="stats">
                 <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
-                <div class="stat"><div class="stat-v" style="color:#92400e;">Rs.${totalBal.toLocaleString('en-IN')}</div><div class="stat-l">Balance</div></div>
                 <div class="stat"><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} / ${endDateDisp}</div><div class="stat-l">Start Date / End</div></div>
                 <div class="stat"><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,paidMonths=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);const uniqueMonths=new Set();gPays.forEach(p=>{if(p.monthSlot!=null){uniqueMonths.add(p.monthSlot);}else if(Array.isArray(p.monthSlots)){p.monthSlots.forEach(m=>uniqueMonths.add(m));}});paidMonths=Math.max(paidMonths,uniqueMonths.size);}});return paidMonths+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid / Total Months</div></div>
+            </div>
+            <div style="margin-top:6px;">
+                <div style="font-size:8px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">🎯 Chit Picked</div>
+                ${pickedInfoHtml}
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
