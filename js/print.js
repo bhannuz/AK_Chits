@@ -402,8 +402,8 @@ async function printMemberStatement(mid){
             #printStatement .stat:nth-child(3) .stat-v { color:#0891b2; }
             #printStatement .stat:nth-child(4) .stat-v { color:#065f46; }
             #printStatement .stat:last-child { border-right:none; }
-            #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-bottom:1px; }
-            #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-top:1px; font-weight:800; letter-spacing:0px; }
+            #printStatement .stat-v { font-size:13px; font-weight:900; display:block; margin-top:1px; }
+            #printStatement .stat-l { font-size:7px; color:#666; text-transform:uppercase; margin-bottom:1px; font-weight:800; letter-spacing:0px; }
             #printStatement .sec-title { 
                 font-size:10px; 
                 font-weight:900; 
@@ -618,10 +618,10 @@ async function printMemberStatement(mid){
         <div class="mbox">
             <div class="mname">${m.name} • &#128222; ${m.phone||'—'} • ${enrollments.map(e=>{const g=gs.find(x=>x.id===e.groupId);const q=parseInt(e.qty||1);return g?(g.name+(e.label?' ('+e.label+')':'')+(q>1?' ×'+q:'')):'?';}).join(', ')||'—'}</div>
             <div class="stats">
-                <div class="stat"><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div><div class="stat-l">Total Paid</div></div>
-                <div class="stat"><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} &rarr; ${endDateDisp}</div><div class="stat-l">Start &rarr; End</div></div>
-                <div class="stat"><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,paidMonths=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);const uniqueMonths=new Set();gPays.forEach(p=>{if(p.monthSlot!=null){uniqueMonths.add(p.monthSlot);}else if(Array.isArray(p.monthSlots)){p.monthSlots.forEach(m=>uniqueMonths.add(m));}});paidMonths=Math.max(paidMonths,uniqueMonths.size);}});return paidMonths+'/'+totalMonths;})() : '0/0'}</div><div class="stat-l">Paid / Total Months</div></div>
-                <div class="stat"><div class="stat-v" style="color:${chitPickedChipColor};font-size:11px;">${chitPickedChipVal}</div><div class="stat-l">Chit Picked</div></div>
+                <div class="stat"><div class="stat-l">Total Paid</div><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div></div>
+                <div class="stat"><div class="stat-l">Start &rarr; End</div><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} &rarr; ${endDateDisp}</div></div>
+                <div class="stat"><div class="stat-l">Paid / Total Months</div><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,paidMonths=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);const uniqueMonths=new Set();gPays.forEach(p=>{if(p.monthSlot!=null){uniqueMonths.add(p.monthSlot);}else if(Array.isArray(p.monthSlots)){p.monthSlots.forEach(m=>uniqueMonths.add(m));}});paidMonths=Math.max(paidMonths,uniqueMonths.size);}});return paidMonths+'/'+totalMonths;})() : '0/0'}</div></div>
+                <div class="stat"><div class="stat-l">Chit Picked</div><div class="stat-v" style="color:${chitPickedChipColor};font-size:11px;">${chitPickedChipVal}</div></div>
             </div>
         </div>
         <div class="sec-title">Payment History &mdash; Group Wise</div>
