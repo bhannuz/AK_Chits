@@ -39,15 +39,16 @@ async function printMemberStatement(mid){
     const chitsPicked=mPays.filter(p=>p.chitPicked==='Yes').length;
 
     // Chit-picked chip info (replaces the removed Balance chip) — shows the
-    // picked chit's payout value and which month it was picked in, or
-    // "Not picked" if this member hasn't picked any chit yet.
+    // *actual monthly collection payout* for the month this chit was picked
+    // (the same value shown in the Groups tab's "Chit Picked" column), not
+    // the member's own monthly pay amount, which is a different figure.
     const ordinal = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+    const payouts = (typeof _getPayouts === 'function') ? await _getPayouts() : {};
     const pickedPayForChip = mPays.find(p=>p.chitPicked==='Yes');
     let chitPickedChipVal = 'Not picked';
     let chitPickedChipColor = '#888';
     if(pickedPayForChip){
         const pg = gs.find(x=>x.id===pickedPayForChip.groupId);
-        const amt = (parseFloat(pickedPayForChip.chit)||0)*(parseInt(pickedPayForChip.numMonths)||1);
         let monthNum = null;
         if(pickedPayForChip.monthSlot!=null){
             monthNum = pickedPayForChip.monthSlot+1;
@@ -56,6 +57,12 @@ async function printMemberStatement(mid){
             const si = getMonthSlot(dueDates, pickedPayForChip.date);
             if(si>=0) monthNum = si+1;
         }
+        // The recorded monthly collection payout for that due month is the actual
+        // "chit picked" amount; fall back to the payment's own chit value only if
+        // no payout has been entered for that month.
+        const payoutKey = pg && monthNum ? (pg.id+'_'+(monthNum-1)) : null;
+        const payoutVal = payoutKey && payouts[payoutKey] ? parseFloat(payouts[payoutKey])||0 : 0;
+        const amt = payoutVal>0 ? payoutVal : (parseFloat(pickedPayForChip.chit)||0)*(parseInt(pickedPayForChip.numMonths)||1);
         chitPickedChipVal = `${Math.round(amt)}${monthNum?` on ${ordinal(monthNum)} month`:''}`;
         chitPickedChipColor = '#065f46';
     }
