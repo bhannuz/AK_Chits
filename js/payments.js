@@ -181,20 +181,26 @@ async function buildMonthSelectorGrid(){
     const chitAmount=parseFloat(document.getElementById('pChit').value)||0;
     const isVariableAmount=grp&&grp.amtType==='variable';
     const ps=await getCollection('payments');
+    window._monthPaidMap={};
     grid.innerHTML=allDueDates.map((dd,i)=>{
         const paid=paidSlots.has(i);
         const isPast=dd<=today;
         let totalPaidForMonth=0;
+        let splitPaidForMonth=0; // multi-month payments split evenly across their months
         if(paid){
             ps.forEach(p=>{
                 if(p.memberId!==mid||p.groupId!==gid)return;
                 const pSlot=p.slotNum?Number(p.slotNum):1;
                 if(pSlot!==Number(sn))return;
                 if(eid&&p.enrollmentId&&p.enrollmentId!==''){if(p.enrollmentId!==eid)return;}
-                if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){totalPaidForMonth+=parseFloat(p.paid)||0;}
-                else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;}
+                if(Array.isArray(p.monthSlots)&&p.monthSlots.includes(i)){
+                    totalPaidForMonth+=parseFloat(p.paid)||0;
+                    splitPaidForMonth+=(parseFloat(p.paid)||0)/(p.monthSlots.length||1);
+                }
+                else if(p.monthSlot===i){totalPaidForMonth+=parseFloat(p.paid)||0;splitPaidForMonth+=parseFloat(p.paid)||0;}
             });
         }
+        window._monthPaidMap[i]=splitPaidForMonth;
         let label='·';
         let statusText='';
         let color='var(--text-dim)';
@@ -242,10 +248,31 @@ async function buildMonthSelectorGrid(){
             <div style="min-width:0;">
                 <div style="font-size:0.65rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${fmtDate(dd)}</div>
                 <div style="font-size:0.6rem;color:${color};">${label} ${statusText}</div>
+                <div class="mb-paid" data-slot="${i}" style="font-size:0.6rem;font-weight:700;white-space:nowrap;color:#34d399;"></div>
+                <div class="mb-bal" data-slot="${i}" style="font-size:0.6rem;font-weight:700;white-space:nowrap;"></div>
             </div>
         </label>`;
     }).join('');
+    updateMonthBalances();
     updateSelectedSummary();
+}
+
+// Fills the "Bal ₹X" line on every month tile from the current Chit Amt
+function updateMonthBalances(){
+    const chit=parseFloat(document.getElementById('pChit').value)||0;
+    const map=window._monthPaidMap||{};
+    document.querySelectorAll('#monthSelectorGrid .mb-bal').forEach(el=>{
+        if(!chit){el.textContent='';return;}
+        const bal=Math.max(0,chit-(map[el.dataset.slot]||0));
+        el.textContent='Bal \u20b9'+Math.round(bal).toLocaleString('en-IN');
+        el.style.color=bal===0?'#34d399':(map[el.dataset.slot]>0?'#f59e0b':'#cbd5e1');
+    });
+    // Partial months: also show how much has been paid so far
+    document.querySelectorAll('#monthSelectorGrid .mb-paid').forEach(el=>{
+        const paidAmt=map[el.dataset.slot]||0;
+        const partial=chit>0 && paidAmt>0 && paidAmt<chit;
+        el.textContent=partial?'Paid \u20b9'+Math.round(paidAmt).toLocaleString('en-IN'):'';
+    });
 }
 
 function updateSelectedSummary(){
@@ -318,12 +345,27 @@ function getPerMonthAmounts(){
 }
 
 function calcBalance(){
+    updateMonthBalances();
     const chit=parseFloat(document.getElementById('pChit').value)||0;
     const paid=parseFloat(document.getElementById('pPaid').value)||0;
     const isMulti=document.getElementById('pNumMonths').value==='multi';
+    const ref=document.getElementById('totalChitRef');
+    const fmt=v=>`\u20b9${v.toLocaleString('en-IN')}`;
+    const setPrev=v=>{
+        const w=document.getElementById('prevPaidWrap');
+        if(v>0){document.getElementById('prevPaidVal').textContent=fmt(v);w.style.display='inline';}
+        else w.style.display='none';
+    };
+    const show=(totalTxt,bal,prev)=>{
+        document.getElementById('totalChitVal').textContent=totalTxt;
+        document.getElementById('totalBalVal').textContent=fmt(bal);
+        setPrev(prev||0);
+        ref.style.display='flex';
+    };
     if(isMulti){
         const selectedCBs=Array.from(document.querySelectorAll('#monthSelectorGrid input[type=checkbox]:checked:not(:disabled)'));
-        const n=Math.max(1,selectedCBs.length);
+        const n=selectedCBs.length;
+        if(!chit||n===0){ref.style.display='none';return;}
         const isCustom=document.getElementById('perMonthCustomToggle')?.checked;
         let totalChit=0;
         if(isCustom){
@@ -333,20 +375,34 @@ function calcBalance(){
             totalChit=chit*n;
         }
         const bal=Math.max(0,totalChit-paid);
-        if(n>1){
-            document.getElementById('totalChitRef').style.display='block';
-            document.getElementById('totalChitVal').textContent=isCustom
-                ? `\u20b9${totalChit.toLocaleString('en-IN')} (${n} months, custom amounts)`
-                : `\u20b9${totalChit.toLocaleString('en-IN')} (${n}\u00d7\u20b9${chit.toLocaleString('en-IN')})`;
-            document.getElementById('totalBalVal').textContent=`\u20b9${bal.toLocaleString('en-IN')}`;
-        } else {
-            document.getElementById('totalChitRef').style.display='none';
-        }
+        const totalTxt=n===1 ? fmt(totalChit)
+            : (isCustom ? `${fmt(totalChit)} (${n} months, custom amounts)`
+                        : `${fmt(totalChit)} (${n}\u00d7${fmt(chit)})`);
+        show(totalTxt,bal,0);
     } else {
-        document.getElementById('totalChitRef').style.display='none';
+        // Single month: balance also accounts for earlier part-payments of that month
+        const slotVal=document.getElementById('pSingleMonthSlot').value;
+        if(!chit||slotVal===''){ref.style.display='none';return;}
+        const seq=window._calcBalSeq=(window._calcBalSeq||0)+1;
+        const mid=document.getElementById('pMember').value;
+        const gid=document.getElementById('pGroup').value;
+        const eid=document.getElementById('pEnrollmentId').value||'';
+        const sn=parseInt(document.getElementById('pSlotNum').value||'1');
+        const slot=parseInt(slotVal);
+        getCollection('payments').then(ps=>{
+            if(seq!==window._calcBalSeq) return; // a newer calc superseded this one
+            const prev=ps.filter(p=>p.memberId===mid && p.groupId===gid &&
+                (p.enrollmentId||'')===eid &&
+                (p.slotNum?Number(p.slotNum):1)===sn &&
+                (Array.isArray(p.monthSlots) ? p.monthSlots.includes(slot) : p.monthSlot===slot))
+                .reduce((s,p)=>{
+                    const slots=Array.isArray(p.monthSlots)?p.monthSlots:(p.monthSlot!=null?[p.monthSlot]:[]);
+                    return s+((parseFloat(p.paid)||0)/(slots.length||1));
+                },0);
+            show(fmt(chit),Math.max(0,chit-prev-paid),prev);
+        }).catch(()=>{ show(fmt(chit),Math.max(0,chit-paid),0); });
     }
 }
-
 
 
 // PAYMENT FORM
@@ -982,6 +1038,7 @@ function onSingleMonthSlotChange() {
         badge.style.color = '#34d399';
     }
     
+    calcBalance();
     updateChitPickedOptionForMode();
 }
 
