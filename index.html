@@ -892,8 +892,9 @@
         </div>
 
         <!-- Total chit ref bar -->
-        <div id="totalChitRef" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:0.82rem;display:flex;gap:16px;">
+        <div id="totalChitRef" style="display:none;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:6px 10px;margin-bottom:8px;font-size:0.82rem;flex-wrap:wrap;gap:6px 16px;">
             <span style="color:var(--text-dim);">Total: <span id="totalChitVal" style="color:#a5b4fc;font-weight:700;"></span></span>
+            <span id="prevPaidWrap" style="color:var(--text-dim);display:none;">Already paid: <span id="prevPaidVal" style="color:#34d399;font-weight:700;"></span></span>
             <span style="color:var(--text-dim);">Balance: <span id="totalBalVal" style="color:#f59e0b;font-weight:700;"></span></span>
         </div>
 
@@ -1083,7 +1084,7 @@
 <script src="js/ledger.js?v=20260619_v6"></script>
 <script src="js/members.js?v=20260610_v1"></script>
 <script src="js/groups.js?v=20260717_v2"></script>
-<script src="js/payments.js?v=20260613_v7"></script>
+<script src="js/payments.js?v=20261013_v8"></script>
 <script src="js/backup.js?v=20260717_v6"></script>
 <script src="js/planner.js?v=20260613_v2"></script>
 <script src="js/print.js?v=20260717_v3"></script>
