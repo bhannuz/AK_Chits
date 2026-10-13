@@ -582,6 +582,7 @@ async function savePayment(){
         const chitPicked=document.getElementById('pChitPicked').value;
         const chitPickedBy=document.getElementById('pChitPickedBy').value.trim();
         const mode = document.getElementById('pNumMonths').value;
+        let ackData=null; // set when chit is picked, used for the WhatsApp acknowledgement
 
         if(!mid){showToast('❌ Select a member',false);return;}
         if(!gid){showToast('❌ Select a group',false);return;}
@@ -628,6 +629,7 @@ async function savePayment(){
                 numMonths:1, monthSlots, monthSlot:selectedSlot,
                 paidPerMonth:paid, balPerMonth:balance, paymentNote:paymentNote1
             });
+            if(chitPicked==='Yes') ackData={mid,gid,slot:selectedSlot,date,chitPickedBy,chit:chitPerMonth};
             
         } else {
             // Multiple month mode
@@ -654,6 +656,7 @@ async function savePayment(){
                 numMonths, monthSlots, monthSlot:monthSlots[0],
                 paidPerMonth:paid/numMonths, balPerMonth:balance/numMonths, paymentNote:paymentNote2
             });
+            if(chitPicked==='Yes') ackData={mid,gid,slot:monthSlots[0],date,chitPickedBy,chit:chitPerMonth};
         }
         
         bustCache('payments');
@@ -668,9 +671,99 @@ async function savePayment(){
             await loadMemberLedger();
         }
         
+        if(ackData) await showChitPickedAck(ackData);
+        
     } catch(error) {
         console.error('Payment save error:', error);
         showToast('❌ ' + error.message, false);
+    }
+}
+
+// ══════════════════════════════════════════
+// CHIT PICKED — WHATSAPP ACKNOWLEDGEMENT
+// ══════════════════════════════════════════
+function buildChitPickedMessage(d){
+    const L=[];
+    L.push(`Dear ${d.name},`);
+    L.push('');
+    L.push('Greetings from *AK Chit Funds*.');
+    L.push('');
+    L.push(`This is to acknowledge that you have picked the chit for the month of *${d.monthLabel}* in the group *${d.groupName}*.`);
+    L.push('');
+    L.push('*Chit Details*');
+    L.push(`Group: ${d.groupName}`);
+    L.push(`Month: ${d.monthLabel}`);
+    if(d.pickedValue>0) L.push(`Chit value: ${fmtAmt(d.pickedValue)}`);
+    L.push(`Recorded on: ${d.dateLabel}`);
+    L.push('');
+    L.push('Our team will contact you shortly regarding the next steps. For any clarification, please feel free to reach out to us.');
+    L.push('');
+    L.push('Thank you for your continued trust in us.');
+    L.push('');
+    L.push('Warm regards,');
+    L.push('*AK Chit Funds*');
+    return L.join('\n');
+}
+
+async function showChitPickedAck(data){
+    try{
+        if(!data||!data.mid||!data.gid) return;
+        const [ms,gs]=await Promise.all([getCollection('members'),getCollection('groups')]);
+        const m=ms.find(x=>x.id===data.mid);
+        const g=gs.find(x=>x.id===data.gid);
+        if(!m||!g) return;
+        const dueDates=getGroupDueDates(g);
+        const due=(data.slot!=null&&dueDates[data.slot])?dueDates[data.slot]:null;
+        let monthLabel='the selected month';
+        if(due){
+            const mn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const [y,mo]=due.split('-');
+            monthLabel=`${mn[parseInt(mo,10)-1]} ${y}`;
+        }
+        const msg=buildChitPickedMessage({
+            name:m.name||'Member',
+            groupName:g.name||'',
+            monthLabel,
+            pickedValue:parseFloat(data.chitPickedBy)||0,
+            dateLabel:fmtDate(data.date)
+        });
+        let phone=(m.phone||'').replace(/\D/g,'');
+        if(phone.length===10) phone='91'+phone;
+
+        let ov=document.getElementById('chitAckModal');
+        if(ov) ov.remove();
+        ov=document.createElement('div');
+        ov.id='chitAckModal';
+        ov.className='modal-overlay';
+        ov.style.cssText='display:block;z-index:2100;';
+        ov.innerHTML=`<div class="modal-content-custom" style="max-height:92vh;overflow-y:auto;padding:14px 16px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <div style="font-size:1rem;font-weight:800;color:#34d399;flex:1;">🏆 Chit Picked — Send Acknowledgement</div>
+                <button type="button" onclick="document.getElementById('chitAckModal').remove()" style="background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;padding:2px 6px;">✕</button>
+            </div>
+            <div style="font-size:0.78rem;color:var(--text-dim);margin-bottom:6px;">To: <b style="color:white;">${m.name||''}</b> &nbsp;📞 ${phone?('+'+phone):'<span style="color:#f87171;">No phone number saved</span>'}</div>
+            <textarea id="chitAckText" class="form-input" rows="14" style="font-size:0.8rem;resize:vertical;margin-bottom:8px;"></textarea>
+            <div style="display:flex;gap:8px;">
+                <button type="button" id="chitAckSend" class="btn btn-success fw-bold" style="flex:1;border-radius:12px;padding:10px;background:#25D366;border:none;color:white;">💬 Send on WhatsApp</button>
+                <button type="button" id="chitAckCopy" class="btn fw-bold" style="border-radius:12px;padding:10px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;">📋 Copy</button>
+                <button type="button" onclick="document.getElementById('chitAckModal').remove()" class="btn fw-bold" style="border-radius:12px;padding:10px;background:var(--input-bg);border:1px solid var(--border);color:white;">Skip</button>
+            </div>
+        </div>`;
+        document.body.appendChild(ov);
+        const ta=document.getElementById('chitAckText');
+        ta.value=msg;
+        const sendBtn=document.getElementById('chitAckSend');
+        if(!phone){ sendBtn.disabled=true; sendBtn.style.opacity='.5'; }
+        sendBtn.onclick=()=>{
+            window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(ta.value),'_blank');
+            ov.remove();
+        };
+        document.getElementById('chitAckCopy').onclick=async()=>{
+            try{ await navigator.clipboard.writeText(ta.value); showToast('✅ Message copied'); }
+            catch(e){ ta.select(); document.execCommand('copy'); showToast('✅ Message copied'); }
+        };
+    }catch(err){
+        console.error('Chit acknowledgement error:',err);
     }
 }
 
@@ -733,11 +826,18 @@ async function saveEditPayment(){
     if(!date)return showToast('\u274c Enter date',false);
     if(!paid)return showToast('\u274c Enter amount paid',false);
     const paymentNote=getEditPaymentNoteText();
+    const psBefore=await getCollection('payments');
+    const before=psBefore.find(x=>x.id===pid)||{};
     await db.collection('payments').doc(pid).update({date,chit,paid,balance,paidBy,chitPicked,chitPickedBy,paymentNote});
     bustCache('payments');
     closeModal('editPaymentModal');showToast('\u2705 Payment updated!');updateUI();
     const mid=document.getElementById('summaryView').value;
     if(mid)loadMemberLedger();
+    // Chit newly marked as picked -> offer the WhatsApp acknowledgement
+    if(chitPicked==='Yes' && before.chitPicked!=='Yes'){
+        const slot=Array.isArray(before.monthSlots)&&before.monthSlots.length?before.monthSlots[0]:(before.monthSlot!=null?before.monthSlot:null);
+        await showChitPickedAck({mid:before.memberId,gid:before.groupId,slot,date,chitPickedBy,chit});
+    }
 }
 
 async function deletePayment(){
