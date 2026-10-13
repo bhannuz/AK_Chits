@@ -137,127 +137,114 @@ async function printMemberStatement(mid){
             else { const si=getMonthSlot(allDueDates,p.date); if(si>=0) paidSlotSet.add(si); }
         });
 
-        // Build rowspan map for multi-month payments
-        const payFirstSlot = {};
-        const payRowSpan   = {};
-        allDueDates.forEach((d,i)=>{
-            const p = slotPays.find(pay=>{
-                if(Array.isArray(pay.monthSlots)) return pay.monthSlots.includes(i);
-                if(pay.monthSlot!=null) return pay.monthSlot===i;
-                return getMonthSlot(allDueDates,pay.date)===i;
-            });
-            if(!p || !(p.numMonths>1)) return;
-            if(payFirstSlot[p.id]===undefined) payFirstSlot[p.id]=i;
-            payRowSpan[p.id]=(payRowSpan[p.id]||0)+1;
-        });
+        // Payments that cover several months (bulk) are split evenly across those months
+        const slotsOf = p => (Array.isArray(p.monthSlots)&&p.monthSlots.length) ? p.monthSlots : null;
+        const shareOf = p => (parseFloat(p.paid)||0) / (slotsOf(p) ? slotsOf(p).length : 1);
+        const isBulk  = p => !!slotsOf(p) && slotsOf(p).length>1;
+        const payInMonth = (p,i) => {
+            if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
+            if(p.monthSlot!=null) return p.monthSlot===i;
+            return getMonthSlot(allDueDates,p.date)===i;
+        };
 
-        // Build merged rows
+        // Build merged rows — EVERY payment made for a month gets its own line
         const rows = allDueDates.map((dueDate,i)=>{
-            const matchPay = slotPays.find(p=>{
-                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
-                if(p.monthSlot!=null) return p.monthSlot===i;
-                return getMonthSlot(allDueDates,p.date)===i;
-            });
-            
-            // Find ALL payments for this month
-            const monthPayments = slotPays.filter(p=>{
-                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(i);
-                if(p.monthSlot!=null) return p.monthSlot===i;
-                return getMonthSlot(allDueDates,p.date)===i;
-            });
-            
-            // Calculate total paid and balance for the month
-            const totalMonthPaid = monthPayments.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
+            const monthPayments = slotPays.filter(p=>payInMonth(p,i));
+            const totalMonthPaid = monthPayments.reduce((s,p)=>s+shareOf(p),0);
             const monthlyBalance = Math.max(0, chitAmount - totalMonthPaid);
-            
-            const paidAmt       = matchPay ? (parseFloat(matchPay.paid)||0)    : 0;
-            const chitAmt       = matchPay ? (parseFloat(matchPay.chit)||chitAmount||0) : (chitAmount||0);
-            const balAmt        = matchPay ? (parseFloat(matchPay.balance)||0)  : 0;
-            
-            // SIMPLE STATUS: Compare total paid for month to chit amount
-            const isFullPaid    = paidSlotSet.has(i) && totalMonthPaid >= chitAmount;
-            const isPartialPaid = paidSlotSet.has(i) && totalMonthPaid > 0 && monthlyBalance > 0;
-            const isAnyPaid     = paidSlotSet.has(i);
-            const isOverdue     = !isAnyPaid && dueDate<todayStr;
-            const cp            = matchPay && matchPay.chitPicked==='Yes';
-            const isMulti       = matchPay && matchPay.numMonths>1;
-            const isFirstOfMulti= isMulti && matchPay && payFirstSlot[matchPay.id]===i;
-            const isSubOfMulti  = isMulti && matchPay && payFirstSlot[matchPay.id]!==i;
-            const span          = isFirstOfMulti ? payRowSpan[matchPay.id] : 1;
-            const rs            = span>1 ? ` rowspan="${span}"` : '';
-            
-            // Check if multiple payments for same month
-            const hasMultiPayments = monthPayments.length > 1;
+            const chitAmt = chitAmount||0;
 
-            // Status
+            const isAnyPaid     = monthPayments.length>0;
+            const isFullPaid    = isAnyPaid && totalMonthPaid >= chitAmount;
+            const isPartialPaid = isAnyPaid && totalMonthPaid > 0 && monthlyBalance > 0;
+            const isOverdue     = !isAnyPaid && dueDate<todayStr;
+            const cp            = monthPayments.some(p=>p.chitPicked==='Yes');
+            const hasBulk       = monthPayments.some(isBulk);
+
             let status;
             if(isFullPaid) status='✅ Paid';
             else if(isPartialPaid) status='⚡ Partial';
             else if(isOverdue)     status='🔴 Overdue';
             else                   status='⏳ Pending';
 
-            // Row styling
             const bg = isFullPaid    ? '#f0fff8'
                      : isPartialPaid ? '#fffbeb'
                      : cp            ? '#f0fff8'
-                     : isMulti       ? '#eef2ff'
+                     : hasBulk       ? '#eef2ff'
                      : isOverdue     ? '#fff5f5'
                      : (i%2===0?'#fff':'#fafafa');
             const bl = cp            ? 'border-left:3px solid #10b981;'
-                     : isMulti       ? 'border-left:3px solid #818cf8;'
+                     : hasBulk       ? 'border-left:3px solid #818cf8;'
                      : isPartialPaid ? 'border-left:3px solid #f59e0b;'
                      : '';
+            const statusColor = isFullPaid?'#065f46':isPartialPaid?'#92400e':isOverdue?'#b91c1c':'#888';
+            const money = v => 'Rs.'+Math.round(v).toLocaleString('en-IN');
 
-            // Sub-rows of multi: only show # and due date
-            if(isSubOfMulti){
+            // Cells describing one payment: date, paid, mode
+            const payCells = (pay, idx, runBal, many)=>{
+                const bulk = isBulk(pay);
+                const first = bulk ? Math.min.apply(null, slotsOf(pay)) : null;
+                const paidTxt = bulk
+                    ? (first===i
+                        ? `${money(parseFloat(pay.paid)||0)} <small style="color:#3730a3;font-size:8px;">(${slotsOf(pay).length} mo)</small>`
+                        : `<small style="color:#6366f1;font-size:8px;">↳ bulk payment</small>`)
+                    : money(parseFloat(pay.paid)||0);
+                return {
+                    date: fmtDate(pay.date),
+                    paid: paidTxt,
+                    mode: normalizePaidBy(pay.paidBy),
+                    bal: many ? money(runBal) : null
+                };
+            };
+
+            if(!monthPayments.length){
                 return `<tr style="background:${bg};${bl}">
                     <td style="text-align:center;color:#888;">${i+1}</td>
-                    <td style="color:#3730a3;">${fmtDate(dueDate)}</td>
-                    <td style="color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
+                    <td>${fmtDate(dueDate)}</td>
+                    <td style="text-align:center;color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center;">—</td>
+                    <td style="text-align:center;font-weight:700;color:${statusColor};">${status}</td>
+                    <td style="text-align:center;color:#555;">—</td>
                 </tr>`;
             }
 
-            // Multi tag
-            const multiTag = isFirstOfMulti
-                ? ` <small style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">×${matchPay.numMonths} months bulk</small>`
-                : '';
-
-            const statusColor = isFullPaid?'#065f46':isPartialPaid?'#92400e':isOverdue?'#b91c1c':'#888';
-
-
-            let mainRow = `<tr style="background:${bg};${bl}">
-                <td style="text-align:center;color:#888;">${i+1}</td>
-                <td>${fmtDate(dueDate)}${multiTag}</td>
-                <td style="text-align:center;color:#555;">Rs.${chitAmount>0?chitAmount.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;">${matchPay?fmtDate(matchPay.date):'—'}</td>
-                <td${rs} style="vertical-align:middle;text-align:center;color:#065f46;font-weight:700;">${isAnyPaid&&matchPay?'Rs.'+paidAmt.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;text-align:center;color:${monthlyBalance>0?'#92400e':'#065f46'};font-weight:700;">${matchPay?'Rs.'+monthlyBalance.toLocaleString('en-IN'):'—'}</td>
-                <td${rs} style="vertical-align:middle;text-align:center;font-weight:700;color:${statusColor};">${status}</td>
-                <td${rs} style="vertical-align:middle;text-align:center;color:#555;">${matchPay?normalizePaidBy(matchPay.paidBy):'—'}</td>
-            </tr>`;
-            
-            // Add sub-rows for additional payments of the same month
-            let subRows = '';
-            if(hasMultiPayments && monthPayments.length > 1){
-                monthPayments.forEach((pay, idx)=>{
-                    if(idx === 0) return; // Skip first, already shown above
-                    const payDate = fmtDate(pay.date);
-                    const paidBy = normalizePaidBy(pay.paidBy);
-                    const cp2 = pay.chitPicked === 'Yes';
-                    subRows += `<tr style="background:#fafafa;border-left:3px solid #e0e7ff;">
-                        <td style="text-align:center;color:#bbb;">└</td>
-                        <td style="color:#999;font-size:9px;">(L${idx+1})</td>
-                        <td style="color:#bbb;">—</td>
-                        <td style="color:#065f46;font-weight:700;">${payDate}</td>
-                        <td style="text-align:center;color:#065f46;font-weight:700;">Rs.${(parseFloat(pay.paid)||0).toLocaleString('en-IN')}</td>
-                        <td style="text-align:center;color:#bbb;font-size:9px;">—</td>
-                        <td style="text-align:center;color:#bbb;font-size:9px;">—</td>
-                        <td style="text-align:center;color:#555;font-size:9px;">${paidBy}</td>
+            const many = monthPayments.length>1;
+            let cum = 0;
+            return monthPayments.map((pay,idx)=>{
+                cum += shareOf(pay);
+                const runBal = Math.max(0, chitAmount - cum);
+                const c = payCells(pay, idx, runBal, many);
+                const cp2 = pay.chitPicked==='Yes';
+                const pickTag = cp2 ? ' <small style="background:#d1fae5;color:#065f46;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">🏆 Picked</small>' : '';
+                if(idx===0){
+                    const bulkTag = isBulk(pay) && Math.min.apply(null,slotsOf(pay))===i
+                        ? ` <small style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">×${slotsOf(pay).length} months bulk</small>` : '';
+                    const manyTag = many ? ` <small style="background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">${monthPayments.length} payments</small>` : '';
+                    return `<tr style="background:${bg};${bl}">
+                        <td style="text-align:center;color:#888;">${i+1}</td>
+                        <td>${fmtDate(dueDate)}${bulkTag}${manyTag}</td>
+                        <td style="text-align:center;color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
+                        <td style="text-align:center;">${c.date}</td>
+                        <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
+                        <td style="text-align:center;color:${(many?runBal:monthlyBalance)>0?'#92400e':'#065f46'};font-weight:700;">${money(many?runBal:monthlyBalance)}</td>
+                        <td style="text-align:center;font-weight:700;color:${statusColor};">${many?'':status}</td>
+                        <td style="text-align:center;color:#555;">${c.mode}</td>
                     </tr>`;
-                });
-            }
-            
-            return mainRow + subRows;
+                }
+                const last = idx===monthPayments.length-1;
+                return `<tr style="background:${bg};border-left:3px solid #e0e7ff;">
+                    <td style="text-align:center;color:#bbb;">└</td>
+                    <td style="color:#999;font-size:9px;">Payment ${idx+1}</td>
+                    <td style="text-align:center;color:#bbb;">—</td>
+                    <td style="text-align:center;">${c.date}</td>
+                    <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
+                    <td style="text-align:center;color:${runBal>0?'#92400e':'#065f46'};font-weight:700;">${money(runBal)}</td>
+                    <td style="text-align:center;font-weight:700;color:${statusColor};">${last?status:''}</td>
+                    <td style="text-align:center;color:#555;">${c.mode}</td>
+                </tr>`;
+            }).join('');
         }).join('');
 
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:0;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
