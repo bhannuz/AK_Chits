@@ -518,3 +518,76 @@
                 padding: 6px 3px !important;
             }
         }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   RECORD PAYMENT WINDOW — fits every screen size
+   • Title bar and Save/Cancel stay pinned, only the middle scrolls
+   • Never taller than the visible screen (handles mobile browser bars / keyboard via dvh)
+   • Month tiles flow to the available width (no cut-off tiles)
+   ═══════════════════════════════════════════════════════════════ */
+#paymentModal.modal-overlay { padding:8px; overflow:hidden; }
+
+#paymentModal .pay-modal {
+    display:flex; flex-direction:column;
+    width:100%; max-width:520px;
+    margin:0 auto;
+    padding:0 !important;
+    overflow:hidden;
+    max-height:calc(100vh - 16px);
+    max-height:calc(100dvh - 16px);
+}
+#paymentModal .pm-head {
+    flex:0 0 auto;
+    padding:12px 14px 10px;
+    border-bottom:1px solid var(--border);
+}
+#paymentModal .pm-body {
+    flex:1 1 auto; min-height:0;
+    overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+    padding:10px 14px 6px;
+}
+#paymentModal .pm-foot {
+    flex:0 0 auto;
+    display:grid; grid-template-columns:1fr 1fr; gap:8px;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top:1px solid var(--border);
+    background:var(--card-bg);
+}
+
+/* Month tiles adapt to the window width instead of a fixed 4 columns */
+#paymentModal .month-selector-grid {
+    grid-template-columns:repeat(auto-fill,minmax(88px,1fr));
+    max-height:min(38vh,260px);
+    max-height:min(38dvh,260px);
+}
+#paymentModal .month-selector-grid label,
+#paymentModal .month-selector-grid > * { min-width:0; }
+
+/* Larger screens: a little more room */
+@media (min-width:768px) {
+    #paymentModal .pay-modal { max-width:560px; }
+    #paymentModal .month-selector-grid { max-height:min(42vh,300px); }
+}
+
+/* Small phones */
+@media (max-width:420px) {
+    #paymentModal.modal-overlay { padding:4px; }
+    #paymentModal .pay-modal { border-radius:16px; max-height:calc(100vh - 8px); max-height:calc(100dvh - 8px); }
+    #paymentModal .pm-head, #paymentModal .pm-body, #paymentModal .pm-foot { padding-left:10px; padding-right:10px; }
+}
+@media (max-width:340px) {
+    /* very narrow screens: stack the two-column rows */
+    #paymentModal .pm-body [style*="display:grid"] { grid-template-columns:1fr !important; }
+    #paymentModal .month-selector-grid { grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); }
+}
+
+/* Short screens (phones in landscape): keep the form usable, buttons still pinned */
+@media (max-height:520px) {
+    #paymentModal.modal-overlay { padding:4px; }
+    #paymentModal .pay-modal { max-height:calc(100vh - 8px); max-height:calc(100dvh - 8px); }
+    #paymentModal .pm-head { padding-top:6px; padding-bottom:6px; }
+    #paymentModal .pm-foot { padding-top:6px; padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px)); }
+    #paymentModal .month-selector-grid { max-height:150px; }
+}
