@@ -445,6 +445,7 @@ function openPaymentModal(){
     if(!isAdmin()){showToast('\ud83d\udeab Access denied',false);return;}
     resetPaymentForm();
     openModal('paymentModal');
+    const _pb=document.querySelector('#paymentModal .pm-body'); if(_pb) _pb.scrollTop=0;
 }
 
 async function linkGroupForPayment(){
@@ -627,7 +628,8 @@ async function savePayment(){
                 memberId:mid, groupId:gid, enrollmentId:enrollmentId1, slotNum:slotNum1, date,
                 chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
                 numMonths:1, monthSlots, monthSlot:selectedSlot,
-                paidPerMonth:paid, balPerMonth:balance, paymentNote:paymentNote1
+                paidPerMonth:paid, balPerMonth:balance, paymentNote:paymentNote1,
+                ackPay:'pending', ...(chitPicked==='Yes'?{ackChit:'pending'}:{})
             });
             if(chitPicked==='Yes') ackData={mid,gid,slot:selectedSlot,date,chitPickedBy,chit:chitPerMonth};
             
@@ -654,7 +656,8 @@ async function savePayment(){
                 memberId:mid, groupId:gid, enrollmentId:enrollmentId1, slotNum:slotNum1, date,
                 chit:chitPerMonth, paid, balance, paidBy, chitPicked, chitPickedBy,
                 numMonths, monthSlots, monthSlot:monthSlots[0],
-                paidPerMonth:paid/numMonths, balPerMonth:balance/numMonths, paymentNote:paymentNote2
+                paidPerMonth:paid/numMonths, balPerMonth:balance/numMonths, paymentNote:paymentNote2,
+                ackPay:'pending', ...(chitPicked==='Yes'?{ackChit:'pending'}:{})
             });
             if(chitPicked==='Yes') ackData={mid,gid,slot:monthSlots[0],date,chitPickedBy,chit:chitPerMonth};
         }
@@ -671,7 +674,7 @@ async function savePayment(){
             await loadMemberLedger();
         }
         
-        if(ackData) await showChitPickedAck(ackData);
+        if(typeof refreshAckBadge==='function') refreshAckBadge();
         
     } catch(error) {
         console.error('Payment save error:', error);
@@ -828,16 +831,14 @@ async function saveEditPayment(){
     const paymentNote=getEditPaymentNoteText();
     const psBefore=await getCollection('payments');
     const before=psBefore.find(x=>x.id===pid)||{};
-    await db.collection('payments').doc(pid).update({date,chit,paid,balance,paidBy,chitPicked,chitPickedBy,paymentNote});
+    const upd={date,chit,paid,balance,paidBy,chitPicked,chitPickedBy,paymentNote};
+    if(chitPicked==='Yes' && before.chitPicked!=='Yes') upd.ackChit='pending'; // queue chit-picked acknowledgement
+    await db.collection('payments').doc(pid).update(upd);
     bustCache('payments');
     closeModal('editPaymentModal');showToast('\u2705 Payment updated!');updateUI();
     const mid=document.getElementById('summaryView').value;
     if(mid)loadMemberLedger();
-    // Chit newly marked as picked -> offer the WhatsApp acknowledgement
-    if(chitPicked==='Yes' && before.chitPicked!=='Yes'){
-        const slot=Array.isArray(before.monthSlots)&&before.monthSlots.length?before.monthSlots[0]:(before.monthSlot!=null?before.monthSlot:null);
-        await showChitPickedAck({mid:before.memberId,gid:before.groupId,slot,date,chitPickedBy,chit});
-    }
+    if(typeof refreshAckBadge==='function') refreshAckBadge();
 }
 
 async function deletePayment(){

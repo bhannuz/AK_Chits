@@ -1,3 +1,16 @@
+// Safety net: if ui.js did not provide normalizePaidBy, use an equivalent so statements never fail
+if(typeof normalizePaidBy!=='function'){
+    window.normalizePaidBy=function(v){
+        if(!v) return '—';
+        const m=String(v).toLowerCase();
+        if(m.includes('phone')||m.includes('pe')) return 'Phone Pe';
+        if(m.includes('gpay')) return 'Gpay';
+        if(m.includes('bank')) return 'Bank';
+        if(m.includes('cash')) return 'Cash';
+        return String(v);
+    };
+}
+
 // Date formatters
 function fmtDate(dateStr) {
     if(!dateStr) return '—';
@@ -11,8 +24,9 @@ function fmtDate(dateStr) {
 
 // PRINT MEMBER STATEMENT
 // ══════════════════════════════════════════
-async function printMemberStatement(mid){
-    showToast('⏳ Preparing statement…', true);
+async function printMemberStatement(mid, opts){
+    opts = opts || {};   // opts.returnHtml: return the statement HTML instead of showing the print overlay
+    if(!opts.silent) showToast('⏳ Preparing statement…', true);
     const ms=await getCollection('members');
     const gs=await getCollection('groups');
     const ps=await getCollection('payments');
@@ -619,6 +633,8 @@ async function printMemberStatement(mid){
             <span>CONFIDENTIAL</span>
         </div>
     </div>`;
+
+    if(opts.returnHtml) return printHTML;
 
     let overlay = document.getElementById('printOverlay');
     if(!overlay){
