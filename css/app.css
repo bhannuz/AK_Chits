@@ -591,3 +591,49 @@
     #paymentModal .pm-foot { padding-top:6px; padding-bottom:calc(6px + env(safe-area-inset-bottom, 0px)); }
     #paymentModal .month-selector-grid { max-height:150px; }
 }
+
+
+/* ═══════════════════════════════════════════════════════════
+   HOME QUICK ACTIONS — compact segmented toolbar
+   (Member | Group | Messages)
+   ═══════════════════════════════════════════════════════════ */
+.qa-bar {
+    display:flex; width:100%; height:42px;
+    background:var(--card-bg);
+    border:1px solid #33405f; border-radius:12px;
+    overflow:hidden;
+}
+.qa-seg {
+    flex:1 1 auto; min-width:0;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    padding:0 8px; margin:0;
+    background:transparent; border:0; border-radius:0;
+    color:#fff; font-size:0.86rem; font-weight:600; font-family:inherit; line-height:1;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:background .15s ease;
+}
+.qa-seg + .qa-seg { border-left:1px solid #33405f; }
+.qa-seg:hover { background:rgba(255,255,255,0.05); }
+.qa-seg:active { background:rgba(255,255,255,0.09); }
+.qa-seg:focus-visible { outline:2px solid #f39c12; outline-offset:-2px; }
+.qa-ico {
+    width:18px; height:18px; flex:0 0 auto;
+    fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;
+}
+.qa-txt { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; padding-top:1px; }
+.qa-badge {
+    background:#ef4444; color:#fff; border-radius:9px;
+    min-width:18px; height:18px; padding:0 5px;
+    font-size:0.68rem; font-weight:700; line-height:18px; text-align:center;
+    flex:0 0 auto;
+}
+@media (max-width:360px) {
+    .qa-seg { gap:5px; padding:0 4px; font-size:0.78rem; }
+    .qa-ico { width:16px; height:16px; }
+}
+@media (max-width:300px) {
+    .qa-seg .qa-ico { display:none; }
+}
+@media (min-width:768px) {
+    .qa-bar { max-width:420px; }
+}
