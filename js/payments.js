@@ -255,6 +255,7 @@ async function buildMonthSelectorGrid(){
     }).join('');
     updateMonthBalances();
     updateSelectedSummary();
+    calcBalance();
 }
 
 // Fills the "Bal ₹X" line on every month tile from the current Chit Amt
@@ -367,18 +368,22 @@ function calcBalance(){
         const n=selectedCBs.length;
         if(!chit||n===0){ref.style.display='none';return;}
         const isCustom=document.getElementById('perMonthCustomToggle')?.checked;
-        let totalChit=0;
-        if(isCustom){
-            const amtMap=getPerMonthAmounts()||{};
-            selectedCBs.forEach(cb=>{ totalChit+=(amtMap[parseInt(cb.value)]||chit); });
-        } else {
-            totalChit=chit*n;
-        }
-        const bal=Math.max(0,totalChit-paid);
+        const amtMap=isCustom?(getPerMonthAmounts()||{}):{};
+        const paidMap=window._monthPaidMap||{};
+        let totalChit=0, alreadyPaid=0, owedBefore=0;
+        selectedCBs.forEach(cb=>{
+            const slot=parseInt(cb.value);
+            const monthChit=isCustom?(amtMap[slot]||chit):chit;
+            const prev=paidMap[slot]||0;            // already paid for this month (same figure the tiles show)
+            totalChit+=monthChit;
+            alreadyPaid+=prev;
+            owedBefore+=Math.max(0,monthChit-prev);
+        });
+        const bal=Math.max(0,owedBefore-paid);
         const totalTxt=n===1 ? fmt(totalChit)
             : (isCustom ? `${fmt(totalChit)} (${n} months, custom amounts)`
                         : `${fmt(totalChit)} (${n}\u00d7${fmt(chit)})`);
-        show(totalTxt,bal,0);
+        show(totalTxt,bal,Math.round(alreadyPaid));
     } else {
         // Single month: balance also accounts for earlier part-payments of that month
         const slotVal=document.getElementById('pSingleMonthSlot').value;
@@ -639,10 +644,25 @@ async function savePayment(){
             if(monthSlots.length===0){showToast('❌ Select at least one month',false);return;}
             
             const numMonths=monthSlots.length;
-            const totalChit=chitPerMonth*numMonths;
-            const balance=Math.max(0,totalChit-paid);
             const enrollmentId1 = document.getElementById('pEnrollmentId').value||'';
             const slotNum1 = parseInt(document.getElementById('pSlotNum').value||'1');
+
+            // Balance = what is still owed for the selected months after earlier (part) payments
+            // of those months, minus this payment — same figure the month tiles and the bar show.
+            const psForBalMulti = await getCollection('payments');
+            const owedBefore = monthSlots.reduce((sum,slot)=>{
+                const prev = psForBalMulti
+                    .filter(x=>x.memberId===mid && x.groupId===gid &&
+                        (x.enrollmentId||'')===enrollmentId1 &&
+                        (x.slotNum?Number(x.slotNum):1)===slotNum1 &&
+                        (Array.isArray(x.monthSlots) ? x.monthSlots.includes(slot) : x.monthSlot===slot))
+                    .reduce((s,x)=>{
+                        const sl = Array.isArray(x.monthSlots) ? x.monthSlots : (x.monthSlot!=null?[x.monthSlot]:[]);
+                        return s + ((parseFloat(x.paid)||0)/(sl.length||1));
+                    },0);
+                return sum + Math.max(0, chitPerMonth - prev);
+            },0);
+            const balance=Math.max(0,owedBefore-paid);
             
             // Check if THIS enrollment slot already picked chit
             if(chitPicked==='Yes'){
