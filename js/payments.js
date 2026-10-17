@@ -418,7 +418,7 @@ function resetPaymentForm(){
     document.getElementById('pMember').value='';
     document.getElementById('pMemberList').style.display='none';
     document.getElementById('pGroup').innerHTML='<option value="">-- Select Member First --</option>';
-    document.getElementById('pNumMonths').value='multi';
+    document.getElementById('pNumMonths').value='1';   // Single Month is the default type
     if(document.getElementById('perMonthCustomToggle')) document.getElementById('perMonthCustomToggle').checked=false;
     if(document.getElementById('perMonthAmtGrid')) document.getElementById('perMonthAmtGrid').style.display='none';
     if(document.getElementById('perMonthAmtWrap')) document.getElementById('perMonthAmtWrap').style.display='none';
@@ -441,7 +441,7 @@ function resetPaymentForm(){
     if(document.getElementById('pSingleMonthSlot')) document.getElementById('pSingleMonthSlot').innerHTML='<option value="">-- Select Month --</option>';
     if(document.getElementById('singleMonthBadge')) document.getElementById('singleMonthBadge').style.display='none';
     window._singleMonthPaidSlots=new Set();
-    // Initialize correct mode UI (multi is default, onchange won't fire)
+    // Initialize correct mode UI (single month is the default, onchange won't fire)
     onNumMonthsChange();
     loadPaidByOptions().then(()=>populatePaidBySelect('pPaidBy'));
 }

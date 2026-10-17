@@ -80,6 +80,9 @@ async function loadMemberLedger(){
     const today = new Date().toISOString().split('T')[0];
 
     function buildSection(grp, enr, slotPays, slotNum, totalSlots, allDueDates, sectionId, groupLabel='', coMember=null, coMemberPays=[]){
+        // Always list payments oldest -> newest, so several payments in a month show in the
+        // correct date order (stable sort: same-date payments keep their entry order)
+        slotPays = [...slotPays].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
         const totalMonths  = parseInt(grp.duration||grp.gDuration)||21;
         
         // Get chit amount from Firebase field: fixedAmt
