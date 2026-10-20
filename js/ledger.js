@@ -266,11 +266,20 @@ async function loadMemberLedger(){
             // MULTIPLE PAYMENTS (Partial) - Show main row FIRST, then detail rows
             const totalMonthPayments = monthPayments.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
             // BUGFIX: Recalculate balance from scratch instead of using last payment's balance
-            const mainIBal = Math.max(0, chitAmount - totalMonthPayments);
+            // Joint chit: add everything the co-member paid for this slot
+            const coPaidMulti = coMember ? coMemberPays.filter(p => {
+                if(p.isJointMirror) return false;
+                if(p.monthSlot != null) return p.monthSlot === slotIndex;
+                if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(slotIndex);
+                return getMonthSlot(allDueDates, p.date) === slotIndex;
+            }).reduce((s,p)=>s+(parseFloat(p.paid)||0),0) : 0;
+            const mainIBal = Math.max(0, chitAmount - totalMonthPayments - coPaidMulti);
             
             // Determine if partial is actually fully paid
-            const isPartialFullyPaid = totalMonthPayments >= chitAmount;
-            const statusForPartial = isPartialFullyPaid
+            const isPartialFullyPaid = chitAmount > 0 ? (totalMonthPayments + coPaidMulti) >= chitAmount : totalMonthPayments > 0;
+            const statusForPartial = coMember
+                ? (isPartialFullyPaid ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">👥✅</span>` : `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">👥⚡</span>`)
+                : isPartialFullyPaid
                 ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">✅</span>`
                 : `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">⚡</span>`;
             
@@ -308,14 +317,16 @@ async function loadMemberLedger(){
             mainRows += monthPayments.map((pay, payIdx) => {
                 const iPaid = parseFloat(pay.paid)||0;
                 _cumPaidSoFar += iPaid;
-                const iBal = Math.max(0, chitAmount - _cumPaidSoFar);
+                const iBal = Math.max(0, chitAmount - _cumPaidSoFar - coPaidMulti);
+                // ✅ only once cumulative total reaches the chit amount, else ⚡ partial
+                const iReached = chitAmount > 0 ? (_cumPaidSoFar + coPaidMulti) >= chitAmount : iPaid > 0;
                 const iMode = pay.paidBy||'—';
                 const iCp = pay.chitPicked==='Yes';
                 const isPaid = iPaid > 0;
                 
-                let iStatusBadge = isPaid 
-                    ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">✅</span>`
-                    : `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">⏳</span>`;
+                let iStatusBadge = !isPaid
+                    ? `<span style="background:rgba(245,158,11,0.08);color:#fbbf24;border:1px solid rgba(245,158,11,0.2);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">⏳</span>`
+                    : (iReached ? `<span style="background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">✅</span>` : `<span style="background:rgba(245,158,11,0.15);color:#fbbf24;border:1px solid rgba(245,158,11,0.35);border-radius:4px;padding:1px 5px;font-size:0.65rem;font-weight:800;">⚡</span>`);
                 
                 const editBtn = !isMember ? `<button class="btn-edit-sm" onclick="openEditPayment('${pay.id}')" style="font-size:0.62rem;padding:3px 7px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;border-radius:4px;cursor:pointer;">Edit</button>` : '';
                 
