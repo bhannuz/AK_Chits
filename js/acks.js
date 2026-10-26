@@ -729,10 +729,12 @@ function openAckTemplates(){
     ov.id='ackTplModal'; ov.className='modal-overlay';
     ov.style.cssText='display:block;z-index:2200;';
     const block=(kind,title,rows)=>`
-        <div style="font-weight:800;font-size:0.88rem;color:#fff;margin:10px 0 2px;">${title}</div>
+        <details style="margin-top:8px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;">
+        <summary style="font-weight:800;font-size:0.88rem;color:#fff;cursor:pointer;user-select:none;">${title}</summary>
         <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:4px;">Placeholders: <span style="color:#a5b4fc;">${_ACK_PLACEHOLDERS[kind]}</span></div>
         <textarea id="ackTpl_${kind}" class="form-input" rows="${rows||12}" style="font-size:0.78rem;resize:vertical;"></textarea>
-        <button type="button" onclick="resetAckTpl('${kind}')" style="background:none;border:none;color:#a5b4fc;font-size:0.74rem;cursor:pointer;padding:2px 0;">↺ Reset to original</button>`;
+        <button type="button" onclick="resetAckTpl('${kind}')" style="background:none;border:none;color:#a5b4fc;font-size:0.74rem;cursor:pointer;padding:2px 0;">↺ Reset to original</button>
+        </details>`;
     ov.innerHTML=`<div class="modal-content-custom" style="max-height:94vh;overflow-y:auto;padding:14px 16px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
             <div style="font-size:1rem;font-weight:800;color:#a5b4fc;flex:1;">✏️ Default Message Text</div>
