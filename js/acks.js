@@ -68,7 +68,7 @@ item:
 Month(s): {months}
 {status}
 Current month: {current}
-Pending: {pending}`,
+Pending months: {pendingOutOf}`,
 chit:
 `Dear {name},
 
@@ -92,7 +92,7 @@ Warm regards,
 
 const _ACK_PLACEHOLDERS = {
     pay:  '{name} {phone} {items} {amount} {date} {balance} {chits} {today} {note}',
-    item: '{group} {slot} {paid} {amount} {date} {mode} {months} {balance} {status} {current} {total} {pending} {pendingCount} {paidCount} {chitAmount} {chitDue} {totalPaid} {dueTillNow} {dueMonths} {nextDue}',
+    item: '{group} {slot} {paid} {amount} {date} {mode} {months} {balance} {status} {current} {total} {pending} {pendingOutOf} {paidOutOf} {pendingCount} {paidCount} {chitAmount} {chitDue} {totalPaid} {dueTillNow} {dueMonths} {nextDue}',
     chit: '{name} {group} {month} {value} {date} {slot} {amount} {phone} {today}'
 };
 
@@ -222,6 +222,8 @@ function _ackItemVars(g,pays,allPays){
         pending:st.total?`${st.pending} of ${st.total} months`:'',
         slot:String(Number(latest.slotNum||1)),
         total:st.total?String(st.total):'',
+        pendingOutOf:st.total?`${st.pending}/${st.total}`:'',
+        paidOutOf:st.total?`${st.paidCount}/${st.total}`:'',
         pendingCount:String(st.pending),
         paidCount:String(st.paidCount),
         chitAmount:st.chit>0?_ackAmt(st.chit):'',
@@ -247,12 +249,12 @@ function buildAckPayMessage(m,chits,allPays){
         return _ackFill(_ackGetTpl('item'),v);
     });
     // Per-chit placeholders also work directly in the main message: one chit gives its value,
-    // several chits give each distinct value joined with " / "
+    // several chits give each distinct value joined with " | "
     const base={};
     Object.keys(allVars[0]||{}).forEach(k=>{
         if(k.charAt(0)==='_') return;
         const vals=[]; allVars.forEach(v=>{ if(v[k]!==''&&v[k]!=null&&vals.indexOf(v[k])<0) vals.push(v[k]); });
-        base[k]=vals.join(' / ');
+        base[k]=vals.join(' | ');
     });
     return _ackFill(_ackGetTpl('pay'),Object.assign({},base,{
         name:m.name||'Member',
