@@ -54,23 +54,21 @@ const _ACK_DEFAULT_TPL = {
 pay:
 `Dear {name},
 
-Greetings from *AK Chit Funds*.
+We acknowledge your payment with thanks.
 
-We gratefully acknowledge the receipt of your payment. Details are given below.
-
-*Payment Receipt*
-Group: {group}
-Month(s): {months}
-Payment date: {date}
-Amount received: {amount}
-Mode: {mode}
-Balance amount: {balance}
-Status: {status}
+{items}
 
 {note}
 
 Warm regards,
 *AK Chit Funds*`,
+item:
+`*{group}*
+{paid}
+Month(s): {months}
+{status}
+Current month: {current}
+Pending: {pending}`,
 chit:
 `Dear {name},
 
@@ -93,12 +91,19 @@ Warm regards,
 };
 
 const _ACK_PLACEHOLDERS = {
-    pay:  '{name} {group} {months} {date} {amount} {mode} {chitDue} {balance} {status} {note}',
+    pay:  '{name} {items} {note}',
+    item: '{group} {paid} {amount} {date} {mode} {months} {balance} {status} {current} {pending}',
     chit: '{name} {group} {month} {value} {date}'
 };
 
 function _ackGetTpl(kind){
-    try{ const t=localStorage.getItem('ak_ack_tpl_'+kind); if(t&&t.trim()) return t; }catch(e){}
+    try{
+        const t=localStorage.getItem('ak_ack_tpl_'+kind);
+        if(t&&t.trim()){
+            if(kind==='pay'&&t.indexOf('{items}')<0) return _ACK_DEFAULT_TPL[kind];   // old single-payment text
+            return t;
+        }
+    }catch(e){}
     return _ACK_DEFAULT_TPL[kind];
 }
 
@@ -146,6 +151,92 @@ function _ackBalanceAfter(g,p,allPays){
     }catch(e){
         return Math.max(0,parseFloat(p.balance)||0);
     }
+}
+
+// Label of a chit in a group; adds "(Chit N)" when the member holds more than one chit there
+function _ackChitLabel(g,p,allPays){
+    const sn=Number(p.slotNum||1);
+    const slots=new Set(allPays.filter(x=>x.memberId===p.memberId&&x.groupId===p.groupId).map(x=>Number(x.slotNum||1)));
+    return (g.name||'')+((sn>1||slots.size>1)?` (Chit ${sn})`:'');
+}
+
+// Pending months (not fully paid) out of the full term, and the current chit month
+function _ackChitStats(g,p,allPays){
+    const dues=getGroupDueDates(g)||[], total=dues.length;
+    const sn=Number(p.slotNum||1), eid=p.enrollmentId||'';
+    const same=allPays.filter(x=>x.memberId===p.memberId&&x.groupId===p.groupId
+        && (!eid||!x.enrollmentId||x.enrollmentId===eid)
+        && Number(x.slotNum||1)===sn);
+    const members=parseInt(g.members||g.gMembers||0), amount=parseFloat(g.amount||g.gAmount||0);
+    const chit=parseFloat(p.chit)>0?parseFloat(p.chit):(members>0&&amount>0?Math.round(amount/members):0);
+    const slotsOf=x=>(Array.isArray(x.monthSlots)&&x.monthSlots.length)?x.monthSlots:null;
+    const share=x=>(parseFloat(x.paid)||0)/(slotsOf(x)?slotsOf(x).length:1);
+    const inMonth=(x,i)=>Array.isArray(x.monthSlots)?x.monthSlots.includes(i):(x.monthSlot!=null?x.monthSlot===i:getMonthSlot(dues,x.date)===i);
+    let pending=0;
+    dues.forEach((d,i)=>{
+        const paid=same.filter(x=>inMonth(x,i)).reduce((a,x)=>a+share(x),0);
+        if(chit>0?paid<chit-0.5:paid<=0) pending++;
+    });
+    const today=new Date().toISOString().split('T')[0];
+    let cur=0; dues.forEach((d,i)=>{ if(d<=today) cur=i; });
+    let curTxt='';
+    if(total){
+        const [y,mo]=String(dues[cur]).split('-');
+        curTxt=`${cur+1} of ${total} (${_ACK_MON[parseInt(mo,10)-1]} ${y})`;
+    }
+    return {total,pending,current:curTxt};
+}
+
+// One chit's block: every pending payment of that chit merged into a single entry
+function _ackItemVars(g,pays,allPays){
+    const dues=getGroupDueDates(g)||[];
+    const key=x=>(x.date||'')+'|'+(x.id||'');
+    const sorted=pays.slice().sort((a,b)=>key(a).localeCompare(key(b)));
+    const latest=sorted[sorted.length-1];
+    const union=[];
+    sorted.forEach(x=>{
+        let sl=_ackSlots(x);
+        if(!sl.length){ const i=getMonthSlot(dues,x.date); sl=i>=0?[i]:[]; }
+        sl.forEach(i=>{ if(union.indexOf(i)<0) union.push(i); });
+    });
+    const synth=Object.assign({},latest,{monthSlots:union,monthSlot:null});
+    const bal=_ackBalanceAfter(g,synth,allPays);
+    const st=_ackChitStats(g,latest,allPays);
+    const total=sorted.reduce((a,x)=>a+(parseFloat(x.paid)||0),0);
+    const modes=[]; sorted.forEach(x=>{ const md=_ackPaidBy(x.paidBy); if(md&&modes.indexOf(md)<0) modes.push(md); });
+    const one=x=>{ const md=_ackPaidBy(x.paidBy); return `${_ackAmt(x.paid)} on ${_ackDate(x.date)}${md?' via '+md:''}`; };
+    const paidTxt=sorted.length===1?'Paid '+one(sorted[0]):`Paid ${_ackAmt(total)}: `+sorted.map(one).join(', ');
+    return {
+        group:_ackChitLabel(g,latest,allPays),
+        paid:paidTxt,
+        amount:_ackAmt(total), date:_ackDate(latest.date), mode:modes.join('/'),
+        months:_ackMonthLabels(g,synth,false).join(', '),
+        balance:_ackAmt(bal),
+        status:bal>0?`Balance pending ${_ackAmt(bal)}`:'Paid in full',
+        current:st.current,
+        pending:st.total?`${st.pending} of ${st.total} months`:'',
+        _bal:bal
+    };
+}
+
+// Payment acknowledgement: ONE message per member, a block for each chit paid
+function buildAckPayMessage(m,chits,allPays){
+    let anyBal=false;
+    const blocks=chits.map(c=>{
+        const v=_ackItemVars(c.g,c.pays,allPays);
+        if(v._bal>0) anyBal=true;
+        return _ackFill(_ackGetTpl('item'),v);
+    });
+    return _ackFill(_ackGetTpl('pay'),{
+        name:m.name||'Member',
+        items:blocks.join('\n\n'),
+        note:anyBal?'Kindly clear the pending balance at your earliest convenience.':''
+    });
+}
+
+function buildAckItemMessage(it){
+    if(it.kind==='chit') return buildAckMessage('chit',it.m,it.g,it.p,it.allPays);
+    return buildAckPayMessage(it.m,it.chits,it.allPays);
 }
 
 function _ackVars(kind,m,g,p,allPays){
@@ -367,11 +458,32 @@ function _ackPaginate(canvas,breaks,jsPDF){
 async function _ackItems(){
     const [ps,ms,gs]=await Promise.all([getCollection('payments'),getCollection('members'),getCollection('groups')]);
     const items=[];
+    const batches={};      // payment acks: one entry per member (pending) / per member+date (sent)
     ps.forEach(p=>{
         const m=ms.find(x=>x.id===p.memberId), g=gs.find(x=>x.id===p.groupId);
         if(!m||!g) return;
-        if(p.ackPay)  items.push({kind:'pay', status:p.ackPay, p,m,g,allPays:ps});
-        if(p.ackChit) items.push({kind:'chit',status:p.ackChit,p,m,g,allPays:ps});
+        if(p.ackPay){
+            const bk=m.id+'|'+p.ackPay+(p.ackPay==='pending'?'':'|'+(p.date||''));
+            let b=batches[bk];
+            if(!b){ b=batches[bk]={kind:'pay',status:p.ackPay,m,allPays:ps,pays:[],chits:[]}; items.push(b); }
+            b.pays.push({p,g});
+        }
+        if(p.ackChit) items.push({kind:'chit',status:p.ackChit,p,m,g,allPays:ps,pids:[p.id],key:p.id});
+    });
+    Object.keys(batches).forEach(bk=>{
+        const b=batches[bk];
+        const key=x=>(x.p.date||'')+'|'+(x.p.id||'');
+        b.pays.sort((a,c)=>key(a).localeCompare(key(c)));
+        const rep=b.pays[b.pays.length-1];
+        b.p=rep.p; b.g=rep.g; b.key=rep.p.id;
+        b.pids=b.pays.map(x=>x.p.id);
+        b.total=b.pays.reduce((a,x)=>a+(parseFloat(x.p.paid)||0),0);
+        const cm={};       // group the payments by chit (group + slot)
+        b.pays.forEach(({p,g})=>{
+            const ck=g.id+'|'+Number(p.slotNum||1)+'|'+(p.enrollmentId||'');
+            if(!cm[ck]){ cm[ck]={g,pays:[]}; b.chits.push(cm[ck]); }
+            cm[ck].pays.push(p);
+        });
     });
     items.sort((a,b)=>((b.p.date||'')+b.p.id).localeCompare((a.p.date||'')+a.p.id));
     return items;
@@ -430,15 +542,21 @@ async function renderAckList(){
     const isPending=_ackFilter==='pending';
     list.innerHTML=rows.map(it=>{
         const {p,m,g,kind}=it;
-        _ackCache[p.id+':'+kind]=it;
+        _ackCache[it.key+':'+kind]=it;
         const phone=_ackPhone(m);
         const months=_ackMonthLabels(g,p,false).join(', ');
+        const chitLines=kind==='chit'
+            ? _ackEsc(g.name)+(months?' · '+_ackEsc(months):'')
+            : it.chits.map(c=>{
+                const ml=_ackMonthLabels(c.g,{monthSlots:[].concat.apply([],c.pays.map(_ackSlots))},false).join(', ');
+                return _ackEsc(_ackChitLabel(c.g,c.pays[0],it.allPays))+(ml?' · '+_ackEsc(ml):'');
+            }).join('<br>');
         const badge=kind==='chit'
             ? '<span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:1px 6px;font-size:0.68rem;font-weight:800;">🏆 Chit picked</span>'
             : '<span style="background:#e0e7ff;color:#3730a3;border-radius:4px;padding:1px 6px;font-size:0.68rem;font-weight:800;">💳 Payment</span>';
         let quick='', err='';
         try{
-            const msg=buildAckMessage(kind,m,g,p,it.allPays);
+            const msg=buildAckItemMessage(it);
             if(phone) quick='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
         }catch(e){ console.error('Ack message error:',e); err=e.message||'message error'; }
         const mainBtn=`<button type="button" ${phone?'':'disabled'} onclick="openAckEditor('${p.id}','${kind}')" class="btn fw-bold" style="flex:1;border-radius:10px;padding:8px;font-size:0.85rem;background:#25D366;border:none;color:#fff;${phone?'':'opacity:.4;'}">✏️ Review &amp; Send ${isPending?'':'again'}</button>`;
@@ -446,8 +564,8 @@ async function renderAckList(){
         return `<div style="background:var(--input-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
             <div style="min-width:0;">
                 <div style="font-weight:800;font-size:0.92rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${_ackEsc(m.name)} ${badge}</div>
-                <div style="font-size:0.76rem;color:var(--text-dim);">${_ackEsc(g.name)}${months?' · '+_ackEsc(months):''}</div>
-                <div style="font-size:0.76rem;color:var(--text-dim);">${_ackDate(p.date)} · <b style="color:#34d399;">${_ackAmt(p.paid)}</b>${phone?'':' · <span style="color:#f87171;">No phone</span>'}${err?` · <span style="color:#f87171;">${_ackEsc(err)}</span>`:''}</div>
+                <div style="font-size:0.76rem;color:var(--text-dim);">${chitLines}</div>
+                <div style="font-size:0.76rem;color:var(--text-dim);">${_ackDate(p.date)} · <b style="color:#34d399;">${_ackAmt(it.total!=null?it.total:p.paid)}</b>${phone?'':' · <span style="color:#f87171;">No phone</span>'}${err?` · <span style="color:#f87171;">${_ackEsc(err)}</span>`:''}</div>
             </div>
             <div style="display:flex;gap:6px;margin-top:8px;align-items:stretch;">
                 ${mainBtn}${quickBtn}
@@ -459,7 +577,9 @@ async function renderAckList(){
 
 async function _ackSetStatus(pid,kind,status){
     const field=kind==='chit'?'ackChit':'ackPay';
-    await db.collection('payments').doc(pid).update({[field]:status});
+    const it=_ackCache[pid+':'+kind];
+    const ids=(it&&it.pids&&it.pids.length)?it.pids:[pid];
+    await Promise.all(ids.map(id=>db.collection('payments').doc(id).update({[field]:status})));
     bustCache('payments');
 }
 async function markAckSent(pid,kind){
@@ -530,11 +650,11 @@ async function openAckEditor(pid,kind){
     const st=document.getElementById('ackPdfStatus');
     const view=document.getElementById('ackViewPdf');
     const sendBtn=document.getElementById('ackEditSend');
-    ta.value=buildAckMessage(kind,m,g,p,it.allPays);
+    ta.value=buildAckItemMessage(it);
     if(cb.checked) _ackSyncStmtLine(ta,true);
 
     document.getElementById('ackResetText').onclick=()=>{
-        ta.value=buildAckMessage(kind,m,g,p,it.allPays);
+        ta.value=buildAckItemMessage(it);
         if(cb.checked) _ackSyncStmtLine(ta,true);
     };
     cb.onchange=()=>{
@@ -608,10 +728,10 @@ function openAckTemplates(){
     ov=document.createElement('div');
     ov.id='ackTplModal'; ov.className='modal-overlay';
     ov.style.cssText='display:block;z-index:2200;';
-    const block=(kind,title)=>`
+    const block=(kind,title,rows)=>`
         <div style="font-weight:800;font-size:0.88rem;color:#fff;margin:10px 0 2px;">${title}</div>
         <div style="font-size:0.7rem;color:var(--text-dim);margin-bottom:4px;">Placeholders: <span style="color:#a5b4fc;">${_ACK_PLACEHOLDERS[kind]}</span></div>
-        <textarea id="ackTpl_${kind}" class="form-input" rows="12" style="font-size:0.78rem;resize:vertical;"></textarea>
+        <textarea id="ackTpl_${kind}" class="form-input" rows="${rows||12}" style="font-size:0.78rem;resize:vertical;"></textarea>
         <button type="button" onclick="resetAckTpl('${kind}')" style="background:none;border:none;color:#a5b4fc;font-size:0.74rem;cursor:pointer;padding:2px 0;">↺ Reset to original</button>`;
     ov.innerHTML=`<div class="modal-content-custom" style="max-height:94vh;overflow-y:auto;padding:14px 16px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
@@ -619,8 +739,9 @@ function openAckTemplates(){
             <button type="button" onclick="document.getElementById('ackTplModal').remove()" style="background:none;border:none;color:var(--text-dim);font-size:1.3rem;cursor:pointer;padding:2px 6px;">✕</button>
         </div>
         <div style="font-size:0.74rem;color:var(--text-dim);">These texts are used for every new acknowledgement. Use *text* for bold. A line whose placeholder has no value is skipped automatically. Saved on this device.</div>
-        ${block('pay','💳 After every payment')}
-        ${block('chit','🏆 When chit is picked')}
+        ${block('pay','💳 After payment — message (one per member)',9)}
+        ${block('item','💳 After payment — block repeated for each chit',8)}
+        ${block('chit','🏆 When chit is picked',12)}
         <div style="display:flex;gap:8px;margin-top:10px;">
             <button type="button" onclick="saveAckTemplates()" class="btn fw-bold" style="flex:1;border-radius:12px;padding:10px;background:#6366f1;border:none;color:#fff;">💾 Save</button>
             <button type="button" onclick="document.getElementById('ackTplModal').remove()" class="btn fw-bold" style="border-radius:12px;padding:10px 16px;background:var(--input-bg);border:1px solid var(--border);color:#fff;">Close</button>
@@ -628,12 +749,13 @@ function openAckTemplates(){
     </div>`;
     document.body.appendChild(ov);
     document.getElementById('ackTpl_pay').value=_ackGetTpl('pay');
+    document.getElementById('ackTpl_item').value=_ackGetTpl('item');
     document.getElementById('ackTpl_chit').value=_ackGetTpl('chit');
 }
 function resetAckTpl(kind){ document.getElementById('ackTpl_'+kind).value=_ACK_DEFAULT_TPL[kind]; }
 function saveAckTemplates(){
     try{
-        ['pay','chit'].forEach(k=>{
+        ['pay','item','chit'].forEach(k=>{
             const v=document.getElementById('ackTpl_'+k).value.trim();
             if(!v||v===_ACK_DEFAULT_TPL[k]) localStorage.removeItem('ak_ack_tpl_'+k);
             else localStorage.setItem('ak_ack_tpl_'+k,v);
