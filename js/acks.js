@@ -91,9 +91,9 @@ Warm regards,
 };
 
 const _ACK_PLACEHOLDERS = {
-    pay:  '{name} {items} {note}',
-    item: '{group} {paid} {amount} {date} {mode} {months} {balance} {status} {current} {pending}',
-    chit: '{name} {group} {month} {value} {date}'
+    pay:  '{name} {phone} {items} {amount} {date} {balance} {chits} {today} {note}',
+    item: '{group} {slot} {paid} {amount} {date} {mode} {months} {balance} {status} {current} {total} {pending} {pendingCount} {paidCount} {chitAmount} {chitDue} {totalPaid} {dueTillNow} {dueMonths} {nextDue}',
+    chit: '{name} {group} {month} {value} {date} {slot} {amount} {phone} {today}'
 };
 
 function _ackGetTpl(kind){
@@ -172,19 +172,27 @@ function _ackChitStats(g,p,allPays){
     const slotsOf=x=>(Array.isArray(x.monthSlots)&&x.monthSlots.length)?x.monthSlots:null;
     const share=x=>(parseFloat(x.paid)||0)/(slotsOf(x)?slotsOf(x).length:1);
     const inMonth=(x,i)=>Array.isArray(x.monthSlots)?x.monthSlots.includes(i):(x.monthSlot!=null?x.monthSlot===i:getMonthSlot(dues,x.date)===i);
-    let pending=0;
+    const today=new Date().toISOString().split('T')[0];
+    let pending=0, paidCount=0, dueTillNow=0; const dueNames=[];
     dues.forEach((d,i)=>{
         const paid=same.filter(x=>inMonth(x,i)).reduce((a,x)=>a+share(x),0);
-        if(chit>0?paid<chit-0.5:paid<=0) pending++;
+        const unpaid=chit>0?paid<chit-0.5:paid<=0;
+        if(unpaid) pending++; else paidCount++;
+        if(unpaid&&d<=today){
+            const [yy,mm]=d.split('-'); dueNames.push(_ACK_MON[parseInt(mm,10)-1]+' '+yy);
+            if(chit>0) dueTillNow+=Math.max(0,chit-paid);
+        }
     });
-    const today=new Date().toISOString().split('T')[0];
+    const totalPaid=same.reduce((a,x)=>a+(parseFloat(x.paid)||0),0);
+    const nextD=dues.find(d=>d>today);
     let cur=0; dues.forEach((d,i)=>{ if(d<=today) cur=i; });
     let curTxt='';
     if(total){
         const [y,mo]=String(dues[cur]).split('-');
         curTxt=`${cur+1} of ${total} (${_ACK_MON[parseInt(mo,10)-1]} ${y})`;
     }
-    return {total,pending,current:curTxt};
+    return {total,pending,paidCount,chit,totalPaid,dueTillNow,dueMonths:dueNames.join(', '),
+        nextDue:nextD?_ackDate(nextD):'',current:curTxt};
 }
 
 // One chit's block: every pending payment of that chit merged into a single entry
@@ -215,20 +223,38 @@ function _ackItemVars(g,pays,allPays){
         status:bal>0?`Balance pending ${_ackAmt(bal)}`:'Paid in full',
         current:st.current,
         pending:st.total?`${st.pending} of ${st.total} months`:'',
-        _bal:bal
+        slot:String(Number(latest.slotNum||1)),
+        total:st.total?String(st.total):'',
+        pendingCount:String(st.pending),
+        paidCount:String(st.paidCount),
+        chitAmount:st.chit>0?_ackAmt(st.chit):'',
+        chitDue:st.chit>0?_ackAmt(st.chit*(union.length||1)):'',
+        totalPaid:_ackAmt(st.totalPaid),
+        dueTillNow:st.dueTillNow>0?_ackAmt(st.dueTillNow):'',
+        dueMonths:st.dueMonths,
+        nextDue:st.nextDue,
+        _bal:bal,_paid:total
     };
 }
 
 // Payment acknowledgement: ONE message per member, a block for each chit paid
 function buildAckPayMessage(m,chits,allPays){
-    let anyBal=false;
+    let anyBal=false, totBal=0, totPaid=0, latestDate='';
     const blocks=chits.map(c=>{
         const v=_ackItemVars(c.g,c.pays,allPays);
         if(v._bal>0) anyBal=true;
+        totBal+=v._bal; totPaid+=v._paid;
+        c.pays.forEach(x=>{ if((x.date||'')>latestDate) latestDate=x.date||''; });
         return _ackFill(_ackGetTpl('item'),v);
     });
     return _ackFill(_ackGetTpl('pay'),{
         name:m.name||'Member',
+        phone:m.phone||'',
+        today:_ackDate(new Date().toISOString().split('T')[0]),
+        date:_ackDate(latestDate),
+        amount:_ackAmt(totPaid),
+        balance:_ackAmt(totBal),
+        chits:String(chits.length),
         items:blocks.join('\n\n'),
         note:anyBal?'Kindly clear the pending balance at your earliest convenience.':''
     });
@@ -245,7 +271,11 @@ function _ackVars(kind,m,g,p,allPays){
             name:m.name||'Member', group:g.name||'',
             month:_ackMonthLabels(g,p,true)[0]||'the selected month',
             value:(parseFloat(p.chitPickedBy)>0)?_ackAmt(p.chitPickedBy):'',
-            date:_ackDate(p.date)
+            date:_ackDate(p.date),
+            phone:m.phone||'',
+            today:_ackDate(new Date().toISOString().split('T')[0]),
+            slot:String(Number(p.slotNum||1)),
+            amount:_ackAmt(p.paid)
         };
     }
     const nMonths=parseInt(p.numMonths)||1;
