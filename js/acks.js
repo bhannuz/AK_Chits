@@ -99,10 +99,7 @@ const _ACK_PLACEHOLDERS = {
 function _ackGetTpl(kind){
     try{
         const t=localStorage.getItem('ak_ack_tpl_'+kind);
-        if(t&&t.trim()){
-            if(kind==='pay'&&t.indexOf('{items}')<0) return _ACK_DEFAULT_TPL[kind];   // old single-payment text
-            return t;
-        }
+        if(t&&t.trim()) return t;
     }catch(e){}
     return _ACK_DEFAULT_TPL[kind];
 }
@@ -240,14 +237,24 @@ function _ackItemVars(g,pays,allPays){
 // Payment acknowledgement: ONE message per member, a block for each chit paid
 function buildAckPayMessage(m,chits,allPays){
     let anyBal=false, totBal=0, totPaid=0, latestDate='';
-    const blocks=chits.map(c=>{
+    const allVars=[];
+    const blocks=chits.map((c,ci)=>{
         const v=_ackItemVars(c.g,c.pays,allPays);
+        allVars.push(v);
         if(v._bal>0) anyBal=true;
         totBal+=v._bal; totPaid+=v._paid;
         c.pays.forEach(x=>{ if((x.date||'')>latestDate) latestDate=x.date||''; });
         return _ackFill(_ackGetTpl('item'),v);
     });
-    return _ackFill(_ackGetTpl('pay'),{
+    // Per-chit placeholders also work directly in the main message: one chit gives its value,
+    // several chits give each distinct value joined with " / "
+    const base={};
+    Object.keys(allVars[0]||{}).forEach(k=>{
+        if(k.charAt(0)==='_') return;
+        const vals=[]; allVars.forEach(v=>{ if(v[k]!==''&&v[k]!=null&&vals.indexOf(v[k])<0) vals.push(v[k]); });
+        base[k]=vals.join(' / ');
+    });
+    return _ackFill(_ackGetTpl('pay'),Object.assign({},base,{
         name:m.name||'Member',
         phone:m.phone||'',
         today:_ackDate(new Date().toISOString().split('T')[0]),
@@ -257,7 +264,7 @@ function buildAckPayMessage(m,chits,allPays){
         chits:String(chits.length),
         items:blocks.join('\n\n'),
         note:anyBal?'Kindly clear the pending balance at your earliest convenience.':''
-    });
+    }));
 }
 
 function buildAckItemMessage(it){
