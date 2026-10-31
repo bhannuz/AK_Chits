@@ -469,40 +469,58 @@ function ncpPrint(){
 
     var amount    = parseFloat(document.getElementById('ncp_amount').value)||0;
     var members2  = parseInt(document.getElementById('ncp_members').value)||0;
-    var tableRows = rowData.map(function(r){
+    var rowHtml = rowData.map(function(r){
         // % return = payout / (monthly × members) × 100
         var monthCol  = r.mp > 0 && members2 > 0 ? r.mp * members2
                         : (amount > 0 && members2 > 0 ? Math.round(amount/members2)*members2 : 0);
         var pct = monthCol > 0 && r.cp > 0 ? ((r.cp / monthCol)*100).toFixed(1) : '—';
         var pctColor = parseFloat(pct) >= 100 ? '#065f46' : parseFloat(pct) >= 85 ? '#92400e' : '#991b1b';
         return '<tr style="background:'+(r.i%2===0?'#f9fafb':'#fff')+';">'+
-            '<td style="text-align:center;color:#888;font-size:13px;">'+(r.i+1)+'</td>'+
+            '<td style="text-align:center;color:#888;font-size:10px;">'+(r.i+1)+'</td>'+
             '<td>'+r.due+'</td>'+
             '<td style="color:#1d4ed8;font-weight:700;">'+(r.cp?'₹'+r.cp.toLocaleString('en-IN'):'—')+'</td>'+
             '<td style="text-align:center;font-weight:800;color:'+pctColor+';">'+(pct!=='—'?pct+'%':'—')+'</td>'+
             '</tr>';
-    }).join('');
+    });
+    // Compressed single-page layout: long schedules are split into two side-by-side tables
+    var tHead = '<thead><tr><th style="width:12%;text-align:center;">#</th><th style="width:38%;">Due Date</th><th style="width:34%;">Chit Payout</th><th style="width:16%;text-align:center;">% Ret.</th></tr></thead>';
+    var parts = rowHtml.length > 12 ? [rowHtml.slice(0, Math.ceil(rowHtml.length/2)), rowHtml.slice(Math.ceil(rowHtml.length/2))] : [rowHtml];
+    // Guarantee ONE page: estimate height (mm) and shrink only if it would overflow A4
+    var estMm  = 46 + parts[0].length * 5.6;
+    var fitZoom = Math.min(1, 268 / estMm).toFixed(3);
+    var printFix = 'html,body{height:auto!important;}'+
+        '#ncpPrintDoc{width:194mm!important;max-width:194mm!important;zoom:'+fitZoom+';overflow:hidden;max-height:278mm;}'+
+        '#ncpPrintDoc .cols{display:flex!important;gap:8px;}'+
+        '#ncpPrintDoc table{margin-bottom:3px!important;page-break-inside:auto!important;}'+
+        '#ncpPrintDoc th{padding:3px 5px!important;font-size:9px!important;}'+
+        '#ncpPrintDoc td{padding:2px 6px!important;font-size:11px!important;line-height:1.25!important;}'+
+        '#ncpPrintDoc .hdr{margin-bottom:5px!important;padding-bottom:4px!important;}'+
+        '#ncpPrintDoc .info-box{margin-bottom:5px!important;padding:4px 10px!important;}'+
+        '#ncpPrintDoc .ftr{margin-top:4px!important;}';
+    var tablesHtml = '<div class="cols">' + parts.map(function(pt){
+        return '<table>' + tHead + '<tbody>' + pt.join('') + '</tbody></table>';
+    }).join('') + '</div>';
 
     var printHTML = '<div id="ncpPrintDoc"><style>'+
-        '#ncpPrintDoc{font-family:Arial,sans-serif;color:#111;max-width:820px;margin:0 auto;padding:16px;}'+
-        '#ncpPrintDoc .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #f39c12;padding-bottom:10px;margin-bottom:14px;}'+
-        '#ncpPrintDoc .brand{font-size:16px;font-weight:900;color:#f39c12;}'+
-        '#ncpPrintDoc .info-box{background:#fffbf0;border:2px solid #f39c12;border-radius:8px;padding:14px 18px;margin-bottom:14px;}'+
-        '#ncpPrintDoc .chips{display:flex;gap:0;border:1px solid #e5c76b;border-radius:8px;overflow:hidden;margin-top:10px;}'+
-        '#ncpPrintDoc .chip{flex:1;padding:8px;text-align:center;border-right:1px solid #e5c76b;}'+
+        '#ncpPrintDoc{font-family:Arial,sans-serif;color:#111;max-width:780px;margin:0 auto;padding:8px;}'+
+        '#ncpPrintDoc .hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #f39c12;padding-bottom:5px;margin-bottom:8px;}'+
+        '#ncpPrintDoc .brand{font-size:14px;font-weight:900;color:#f39c12;}'+
+        '#ncpPrintDoc .info-box{background:#fffbf0;border:2px solid #f39c12;border-radius:6px;padding:6px 10px;margin-bottom:8px;}'+
+        '#ncpPrintDoc .chips{display:flex;gap:0;border:1px solid #e5c76b;border-radius:8px;overflow:hidden;margin-top:5px;}'+
+        '#ncpPrintDoc .chip{flex:1;padding:3px 4px;text-align:center;border-right:1px solid #e5c76b;}'+
         '#ncpPrintDoc .chip:last-child{border-right:none;}'+
-        '#ncpPrintDoc .chip-v{font-size:14px;font-weight:800;}'+
-        '#ncpPrintDoc .chip-l{font-size:9px;color:#888;text-transform:uppercase;}'+
-        '#ncpPrintDoc table{width:100%;border-collapse:collapse;font-size:15px;margin-bottom:10px;}'+
+        '#ncpPrintDoc .chip-v{font-size:11px;font-weight:800;}'+
+        '#ncpPrintDoc .chip-l{font-size:8px;color:#888;text-transform:uppercase;}'+
+        '#ncpPrintDoc .cols{display:flex;gap:10px;align-items:flex-start;}#ncpPrintDoc .cols table{flex:1;}#ncpPrintDoc table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;}'+
         '#ncpPrintDoc thead tr{background:#fef3c7;}'+
-        '#ncpPrintDoc th{border:1px solid #d1a832;padding:10px 12px;font-size:13px;text-transform:uppercase;color:#555;font-weight:800;}'+
-        '#ncpPrintDoc td{border:1px solid #e5e7eb;padding:9px 12px;}'+
+        '#ncpPrintDoc th{border:1px solid #d1a832;padding:3px 5px;font-size:9px;text-transform:uppercase;color:#555;font-weight:800;}'+
+        '#ncpPrintDoc td{border:1px solid #e5e7eb;padding:2px 6px;line-height:1.25;}#ncpPrintDoc tr{page-break-inside:avoid;}'+
         '#ncpPrintDoc tfoot td{background:#fff8e1;font-weight:800;border-top:2px solid #f39c12;}'+
-        '#ncpPrintDoc .ftr{margin-top:14px;border-top:1px solid #ddd;padding-top:8px;display:flex;justify-content:space-between;font-size:10px;color:#aaa;}'+
-        '#ncpPrintDoc .pbar{display:flex;gap:10px;margin-bottom:16px;}'+
+        '#ncpPrintDoc .ftr{margin-top:6px;border-top:1px solid #ddd;padding-top:4px;display:flex;justify-content:space-between;font-size:10px;color:#aaa;}'+
+        '#ncpPrintDoc .pbar{display:flex;gap:10px;margin-bottom:8px;}'+
         '#ncpPrintDoc .pbtn{background:linear-gradient(90deg,#f39c12,#f57c00);color:#000;border:none;padding:10px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;}'+
         '#ncpPrintDoc .cbtn{background:#eee;color:#333;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;}'+
-        '@media print{body>*:not(#printOverlay){display:none!important;}#printOverlay{position:absolute!important;top:0!important;left:0!important;width:100%!important;}#ncpPrintDoc .pbar{display:none!important;}@page{size:A4 portrait;margin:10mm;}}'+
+        '@media print{body>*:not(#printOverlay){display:none!important;}#printOverlay{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:auto!important;overflow:visible!important;padding:0!important;}#ncpPrintDoc{padding:0!important;max-width:none!important;page-break-inside:avoid;}#ncpPrintDoc .pbar{display:none!important;}@page{size:A4 portrait;margin:8mm;}'+printFix+'}'+
         '</style>'+
         '<div class="pbar">'+
         '<button class="pbtn" onclick="window.print()">🖨️ Print / Save as PDF</button>'+
@@ -511,7 +529,7 @@ function ncpPrint(){
         '<div class="hdr">'+
         '<div>'+
         '<div style="display:flex;align-items:center;gap:10px;">'+
-        '<img src="logo.png" style="width:48px;height:48px;border-radius:10px;object-fit:cover;" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'inline\'" />'+
+        '<img src="logo.png" style="width:32px;height:32px;border-radius:8px;object-fit:cover;" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'inline\'" />'+
         '<span style="display:none;font-size:22px;">🏆</span>'+
         '<div><div class="brand">AK CHIT FUNDS</div><div style="font-size:9px;color:#888;">Chit Fund Management &middot; Group Schedule</div></div>'+
         '</div>'+
@@ -520,7 +538,7 @@ function ncpPrint(){
         '<div style="text-align:right;"><div style="font-size:13px;font-weight:800;">CHIT SCHEDULE</div><div style="font-size:9px;color:#888;">' + today + '</div></div>'+
         '</div>'+
         '<div class="info-box">'+
-        '<div style="font-size:16px;font-weight:900;margin-bottom:8px;">📂 '+name+'</div>'+
+        '<div style="font-size:13px;font-weight:900;margin-bottom:0;">📂 '+name+'</div>'+
         '<div class="chips">'+
         '<div class="chip"><div class="chip-v">'+members+'</div><div class="chip-l">Members</div></div>'+
         '<div class="chip"><div class="chip-v">'+duration+'</div><div class="chip-l">Months</div></div>'+
@@ -528,13 +546,7 @@ function ncpPrint(){
         '<div class="chip"><div class="chip-v">'+startDisp+'</div><div class="chip-l">Start Date</div></div>'+
         (amount>0?'<div class="chip"><div class="chip-v" style="color:#065f46;">₹'+Math.round(amount/members).toLocaleString('en-IN')+'</div><div class="chip-l">Monthly/Member</div></div>':'')+
         '</div></div>'+
-        '<table>'+
-        '<thead><tr><th style="width:6%;text-align:center;">#</th><th style="width:40%;">Due Date</th><th style="width:36%;">Chit Payout</th><th style="width:18%;text-align:center;">% Return</th></tr></thead>'+
-        '<tbody>'+tableRows+'</tbody>'+
-        '<tfoot><tr><td colspan="2" style="text-align:right;padding-right:10px;font-weight:800;">TOTAL</td>'+
-        '<td style="color:#888;">—</td>'+
-        '<td></td></tr></tfoot>'+
-        '</table>'+
+        tablesHtml+
         '<div class="ftr"><span>AK Chit Funds · Planner</span><span>'+name+' · '+today+'</span><span>CONFIDENTIAL</span></div>'+
         '</div>';
 
