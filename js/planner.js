@@ -482,24 +482,25 @@ function ncpPrint(){
             '<td style="text-align:center;font-weight:800;color:'+pctColor+';">'+(pct!=='—'?pct+'%':'—')+'</td>'+
             '</tr>';
     });
-    // Compressed single-page layout: long schedules are split into two side-by-side tables
-    var tHead = '<thead><tr><th style="width:12%;text-align:center;">#</th><th style="width:38%;">Due Date</th><th style="width:34%;">Chit Payout</th><th style="width:16%;text-align:center;">% Ret.</th></tr></thead>';
-    var parts = rowHtml.length > 12 ? [rowHtml.slice(0, Math.ceil(rowHtml.length/2)), rowHtml.slice(Math.ceil(rowHtml.length/2))] : [rowHtml];
-    // Guarantee ONE page: estimate height (mm) and shrink only if it would overflow A4
-    var estMm  = 46 + parts[0].length * 5.6;
-    var fitZoom = Math.min(1, 268 / estMm).toFixed(3);
+    // Single column on ONE A4 page: row height adapts to the number of months
+    var nRows   = rowHtml.length;
+    var rowMm   = Math.max(3.4, Math.min(10, 185 / (nRows + 1)));          // mm per row
+    var fontPx  = Math.max(8, Math.min(14, rowMm * 3.78 * 0.46)).toFixed(1);
+    var estMm   = 78 + (nRows + 1) * rowMm;                                // header + info + footer + rows
+    var fitZoom = Math.min(1, 272 / estMm).toFixed(3);                     // safety: shrink only if it would overflow
+    var tHead = '<thead><tr><th style="width:8%;">#</th><th style="width:38%;text-align:left!important;">Due Date</th><th style="width:34%;text-align:left!important;">Chit Payout</th><th style="width:20%;">% Return</th></tr></thead>';
+    var tablesHtml = '<table>' + tHead + '<tbody>' + rowHtml.join('') + '</tbody></table>';
+    var pageCss =
+        '#ncpPrintDoc{display:flex!important;flex-direction:column;width:194mm;max-width:100%;min-height:277mm;box-sizing:border-box;}'+
+        '#ncpPrintDoc table{flex:none;width:100%!important;table-layout:fixed!important;margin-bottom:0!important;page-break-inside:auto!important;}'+
+        '#ncpPrintDoc th{height:'+rowMm.toFixed(2)+'mm;padding:0 8px!important;font-size:'+fontPx+'px!important;line-height:1!important;text-align:center;}'+
+        '#ncpPrintDoc td{height:'+rowMm.toFixed(2)+'mm;padding:0 8px!important;font-size:'+fontPx+'px!important;line-height:1!important;text-align:left;}'+
+        '#ncpPrintDoc td:first-child,#ncpPrintDoc td:last-child{text-align:center!important;}'+
+        '#ncpPrintDoc .hdr{margin-bottom:6px!important;padding-bottom:5px!important;}'+
+        '#ncpPrintDoc .info-box{margin-bottom:8px!important;padding:6px 10px!important;}'+
+        '#ncpPrintDoc .ftr{margin-top:auto!important;}';
     var printFix = 'html,body{height:auto!important;}'+
-        '#ncpPrintDoc{width:194mm!important;max-width:194mm!important;zoom:'+fitZoom+';overflow:hidden;max-height:278mm;}'+
-        '#ncpPrintDoc .cols{display:flex!important;gap:8px;}'+
-        '#ncpPrintDoc table{margin-bottom:3px!important;page-break-inside:auto!important;}'+
-        '#ncpPrintDoc th{padding:3px 5px!important;font-size:9px!important;}'+
-        '#ncpPrintDoc td{padding:2px 6px!important;font-size:11px!important;line-height:1.25!important;}'+
-        '#ncpPrintDoc .hdr{margin-bottom:5px!important;padding-bottom:4px!important;}'+
-        '#ncpPrintDoc .info-box{margin-bottom:5px!important;padding:4px 10px!important;}'+
-        '#ncpPrintDoc .ftr{margin-top:4px!important;}';
-    var tablesHtml = '<div class="cols">' + parts.map(function(pt){
-        return '<table>' + tHead + '<tbody>' + pt.join('') + '</tbody></table>';
-    }).join('') + '</div>';
+        '#ncpPrintDoc{width:194mm!important;max-width:194mm!important;zoom:'+fitZoom+';max-height:279mm;overflow:hidden;padding:0!important;}';
 
     var printHTML = '<div id="ncpPrintDoc"><style>'+
         '#ncpPrintDoc{font-family:Arial,sans-serif;color:#111;max-width:780px;margin:0 auto;padding:8px;}'+
@@ -520,6 +521,7 @@ function ncpPrint(){
         '#ncpPrintDoc .pbar{display:flex;gap:10px;margin-bottom:8px;}'+
         '#ncpPrintDoc .pbtn{background:linear-gradient(90deg,#f39c12,#f57c00);color:#000;border:none;padding:10px 24px;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;}'+
         '#ncpPrintDoc .cbtn{background:#eee;color:#333;border:none;padding:10px 18px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;}'+
+        pageCss+
         '@media print{body>*:not(#printOverlay){display:none!important;}#printOverlay{position:absolute!important;top:0!important;left:0!important;width:100%!important;height:auto!important;overflow:visible!important;padding:0!important;}#ncpPrintDoc{padding:0!important;max-width:none!important;page-break-inside:avoid;}#ncpPrintDoc .pbar{display:none!important;}@page{size:A4 portrait;margin:8mm;}'+printFix+'}'+
         '</style>'+
         '<div class="pbar">'+
