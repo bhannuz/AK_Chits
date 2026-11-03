@@ -65,7 +65,11 @@ function filterSearch(inputId,listId,hiddenId){
     const query=document.getElementById(inputId).value.toLowerCase();
     const list=document.getElementById(listId);
     list.innerHTML='';if(!query){list.style.display='none';return;}
-    const filtered=ALL_MEMBERS.filter(m=>m.name.toLowerCase().includes(query));
+    let filtered=ALL_MEMBERS.filter(m=>m.name.toLowerCase().includes(query));
+    if(hiddenId==='pMember'){      // Record Payment: respect the chosen group
+        const gf=document.getElementById('pGroupFilter'); const gv=gf?gf.value:'';
+        if(gv) filtered=filtered.filter(m=>(m.groupIds&&m.groupIds.includes(gv))||(m.enrollments||[]).some(e=>e.groupId===gv));
+    }
     if(filtered.length>0){
         list.style.display='block';
         filtered.forEach(m=>{
@@ -75,7 +79,7 @@ function filterSearch(inputId,listId,hiddenId){
                 document.getElementById(hiddenId).value=m.id;
                 list.style.display='none';
                 if(hiddenId==='summaryView') loadMemberLedger();
-                if(hiddenId==='pMember') linkGroupForPayment();
+                if(hiddenId==='pMember'){ linkGroupForPayment(); if(window.syncPayMemberSel) syncPayMemberSel(); if(window.togglePayMemberSearch) togglePayMemberSearch(false); }
                 // Auto-add for QR member search
                 if(hiddenId==='qr_member_id') qrAddMember();
             };

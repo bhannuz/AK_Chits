@@ -413,6 +413,7 @@ function calcBalance(){
 // PAYMENT FORM
 // ══════════════════════════════════════════
 function resetPaymentForm(){
+    { const gf=document.getElementById('pGroupFilter'); if(gf) gf.value=''; togglePayMemberSearch(false); refreshPayMemberSelect(); }
     document.getElementById('pDate').value=new Date().toISOString().split('T')[0];
     document.getElementById('pMemberSearch').value='';
     document.getElementById('pMember').value='';
@@ -449,8 +450,68 @@ function resetPaymentForm(){
 function openPaymentModal(){
     if(!isAdmin()){showToast('\ud83d\udeab Access denied',false);return;}
     resetPaymentForm();
+    populatePayGroupFilter().then(refreshPayMemberSelect);
     openModal('paymentModal');
     const _pb=document.querySelector('#paymentModal .pm-body'); if(_pb) _pb.scrollTop=0;
+}
+
+// ── Record Payment: Group filter + Member dropdown (members of the chosen group) ──
+function _payEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+async function populatePayGroupFilter(){
+    const sel=document.getElementById('pGroupFilter'); if(!sel) return;
+    const gs=await getCollection('groups'); const cur=sel.value;
+    sel.innerHTML='<option value="">All groups</option>'+gs.map(g=>`<option value="${g.id}">${_payEsc(g.name)}</option>`).join('');
+    sel.value=cur;
+}
+async function refreshPayMemberSelect(){
+    const sel=document.getElementById('pMemberSel'); if(!sel) return;
+    const gid=(document.getElementById('pGroupFilter')||{}).value||'';
+    const ms=await getCollection('members');
+    const list=ms.filter(m=>!gid||(m.groupIds&&m.groupIds.includes(gid))||(m.enrollments||[]).some(e=>e.groupId===gid))
+                 .sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    const cur=(document.getElementById('pMember')||{}).value||'';
+    sel.innerHTML=`<option value="">-- Select Member (${list.length}) --</option>`+list.map(m=>`<option value="${m.id}">${_payEsc(m.name)}</option>`).join('');
+    sel.value=list.some(m=>m.id===cur)?cur:'';
+}
+// small 🔍 icon next to the Member dropdown opens / closes the search box
+function togglePayMemberSearch(force){
+    const w=document.getElementById('pMemberSearchWrap'); if(!w) return;
+    const show=(typeof force==='boolean')?force:(w.style.display==='none');
+    w.style.display=show?'block':'none';
+    if(show){ const i=document.getElementById('pMemberSearch'); if(i){ i.value=''; i.focus(); } }
+    else { const l=document.getElementById('pMemberList'); if(l) l.style.display='none'; }
+}
+function syncPayMemberSel(){
+    const sel=document.getElementById('pMemberSel'); if(!sel) return;
+    const id=document.getElementById('pMember').value;
+    if([...sel.options].some(o=>o.value===id)) sel.value=id;
+}
+// start the form over but keep the date and the group filter
+async function _payClearMember(){
+    const d=document.getElementById('pDate').value, gv=document.getElementById('pGroupFilter').value;
+    resetPaymentForm();
+    document.getElementById('pDate').value=d;
+    document.getElementById('pGroupFilter').value=gv;
+    await refreshPayMemberSelect();
+}
+async function onPayGroupFilterChange(){
+    const mid=document.getElementById('pMember').value;
+    if(!mid){ await refreshPayMemberSelect(); return; }
+    const gv=document.getElementById('pGroupFilter').value;
+    const ms=await getCollection('members'); const m=ms.find(x=>x.id===mid);
+    const inGroup=!gv||(m&&((m.groupIds&&m.groupIds.includes(gv))||(m.enrollments||[]).some(e=>e.groupId===gv)));
+    if(inGroup){ await refreshPayMemberSelect(); await linkGroupForPayment(); }
+    else await _payClearMember();
+}
+async function onPayMemberSelect(){
+    const id=document.getElementById('pMemberSel').value;
+    if(!id){ await _payClearMember(); return; }
+    const ms=await getCollection('members'); const m=ms.find(x=>x.id===id); if(!m) return;
+    document.getElementById('pMemberSearch').value=m.name;
+    document.getElementById('pMember').value=id;
+    document.getElementById('pMemberList').style.display='none';
+    togglePayMemberSearch(false);
+    await linkGroupForPayment();
 }
 
 async function linkGroupForPayment(){
@@ -486,6 +547,8 @@ async function linkGroupForPayment(){
         document.getElementById('pSlotNum').value = chosen ? (chosen.dataset.slot||'1') : '1';
         onGroupChange();
     };
+    // a group chosen in the Group filter is pre-selected for this member
+    { const gf=document.getElementById('pGroupFilter'); if(gf&&gf.value){ const ix=[...sel.options].findIndex(o=>o.value===gf.value); if(ix>=0) sel.selectedIndex=ix; } }
     const first = sel.options[sel.selectedIndex];
     document.getElementById('pEnrollmentId').value = first ? (first.dataset.enrollmentId||'') : '';
     document.getElementById('pSlotNum').value = first ? (first.dataset.slot||'1') : '1';
