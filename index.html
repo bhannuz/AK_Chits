@@ -18,6 +18,21 @@
     .container,.container-sm,.container-md,.container-lg,.container-xl,.container-xxl{max-width:100% !important;}
     .nav-bar{left:0;right:0;}
     </style>
+    <style id="homeToolRowCss">
+    /* 3 tool sections in one row; the section that is opened expands full width underneath */
+    #homeToolRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px;}
+    #homeToolRow>div:not([style*="display: none"]):not([style*="display:none"]){display:contents;}
+    #homeToolRow>div>div:first-child{order:1;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:10px 12px !important;min-width:0;}
+    #homeToolRow>div>div:nth-child(2){order:2;grid-column:1 / -1;background:var(--card-bg);border:1px solid var(--border) !important;border-radius:16px;overflow:hidden;}
+    #homeToolRow>div>div:first-child span[style*="uppercase"]{font-size:0.74rem !important;white-space:normal;line-height:1.15;}
+    @media (max-width:600px){
+        #homeToolRow{gap:6px;}
+        #homeToolRow>div>div:first-child{flex-direction:column;justify-content:center;align-items:center !important;gap:4px;text-align:center;padding:9px 4px !important;}
+        #homeToolRow>div>div:first-child>div{flex-direction:column;gap:4px !important;}
+        #homeToolRow>div>div:first-child span[style*="uppercase"]{font-size:0.6rem !important;letter-spacing:0 !important;}
+        #homeToolRow>div>div:first-child [id$="SectionChevron"]{display:none;}
+    }
+    </style>
 
     <!-- ── CDN Libraries (load before app.js) ── -->
     <!-- Early admin-mode detection — runs before CSS renders to avoid nav flash -->
@@ -249,6 +264,8 @@
 
 
 
+        <!-- QR / WhatsApp / Spin Wheel: three buttons side by side, the opened one expands full width below -->
+        <div id="homeToolRow">
         <!-- ── QR Payment Generator (Admin only) ── -->
         <div id="qrGeneratorSection" style="margin-top:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
             <div onclick="toggleQrSection()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
@@ -425,6 +442,7 @@
             </div>
             <div id="spinSectionBody" style="display:none;border-top:1px solid var(--border);"></div>
         </div>
+        </div><!-- /homeToolRow -->
 
     </div>
 
