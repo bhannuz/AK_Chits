@@ -863,9 +863,14 @@
         <style>
         #paymentModal .pm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px;}
         #paymentModal .pm-grid>div{min-width:0;}
-        #paymentModal .pm-body .form-input,#paymentModal .pm-body select,#paymentModal .pm-body input[type=date]{width:100%;min-width:0;max-width:100%;box-sizing:border-box;}
-        #paymentModal .pm-body input[type=date]{-webkit-appearance:none;appearance:none;min-height:34px;}
+        #paymentModal .pm-body .form-input,#paymentModal .pm-body select,#paymentModal .pm-body input[type=date]{width:100%;min-width:0;max-width:100%;box-sizing:border-box;min-height:36px;}
+        #paymentModal .pm-body input[type=date]{-webkit-appearance:none;appearance:none;display:block;line-height:1.2;}
+        #paymentModal .pm-body input[type=date]::-webkit-date-and-time-value{text-align:left;min-height:1.2em;}
         #paymentModal #singleMonthDropdownWrap select{width:50%;min-width:150px;}
+        /* phones: the global .form-input rule (12px padding, !important) clipped the text of these fields */
+        @media (max-width:480px){
+            #paymentModal .pm-body .form-input,#paymentModal .pm-body select,#paymentModal .pm-body input[type=date]{padding:8px 7px !important;font-size:0.78rem !important;min-height:40px !important;line-height:1.2 !important;}
+        }
         </style>
         <!-- Date + Group filter -->
         <div class="pm-grid">
