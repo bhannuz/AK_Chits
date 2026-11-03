@@ -52,22 +52,18 @@ function _ackMonthLabels(g,p,full){
 // ═══════════════ TEMPLATES (editable defaults) ═══════════════
 const _ACK_DEFAULT_TPL = {
 pay:
-`Dear {name},
-
+`Hi {name}
 We acknowledge your payment with thanks.
 
 {items}
 
-{note}
-
-Warm regards,
-*AK Chit Funds*`,
+{note}`,
 item:
-`*{group}*
-{paid}
-Month(s): {months}
-{status}
-Current month: {current}
+`Group = {group}
+Paid = {paidOn}
+Month(s)= {months}
+Mode = {mode}
+Paid = {paidStatus}
 Pending months: {pendingOutOf}`,
 chit:
 `Dear {name},
@@ -91,13 +87,17 @@ Warm regards,
 };
 
 const _ACK_PLACEHOLDERS = {
-    pay:  '{name} {phone} {items} {amount} {date} {balance} {chits} {today} {note}',
-    item: '{group} {slot} {paid} {amount} {date} {mode} {months} {balance} {status} {current} {total} {pending} {pendingOutOf} {paidOutOf} {pendingCount} {paidCount} {chitAmount} {chitDue} {totalPaid} {dueTillNow} {dueMonths} {nextDue}',
+    pay:  '{name} {membername} {phone} {items} {amount} {date} {balance} {chits} {today} {note}',
+    item: '{group} {slot} {paid} {paidOn} {paidStatus} {amount} {date} {mode} {months} {balance} {status} {current} {total} {pending} {pendingOutOf} {paidOutOf} {pendingCount} {paidCount} {chitAmount} {chitDue} {totalPaid} {dueTillNow} {dueMonths} {nextDue}',
     chit: '{name} {group} {month} {value} {date} {slot} {amount} {phone} {today}'
 };
 
 function _ackGetTpl(kind){
     try{
+        if(localStorage.getItem('ak_ack_tpl_ver')!=='3'){      // new default message format
+            localStorage.removeItem('ak_ack_tpl_pay'); localStorage.removeItem('ak_ack_tpl_item');
+            localStorage.setItem('ak_ack_tpl_ver','3');
+        }
         const t=localStorage.getItem('ak_ack_tpl_'+kind);
         if(t&&t.trim()) return t;
     }catch(e){}
@@ -177,7 +177,7 @@ function _ackChitStats(g,p,allPays){
         if(unpaid) pending++; else paidCount++;
         if(unpaid&&d<=today){
             const [yy,mm]=d.split('-'); dueNames.push(_ACK_MON[parseInt(mm,10)-1]+' '+yy);
-            if(chit>0) dueTillNow+=Math.max(0,chit-paid);
+            if(chit>0) dueTillNow+=Math.max(0,chit-paid);   // includes the unpaid part of part-paid months
         }
     });
     const totalPaid=same.reduce((a,x)=>a+(parseFloat(x.paid)||0),0);
@@ -209,13 +209,17 @@ function _ackItemVars(g,pays,allPays){
     const st=_ackChitStats(g,latest,allPays);
     const total=sorted.reduce((a,x)=>a+(parseFloat(x.paid)||0),0);
     const modes=[]; sorted.forEach(x=>{ const md=_ackPaidBy(x.paidBy); if(md&&modes.indexOf(md)<0) modes.push(md); });
+    const onDate=x=>`${_ackAmt(x.paid)} on ${_ackDate(x.date)}`;
     const one=x=>{ const md=_ackPaidBy(x.paidBy); return `${_ackAmt(x.paid)} on ${_ackDate(x.date)}${md?' via '+md:''}`; };
     const paidTxt=sorted.length===1?'Paid '+one(sorted[0]):`Paid ${_ackAmt(total)}: `+sorted.map(one).join(', ');
     return {
         group:_ackChitLabel(g,latest,allPays),
         paid:paidTxt,
+        paidOn:sorted.length===1?onDate(sorted[0]):`${_ackAmt(total)} (${sorted.map(onDate).join(', ')})`,
+        paidStatus:bal>0?`Partial (balance ${_ackAmt(bal)})`:'Full',
         amount:_ackAmt(total), date:_ackDate(latest.date), mode:modes.join('/'),
         months:_ackMonthLabels(g,synth,false).join(', '),
+        // partial payment: balance = what is still pending for the month(s) this payment covers
         balance:_ackAmt(bal),
         status:bal>0?`Balance pending ${_ackAmt(bal)}`:'Paid in full',
         current:st.current,
@@ -258,6 +262,7 @@ function buildAckPayMessage(m,chits,allPays){
     });
     return _ackFill(_ackGetTpl('pay'),Object.assign({},base,{
         name:m.name||'Member',
+        membername:m.name||'Member',
         phone:m.phone||'',
         today:_ackDate(new Date().toISOString().split('T')[0]),
         date:_ackDate(latestDate),
@@ -440,6 +445,16 @@ async function _ackBuildStatementPdf(m,g,p,allPays){
         host.style.cssText='position:fixed;left:-12000px;top:0;width:718px;background:#fff;';
         host.innerHTML=html;
         const bar=host.querySelector('.print-btn-bar'); if(bar) bar.remove();
+        // statement sent to members: leave out the Total row at the bottom of each table
+        host.querySelectorAll('tr').forEach(tr=>{
+            const c=tr.cells&&tr.cells[0];
+            if(c&&c.textContent.trim().toLowerCase()==='total') tr.remove();
+        });
+        // ...and the "Total Paid" chip in the summary box (the other chips stretch to fill the row)
+        host.querySelectorAll('.stat').forEach(st=>{
+            const l=st.querySelector('.stat-l');
+            if(l&&l.textContent.trim().toLowerCase()==='total paid') st.remove();
+        });
         document.body.appendChild(host);
         try{
             const el=host.querySelector('#printStatement');
