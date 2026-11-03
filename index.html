@@ -864,9 +864,8 @@
         #paymentModal .pm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:8px;}
         #paymentModal .pm-grid>div{min-width:0;}
         #paymentModal .pm-body .form-input,#paymentModal .pm-body select,#paymentModal .pm-body input[type=date]{width:100%;min-width:0;max-width:100%;box-sizing:border-box;}
-        #paymentModal .pm-body input[type=date]{-webkit-appearance:none;appearance:none;display:block;}
-        /* same height for every input / dropdown (incl. the date field) */
-        #paymentModal .pm-body input.form-input,#paymentModal .pm-body select.form-input,#paymentModal .pm-body input[type=date]{height:36px;line-height:normal;}
+        #paymentModal .pm-body input[type=date]{-webkit-appearance:none;appearance:none;min-height:34px;}
+        #paymentModal #singleMonthDropdownWrap select{width:50%;min-width:150px;}
         </style>
         <!-- Date + Group filter -->
         <div class="pm-grid">
@@ -915,7 +914,7 @@
 
         <!-- Single Month dropdown -->
         <div id="singleMonthDropdownWrap" style="display:none;margin-bottom:8px;">
-            <label class="form-label-small">📅 Payment Month</label>
+            <label class="form-label-small">📅 Which Month?</label>
             <select id="pSingleMonthSlot" class="form-input" onchange="onSingleMonthSlotChange()" style="margin-bottom:0;font-size:0.8rem;padding:7px 9px;">
                 <option value="">-- Select Month --</option>
             </select>
