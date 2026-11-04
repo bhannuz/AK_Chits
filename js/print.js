@@ -24,6 +24,21 @@ function fmtDate(dateStr) {
 
 // PRINT MEMBER STATEMENT
 // ══════════════════════════════════════════
+// A group is "completed" when it is closed, or every due month has a payment recorded
+// (same rule as the Planner > Completed Groups list). Printing is only offered for active groups.
+function isGroupCompleted(g, payments){
+    if(!g) return false;
+    if(g.status === 'closed') return true;
+    const dueDates = getGroupDueDates(g);
+    if(!dueDates.length) return false;
+    const paidMonths = new Set();
+    (payments||[]).filter(p => p.groupId === g.id).forEach(p => {
+        if(Array.isArray(p.monthSlots)) p.monthSlots.forEach(s => paidMonths.add(s));
+        else if(p.monthSlot != null) paidMonths.add(p.monthSlot);
+    });
+    return dueDates.every((_, i) => paidMonths.has(i));
+}
+
 async function printMemberStatement(mid, opts){
     opts = opts || {};   // opts.returnHtml: return the statement HTML instead of showing the print overlay
     if(!opts.silent) showToast('⏳ Preparing statement…', true);
@@ -31,12 +46,31 @@ async function printMemberStatement(mid, opts){
     const gs=await getCollection('groups');
     const ps=await getCollection('payments');
     const m=ms.find(x=>x.id===mid); if(!m){showToast('❌ Member not found',false);return;}
-    const mPays=ps.filter(p=>p.memberId===mid);
+    // Statement covers ACTIVE groups only — same meaning as the ACTIVE badge in the member ledger:
+    // not completed / closed (end date not passed) and at least one payment made by this member
+    // (a group with nothing paid yet is "NEW", not active).
+    const _now=new Date();
+    const activeIds=new Set(gs.filter(g=>{
+        if(isGroupCompleted(g,ps)) return false;
+        if(!ps.some(p=>p.memberId===mid && p.groupId===g.id)) return false;
+        const st=g.startDate||g.gStart;
+        if(st){
+            const tm=parseInt(g.duration||g.gDuration)||21, s=new Date(st+'T00:00:00');
+            if(new Date(s.getFullYear(), s.getMonth()+tm, s.getDate()) < _now) return false;
+        }
+        return true;
+    }).map(g=>g.id));
+    const mPays=ps.filter(p=>p.memberId===mid && activeIds.has(p.groupId));
     const totalPaid=mPays.reduce((s,p)=>s+(parseFloat(p.paid)||0),0);
     
     // Initialize enrollments first
     let enrollments=m.enrollments;
     if(!enrollments||!enrollments.length) enrollments=(m.groupIds||[]).map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}));
+    enrollments=enrollments.filter(e=>activeIds.has(e.groupId));
+    if(!enrollments.length && !(m.groupIds||[]).some(gid=>activeIds.has(gid))){
+        if(!opts.silent) showToast('ℹ️ No active group to print for this member',false);
+        return null;
+    }
     
     // Calculate total chit commitment needed
     let totalChitNeeded = 0;
@@ -112,7 +146,7 @@ async function printMemberStatement(mid, opts){
     // BUGFIX: Ensure we capture ALL groups - merge enrollments with groupIds
     // If member has groupIds that aren't in enrollments, add them
     const enrolledGroupIds = new Set(enrollments.map(e=>e.groupId));
-    const missingGroups = (m.groupIds||[]).filter(gid => !enrolledGroupIds.has(gid));
+    const missingGroups = (m.groupIds||[]).filter(gid => !enrolledGroupIds.has(gid) && activeIds.has(gid));
     if(missingGroups.length > 0) {
         enrollments = [...enrollments, ...missingGroups.map(gid=>({enrollmentId:'',groupId:gid,label:'',qty:1}))];
     }
@@ -673,6 +707,7 @@ async function generateGroupPDF(gid){
     const ps = await getCollection('payments');
     const g  = gs.find(x => x.id === gid);
     if(!g){ showToast('❌ Group not found', false); return; }
+    if(isGroupCompleted(g, ps)){ showToast('ℹ️ Print is available only for active groups', false); return; }
 
     const gPays = ps.filter(p => p.groupId === gid);
     const tPaid = gPays.reduce((s,p) => s + (parseFloat(p.paid)||0), 0);
