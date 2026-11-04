@@ -273,8 +273,8 @@ async function printMemberStatement(mid, opts){
                         ? `<span title="${slotsOf(pay).length} months paid together" style="display:inline-block;margin-left:4px;background:#e0e7ff;color:#3730a3;border-radius:8px;padding:0 5px;font-size:8px;font-weight:800;line-height:12px;vertical-align:middle;white-space:nowrap;">×${slotsOf(pay).length}</span>` : '';
                     const manyTag = many ? `<span title="${monthPayments.length} payments" style="display:inline-block;margin-left:4px;min-width:12px;text-align:center;background:#fef3c7;color:#92400e;border:1px solid #f5c842;border-radius:8px;padding:0 4px;font-size:8px;font-weight:800;line-height:12px;vertical-align:middle;">${monthPayments.length}</span>` : '';
                     return `<tr style="background:${bg};${bl}">
-                        <td style="text-align:center;color:#888;">${i+1}</td>
-                        <td style="white-space:nowrap;">${fmtDate(dueDate)}${bulkTag}${manyTag}</td>
+                        <td style="text-align:center;color:#888;white-space:nowrap;">${many?(i+1)+'.1':(i+1)}</td>
+                        <td style="white-space:nowrap;">${fmtDate(dueDate)}${bulkTag}</td>
                         <td style="text-align:center;color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
                         <td style="text-align:center;">${c.date}</td>
                         <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
@@ -285,8 +285,8 @@ async function printMemberStatement(mid, opts){
                 }
                 const last = idx===monthPayments.length-1;
                 return `<tr style="background:${bg};border-left:3px solid #e0e7ff;">
-                    <td style="text-align:center;color:#bbb;">└</td>
-                    <td style="color:#999;font-size:9px;">Payment ${idx+1}</td>
+                    <td style="text-align:center;color:#888;white-space:nowrap;">${i+1}.${idx+1}</td>
+                    <td></td>
                     <td style="text-align:center;color:#bbb;">—</td>
                     <td style="text-align:center;">${c.date}</td>
                     <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
@@ -301,7 +301,7 @@ async function printMemberStatement(mid, opts){
             ? `<div class="grp-ttl" style="font-size:11px;font-weight:800;color:#92400e;background:#fef3c7;border-bottom:1px solid #f39c12;padding:4px 8px;">&#128194; ${g.name}${labelBadge}${slotBadge}</div>` : '';
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:0;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
             ${grpTitle}<table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">
-                <colgroup><col style="width:4%"><col style="width:17%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:15%"></colgroup>
+                <colgroup><col style="width:6%"><col style="width:12%"><col style="width:12%"><col style="width:13%"><col style="width:14%"><col style="width:13%"><col style="width:13%"><col style="width:17%"></colgroup>
                 <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Status</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;text-align:center;">Mode</th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:9px;color:#333;">
