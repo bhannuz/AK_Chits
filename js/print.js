@@ -250,7 +250,7 @@ async function printMemberStatement(mid, opts){
             if(!monthPayments.length){
                 return `<tr style="background:${bg};${bl}">
                     <td style="text-align:center;color:#888;">${i+1}</td>
-                    <td>${fmtDate(dueDate)}</td>
+                    <td style="text-align:center;white-space:nowrap;">${fmtDate(dueDate)}</td>
                     <td style="text-align:center;color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
                     <td style="text-align:center;">—</td>
                     <td style="text-align:center;">—</td>
@@ -266,6 +266,9 @@ async function printMemberStatement(mid, opts){
                 cum += shareOf(pay);
                 const runBal = Math.max(0, chitAmount - cum);
                 const c = payCells(pay, idx, runBal, many);
+                // each payment line of a month has its own status: ⚡ Partial until the month is fully paid, then ✅ Paid
+                const lineStatus = runBal<=0 ? '✅ Paid' : '⚡ Partial';
+                const lineColor  = runBal<=0 ? '#065f46' : '#92400e';
                 const cp2 = pay.chitPicked==='Yes';
                 const pickTag = cp2 ? ' <small style="background:#d1fae5;color:#065f46;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">🏆 Picked</small>' : '';
                 if(idx===0){
@@ -274,12 +277,12 @@ async function printMemberStatement(mid, opts){
                     const manyTag = many ? `<span title="${monthPayments.length} payments" style="display:inline-block;margin-left:4px;min-width:12px;text-align:center;background:#fef3c7;color:#92400e;border:1px solid #f5c842;border-radius:8px;padding:0 4px;font-size:8px;font-weight:800;line-height:12px;vertical-align:middle;">${monthPayments.length}</span>` : '';
                     return `<tr style="background:${bg};${bl}">
                         <td style="text-align:center;color:#888;white-space:nowrap;">${many?(i+1)+'.1':(i+1)}</td>
-                        <td style="white-space:nowrap;">${fmtDate(dueDate)}${bulkTag}</td>
+                        <td style="text-align:center;white-space:nowrap;">${fmtDate(dueDate)}${bulkTag}</td>
                         <td style="text-align:center;color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
                         <td style="text-align:center;">${c.date}</td>
                         <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
                         <td style="text-align:center;color:${(many?runBal:monthlyBalance)>0?'#92400e':'#065f46'};font-weight:700;">${money(many?runBal:monthlyBalance)}</td>
-                        <td style="text-align:center;font-weight:700;color:${statusColor};">${many?'':status}</td>
+                        <td style="text-align:center;font-weight:700;color:${many?lineColor:statusColor};">${many?lineStatus:status}</td>
                         <td style="text-align:center;color:#555;">${c.mode}</td>
                     </tr>`;
                 }
@@ -291,7 +294,7 @@ async function printMemberStatement(mid, opts){
                     <td style="text-align:center;">${c.date}</td>
                     <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
                     <td style="text-align:center;color:${runBal>0?'#92400e':'#065f46'};font-weight:700;">${money(runBal)}</td>
-                    <td style="text-align:center;font-weight:700;color:${statusColor};">${last?status:''}</td>
+                    <td style="text-align:center;font-weight:700;color:${lineColor};">${lineStatus}</td>
                     <td style="text-align:center;color:#555;">${c.mode}</td>
                 </tr>`;
             }).join('');

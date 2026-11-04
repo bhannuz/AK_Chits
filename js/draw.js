@@ -2,7 +2,8 @@
 // AK Chit Funds — CHIT DRAW (spin wheel)
 // Used when nobody volunteers to pick the chit for a month:
 // spins a wheel of the members who have NOT yet picked in that group.
-// Lives in the collapsible "Spin Wheel" section on the Home tab (admin only).
+// Lives in a collapsible "Spin Wheel" section: Home tab for the admin / chit owner (can spin),
+// member dashboard for chit members (view only: sees the wheel and who won).
 // ═══════════════════════════════════════════════════════════
 
 let _drawState = null;
@@ -56,28 +57,54 @@ function _drawPickedInMonth(g, ps, ms, slotIndex, dueDates){
     return m ? m.name : 'someone';
 }
 
+function _drawIsAdmin(){ try{ return !!(CURRENT_USER && CURRENT_USER.role === 'admin'); }catch(e){ return false; } }
+function _drawIds(){
+    return _drawIsAdmin() ? { body:'spinSectionBody', chev:'spinSectionChevron' } : { body:'memberSpinBody', chev:'memberSpinChevron' };
+}
+let _drawUnsub = null;
+function _drawStopLive(){ if(_drawUnsub){ try{ _drawUnsub(); }catch(e){} _drawUnsub = null; } }
+
 function toggleSpinSection(){
-    const body = document.getElementById('spinSectionBody');
-    const chev = document.getElementById('spinSectionChevron');
+    const ids = _drawIds();
+    const body = document.getElementById(ids.body);
+    const chev = document.getElementById(ids.chev);
     if(!body) return;
     const open = body.style.display === 'none' || body.style.display === '';
     body.style.display = open ? 'block' : 'none';
     if(chev) chev.style.transform = open ? 'rotate(90deg)' : '';
-    if(open) loadSpinWheel();
+    if(open) loadSpinWheel(); else _drawStopLive();
 }
 
 async function loadSpinWheel(keepGid){
-    const body = document.getElementById('spinSectionBody'); if(!body) return;
+    const ids = _drawIds();
+    const body = document.getElementById(ids.body); if(!body) return;
     if(_drawState && _drawState.spinning) return;
+    _drawStopLive();
     body.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-dim);font-size:0.8rem;">Loading…</div>';
-    const [gs, ms, ps] = await Promise.all([getCollection('groups'), getCollection('members'), getCollection('payments', true)]);
+    const [gsAll, ms, ps] = await Promise.all([getCollection('groups'), getCollection('members'), getCollection('payments', true)]);
+    const admin = _drawIsAdmin();
+    let gs = gsAll;
+    if(!admin){                                   // a member only sees the groups he/she belongs to
+        const me = ms.find(x => x.id === (CURRENT_USER && CURRENT_USER.memberId));
+        gs = gsAll.filter(g => me && me.groupIds && me.groupIds.includes(g.id));
+    }
     let saved = {};
     try{ const d = await db.collection('settings').doc('chitDraws').get(); if(d.exists) saved = d.data().draws || {}; }catch(e){}
     if(!gs.length){ body.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-dim);">No groups yet.</div>'; return; }
     const gid = keepGid && gs.find(x => x.id === keepGid) ? keepGid : gs[0].id;
-    _drawState = { gs, ms, ps, saved, angle: 0, spinning: false, winner: null };
+    _drawState = { gs, ms, ps, saved, admin, bodyId: ids.body, angle: 0, spinning: false, winner: null };
     _drawSetGroup(gid);
     _drawRender();
+    // chit members see a result the moment the admin / owner confirms it
+    if(!admin){
+        try{
+            _drawUnsub = db.collection('settings').doc('chitDraws').onSnapshot(doc => {
+                if(!_drawState || _drawState.admin) return;
+                _drawState.saved = (doc.exists && doc.data().draws) || {};
+                _drawBody();
+            }, () => {});
+        }catch(e){}
+    }
 }
 
 function _drawSetGroup(gid){
@@ -91,7 +118,7 @@ function _drawSetGroup(gid){
 }
 
 function _drawRender(){
-    const S = _drawState; const body = document.getElementById('spinSectionBody'); if(!S || !body) return;
+    const S = _drawState; const body = document.getElementById(S && S.bodyId); if(!S || !body) return;
     const sty = 'width:100%;margin-bottom:6px;padding:8px;border-radius:8px;background:var(--input-bg);color:#e5e7eb;border:1px solid rgba(255,255,255,0.15);font-size:0.8rem;';
     const grpOpts = S.gs.map(x => `<option value="${x.id}" ${x.id === S.g.id ? 'selected' : ''}>${_drawEsc(x.name)}</option>`).join('');
     const monthOpts = S.dueDates.map((d, i) => `<option value="${i}" ${i === S.slotIndex ? 'selected' : ''}>Month ${i + 1} — ${fmtDate(d)}${S.saved[S.g.id + '_' + i] ? ' ✔ drawn' : ''}</option>`).join('');
@@ -116,6 +143,12 @@ function _drawMonthChanged(v){
     _drawBody();
 }
 
+// angle that puts the pointer (top) in the middle of segment idx
+function _drawAngleFor(idx, n){
+    const TAU = 2 * Math.PI, seg = TAU / n;
+    return (((-Math.PI / 2 - (idx + 0.5) * seg) % TAU) + TAU) % TAU;
+}
+
 function _drawBody(){
     const S = _drawState; if(!S) return;
     const note = document.getElementById('drawNote');
@@ -126,37 +159,52 @@ function _drawBody(){
     const prev = S.saved[key];
     let msg = '';
     if(already) msg += `<div style="color:#f87171;">⚠ ${_drawEsc(already)} already picked this month.</div>`;
-    if(prev) msg += `<div style="color:#34d399;">Previously drawn: <b>${_drawEsc(prev.name)}</b></div>`;
+    if(prev && S.admin) msg += `<div style="color:#34d399;">Previously drawn: <b>${_drawEsc(prev.name)}</b></div>`;
     note.innerHTML = msg;
 
+    // Results already published for this group (admin and members both see them)
+    const hist = Object.keys(S.saved).filter(k => k.indexOf(S.g.id + '_') === 0)
+        .map(k => ({ idx: parseInt(k.slice(S.g.id.length + 1)), r: S.saved[k] })).sort((a, b) => a.idx - b.idx);
+    const histHtml = hist.length ? `<div style="margin-top:12px;text-align:left;font-size:0.74rem;border-top:1px solid rgba(255,255,255,0.1);padding-top:8px;">
+        <div style="color:#9ca3af;font-weight:800;margin-bottom:4px;">DRAW RESULTS</div>
+        ${hist.map(h => `<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>Month ${h.idx + 1}</span><b style="color:#34d399;">🏆 ${_drawEsc(h.r.name)}</b></div>`).join('')}</div>` : '';
+
     if(!S.names.length){
-        body.innerHTML = '<div style="padding:24px 0;color:#9ca3af;">Everyone in this group has already picked their chit.</div>';
+        body.innerHTML = '<div style="padding:24px 0;color:#9ca3af;">Everyone in this group has already picked their chit.</div>' + histHtml;
         return;
     }
     if(S.names.length === 1){
-        body.innerHTML = `<div style="padding:20px 0;"><div style="color:#9ca3af;font-size:0.75rem;">Only one member left to pick</div><div style="font-size:1.2rem;font-weight:800;color:#34d399;margin-top:6px;">🏆 ${_drawEsc(S.names[0].label)}</div></div>`;
+        body.innerHTML = `<div style="padding:20px 0;"><div style="color:#9ca3af;font-size:0.75rem;">Only one member left to pick</div><div style="font-size:1.2rem;font-weight:800;color:#34d399;margin-top:6px;">🏆 ${_drawEsc(S.names[0].label)}</div></div>` + histHtml;
         return;
     }
-    const avail = (document.getElementById('spinSectionBody').clientWidth || window.innerWidth) - 40;
-    const size = Math.max(220, Math.min(320, avail));
+    // members: park the pointer on the published winner of the selected month
+    if(!S.admin && prev && !S.spinning){
+        const wi = S.names.findIndex(n => n.memberId === prev.memberId && n.slotNum === prev.slotNum);
+        if(wi >= 0) S.angle = _drawAngleFor(wi, S.names.length);
+    }
+    const avail = (document.getElementById(S.bodyId).clientWidth || window.innerWidth) - 40;
+    const size = Math.max(240, Math.min(340, avail));
+    const resultTxt = S.winner ? '🏆 ' + _drawEsc(S.winner.label)
+        : (!S.admin ? (prev ? '🏆 ' + _drawEsc(prev.name) : '<span style="font-size:0.8rem;color:#9ca3af;font-weight:600;">Draw not done yet for this month</span>') : '');
     body.innerHTML = `
         <div style="position:relative;width:${size}px;height:${size + 14}px;margin:0 auto;">
             <div style="position:absolute;left:50%;top:0;transform:translateX(-50%);z-index:2;width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:22px solid #f43f5e;filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));"></div>
             <canvas id="drawCanvas" width="${size * 2}" height="${size * 2}" style="position:absolute;left:0;top:14px;width:${size}px;height:${size}px;"></canvas>
         </div>
-        <div id="drawResult" style="min-height:44px;margin:10px 0 6px;font-size:1.1rem;font-weight:800;color:#34d399;">${S.winner ? '🏆 ' + _drawEsc(S.winner.label) : ''}</div>
+        <div id="drawResult" style="min-height:44px;margin:10px 0 6px;font-size:1.1rem;font-weight:800;color:#34d399;">${resultTxt}</div>
         <div style="font-size:0.66rem;color:#9ca3af;margin-bottom:8px;">${S.names.length} members in the draw (those who have not picked yet)</div>
-        <div id="drawBtns" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>`;
+        <div id="drawBtns" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;"></div>` + histHtml;
     _drawCanvas();
     _drawButtons();
 }
 
 function _drawButtons(){
     const S = _drawState; const b = document.getElementById('drawBtns'); if(!S || !b) return;
+    if(!S.admin){ b.innerHTML = '<div style="font-size:0.7rem;color:#9ca3af;">The draw is done by the chit owner / admin. The winner appears here as soon as it is confirmed.</div>'; return; }
     const base = 'border:none;border-radius:10px;padding:9px 18px;font-weight:800;font-size:0.85rem;cursor:pointer;';
     if(S.spinning){ b.innerHTML = `<button disabled style="${base}background:#374151;color:#9ca3af;">Spinning…</button>`; return; }
     if(S.winner){
-        b.innerHTML = `<button onclick="_drawSave()" style="${base}background:#10b981;color:#fff;">✔ Confirm & Save</button>
+        b.innerHTML = `<button onclick="_drawSave()" style="${base}background:#10b981;color:#fff;">✔ Confirm & Publish</button>
                        <button onclick="chitDrawSpin()" style="${base}background:#374151;color:#e5e7eb;">🔄 Spin again</button>`;
     } else {
         b.innerHTML = `<button onclick="chitDrawSpin()" style="${base}background:#f39c12;color:#1a1f2e;">🎡 SPIN</button>`;
@@ -167,20 +215,36 @@ function _drawCanvas(){
     const S = _drawState; const c = document.getElementById('drawCanvas'); if(!S || !c) return;
     const ctx = c.getContext('2d'); const W = c.width, R = W / 2 - 6, n = S.names.length, seg = 2 * Math.PI / n;
     const cols = ['#f39c12', '#6366f1', '#10b981', '#ec4899', '#0ea5e9', '#eab308', '#8b5cf6', '#ef4444', '#14b8a6', '#f97316'];
+    const HUB = 26, EDGE = 14;
     ctx.clearRect(0, 0, W, W);
     ctx.save(); ctx.translate(W / 2, W / 2); ctx.rotate(S.angle);
     S.names.forEach((nm, i) => {
         ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, R, i * seg, (i + 1) * seg); ctx.closePath();
         ctx.fillStyle = cols[i % cols.length]; ctx.fill();
         ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2; ctx.stroke();
-        ctx.save(); ctx.rotate(i * seg + seg / 2); ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
-        const fs = Math.max(14, Math.min(30, Math.floor(R * seg * 0.55)));
-        ctx.font = '700 ' + fs + 'px sans-serif';
-        let t = nm.label; const maxW = R - 34;
-        while(t.length > 3 && ctx.measureText(t).width > maxW) t = t.slice(0, -2);
-        if(t !== nm.label) t = t.trimEnd() + '…';
-        ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 3;
-        ctx.fillText(t, R - 16, 0); ctx.restore();
+
+        // Name runs along the radius, outside-in. Pick the largest font whose name still fits inside
+        // its own slice (slice is narrow near the centre, so long names are shortened, never overlapped).
+        ctx.save(); ctx.rotate(i * seg + seg / 2);
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+        const xEnd = R - EDGE, maxLen = xEnd - HUB - 6;
+        let fs = Math.max(11, Math.min(30, Math.floor(R * seg * 0.42)));
+        let t = nm.label;
+        for(; fs >= 11; fs -= 1){
+            ctx.font = '700 ' + fs + 'px sans-serif';
+            const w = Math.min(ctx.measureText(t).width, maxLen);
+            const innerR = xEnd - w;
+            if(fs <= innerR * seg * 0.82) break;        // fits without touching the neighbours
+        }
+        ctx.font = '700 ' + Math.max(fs, 11) + 'px sans-serif';
+        const innerLimit = Math.max(HUB + 6, (Math.max(fs, 11) / (seg * 0.82)));   // closest to centre the text may start
+        const allowed = Math.max(40, Math.min(maxLen, xEnd - innerLimit));
+        if(ctx.measureText(t).width > allowed){
+            while(t.length > 1 && ctx.measureText(t + '…').width > allowed) t = t.slice(0, -1);
+            t = t.trimEnd() + '…';
+        }
+        ctx.shadowColor = 'rgba(0,0,0,0.55)'; ctx.shadowBlur = 3;
+        ctx.fillText(t, xEnd, 0); ctx.restore();
     });
     ctx.restore();
     ctx.beginPath(); ctx.arc(W / 2, W / 2, 20, 0, 2 * Math.PI); ctx.fillStyle = '#1a1f2e'; ctx.fill();
@@ -188,7 +252,7 @@ function _drawCanvas(){
 }
 
 function chitDrawSpin(){
-    const S = _drawState; if(!S || S.spinning || S.names.length < 2) return;
+    const S = _drawState; if(!S || !S.admin || S.spinning || S.names.length < 2) return;
     // Fair, unbiased pick via crypto RNG
     const rnd = () => crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
     const n = S.names.length, seg = 2 * Math.PI / n;
@@ -218,13 +282,13 @@ function chitDrawSpin(){
 }
 
 async function _drawSave(){
-    const S = _drawState; if(!S || !S.winner) return;
+    const S = _drawState; if(!S || !S.admin || !S.winner) return;
     const key = S.g.id + '_' + S.slotIndex;
     const rec = { name: S.winner.label, memberId: S.winner.memberId, slotNum: S.winner.slotNum, month: S.slotIndex + 1, date: new Date().toISOString() };
     try{
         await db.collection('settings').doc('chitDraws').set({ draws: { [key]: rec } }, { merge: true });
         S.saved[key] = rec;
-        showToast('✅ Draw saved — ' + rec.name + ' · record the chit pick in Payments');
+        showToast('✅ Draw published — ' + rec.name + ' · record the chit pick in Payments');
     }catch(e){
         showToast('❌ Could not save draw result', false);
         return;

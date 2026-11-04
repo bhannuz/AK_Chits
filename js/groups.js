@@ -568,7 +568,7 @@ async function renderGroupsTab(){
                         </div>
                     </div>
                     <div style="display:flex;gap:5px;align-items:center;">
-                        <button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:4px 8px;font-size:0.85rem;">📄</button>
+                        ${isGroupCompleted(g,ps)?'':`<button onclick="generateGroupPDF('${g.id}');event.stopPropagation();" class="btn-pdf" style="padding:4px 8px;font-size:0.85rem;">📄</button>`}
                         <button onclick="openEditGroup('${g.id}');event.stopPropagation();" class="btn-edit-sm" style="padding:4px 8px;font-size:0.85rem;">✏️</button>
                         <span class="chevron-icon closed">▼</span>
                     </div>

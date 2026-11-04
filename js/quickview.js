@@ -103,7 +103,7 @@ function renderGroupsQuick(gs, ms, ps){
                         <div style="font-size:0.92rem;color:var(--text-dim);margin-top:2px;">${totalSlots===gMs.length?totalSlots+' members':totalSlots+' chit slots'} &nbsp;·&nbsp; 🗓 ${gStartDisp}</div>
                     </div>
                     <div style="display:flex;gap:5px;">
-                        <button onclick="closeModal('groupsQuickModal');generateGroupPDF('${g.id}')" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;border:none;border-radius:7px;padding:4px 9px;font-size:1.05rem;font-weight:700;cursor:pointer;">📄 PDF</button>
+                        ${isGroupCompleted(g,ps)?'':`<button onclick="closeModal('groupsQuickModal');generateGroupPDF('${g.id}')" style="background:linear-gradient(135deg,#e74c3c,#c0392b);color:white;border:none;border-radius:7px;padding:4px 9px;font-size:1.05rem;font-weight:700;cursor:pointer;">📄 PDF</button>`}
                         ${isAdmin()?`<button class="btn-edit-sm" onclick="openEditGroup('${g.id}')" style="font-size:1.05rem;padding:4px 9px;">✏️</button>`:''}
                     </div>
                 </div>
