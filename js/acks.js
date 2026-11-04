@@ -448,7 +448,7 @@ async function _ackBuildStatementPdf(m,g,p,allPays){
         // statement sent to members: leave out the Total row at the bottom of each table
         host.querySelectorAll('tr').forEach(tr=>{
             const c=tr.cells&&tr.cells[0];
-            if(c&&c.textContent.trim().toLowerCase()==='total') tr.remove();
+            if(c&&c.textContent.trim().toLowerCase()==='total') tr.style.display='none';   // hidden, not removed: the stylesheet bolds/highlights the LAST row
         });
         // ...and the "Total Paid" chip in the summary box (the other chips stretch to fill the row)
         host.querySelectorAll('.stat').forEach(st=>{

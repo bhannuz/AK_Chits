@@ -136,9 +136,11 @@ async function printMemberStatement(mid, opts){
         const lastPay    = slotPays.length ? slotPays[slotPays.length-1] : null;
         const membersCount = parseInt(g.members||g.gMembers||0);
         const groupAmount  = parseFloat(g.amount||g.gAmount||0);
-        const chitAmount   = lastPay && parseFloat(lastPay.chit)>0
-            ? parseFloat(lastPay.chit)
-            : (membersCount>0 && groupAmount>0 ? Math.round(groupAmount/membersCount) : 0);
+        const fixedMonthly = g.amtType!=='variable' && g.fixedAmt ? (parseFloat(g.fixedAmt)||0) : 0;
+        const chitAmount   = fixedMonthly>0 ? fixedMonthly
+            : (lastPay && parseFloat(lastPay.chit)>0
+                ? parseFloat(lastPay.chit)
+                : (membersCount>0 && groupAmount>0 ? Math.round(groupAmount/membersCount) : 0));
         
         // Calculate total balance for this slot
         const gBal = Math.max(0, (totalMonths * chitAmount) - gPaid);
@@ -234,11 +236,11 @@ async function printMemberStatement(mid, opts){
                 const pickTag = cp2 ? ' <small style="background:#d1fae5;color:#065f46;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">🏆 Picked</small>' : '';
                 if(idx===0){
                     const bulkTag = isBulk(pay) && Math.min.apply(null,slotsOf(pay))===i
-                        ? ` <small style="background:#e0e7ff;color:#3730a3;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">×${slotsOf(pay).length} months bulk</small>` : '';
-                    const manyTag = many ? ` <small style="background:#fef3c7;color:#92400e;border-radius:3px;padding:1px 4px;font-size:8px;font-weight:800;">${monthPayments.length} payments</small>` : '';
+                        ? `<span title="${slotsOf(pay).length} months paid together" style="display:inline-block;margin-left:4px;background:#e0e7ff;color:#3730a3;border-radius:8px;padding:0 5px;font-size:8px;font-weight:800;line-height:12px;vertical-align:middle;white-space:nowrap;">×${slotsOf(pay).length}</span>` : '';
+                    const manyTag = many ? `<span title="${monthPayments.length} payments" style="display:inline-block;margin-left:4px;min-width:12px;text-align:center;background:#fef3c7;color:#92400e;border:1px solid #f5c842;border-radius:8px;padding:0 4px;font-size:8px;font-weight:800;line-height:12px;vertical-align:middle;">${monthPayments.length}</span>` : '';
                     return `<tr style="background:${bg};${bl}">
                         <td style="text-align:center;color:#888;">${i+1}</td>
-                        <td>${fmtDate(dueDate)}${bulkTag}${manyTag}</td>
+                        <td style="white-space:nowrap;">${fmtDate(dueDate)}${bulkTag}${manyTag}</td>
                         <td style="text-align:center;color:#555;">Rs.${chitAmt>0?chitAmt.toLocaleString('en-IN'):'—'}</td>
                         <td style="text-align:center;">${c.date}</td>
                         <td style="text-align:center;color:#065f46;font-weight:700;">${c.paid}${pickTag}</td>
@@ -261,9 +263,11 @@ async function printMemberStatement(mid, opts){
             }).join('');
         }).join('');
 
+        const grpTitle = (enrollments.length>1 || totalSlots>1)
+            ? `<div class="grp-ttl" style="font-size:11px;font-weight:800;color:#92400e;background:#fef3c7;border-bottom:1px solid #f39c12;padding:4px 8px;">&#128194; ${g.name}${labelBadge}${slotBadge}</div>` : '';
         return `<div class="grp-block" style="${indentStyle}border:1px solid #f39c12;background:#ffffff;padding:0;border-radius:2px;margin-bottom:6px;page-break-after:auto;box-shadow:none;">
-            <table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">
-                <colgroup><col style="width:4%"><col style="width:13%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:19%"></colgroup>
+            ${grpTitle}<table style="border:1px solid #f39c12;border-collapse:collapse;width:100%;">
+                <colgroup><col style="width:4%"><col style="width:17%"><col style="width:12%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:15%"></colgroup>
                 <thead><tr style="background:#f5f5f5;border-bottom:1px solid #f39c12;"><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">#</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Due Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Chit/Mo</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Pay Date</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Paid</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Balance</th><th style="font-size:8px;font-weight:800;color:#333;border-right:1px solid #f39c12;padding:3px 2px;text-align:center;">Status</th><th style="font-size:8px;font-weight:800;color:#333;padding:3px 2px;text-align:center;">Mode</th></tr></thead>
                 <tbody>${rows}
                 <tr style="background:#fff8e1;font-weight:800;border-top:1px solid #f39c12;font-size:9px;color:#333;">
@@ -327,6 +331,12 @@ async function printMemberStatement(mid, opts){
             return slotBlocks;
         }
     }).join('');
+
+    // Chit tenure (months) of the member's group(s)
+    const tenureTxt = (()=>{
+        const set=[]; enrollments.forEach(e=>{ const g=gs.find(x=>x.id===e.groupId); if(g){ const t=parseInt(g.duration||g.gDuration)||21; if(set.indexOf(t)<0) set.push(t); } });
+        return set.length ? set.join(' / ')+' months' : '—';
+    })();
 
     const printHTML = `
     <div id="printStatement">
@@ -622,6 +632,7 @@ async function printMemberStatement(mid, opts){
                 <div class="stat"><div class="stat-l">Total Paid</div><div class="stat-v" style="color:#065f46;">Rs.${totalPaid.toLocaleString('en-IN')}</div></div>
                 <div class="stat"><div class="stat-l">Start &rarr; End</div><div class="stat-v" style="color:#0891b2;font-size:11px;">${startDateDisp} &rarr; ${endDateDisp}</div></div>
                 <div class="stat"><div class="stat-l">Paid / Total Months</div><div class="stat-v" style="color:#065f46;font-size:11px;">${enrollments.length > 0 ? (() => {let totalMonths=0,paidMonths=0; enrollments.forEach(e=>{const g=gs.find(x=>x.id===e.groupId);if(g){const tm=parseInt(g.duration||g.gDuration)||21;totalMonths=Math.max(totalMonths,tm);const gPays=mPays.filter(p=>p.enrollmentId===e.enrollmentId||p.groupId===e.groupId);const uniqueMonths=new Set();gPays.forEach(p=>{if(p.monthSlot!=null){uniqueMonths.add(p.monthSlot);}else if(Array.isArray(p.monthSlots)){p.monthSlots.forEach(m=>uniqueMonths.add(m));}});paidMonths=Math.max(paidMonths,uniqueMonths.size);}});return paidMonths+'/'+totalMonths;})() : '0/0'}</div></div>
+                <div class="stat"><div class="stat-l">Chit Tenure</div><div class="stat-v" style="color:#4338ca;font-size:11px;">${tenureTxt}</div></div>
                 <div class="stat"><div class="stat-l">Chit Picked</div><div class="stat-v" style="color:${chitPickedChipColor};font-size:11px;">${chitPickedChipVal}</div></div>
             </div>
         </div>
