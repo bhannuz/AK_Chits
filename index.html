@@ -538,8 +538,20 @@
                 </div>
 
                 <div id="ncpBody" style="display:none;">
-                <!-- Parameters -->
-                <div style="padding:16px;border-bottom:1px solid var(--border);">
+                <!-- Parameters (compact: all six fields in one grid) -->
+                <style>
+                #ncpBody .ncp-params{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 8px;padding:10px 12px !important;}
+                @media (min-width:560px){ #ncpBody .ncp-params{grid-template-columns:repeat(3,minmax(0,1fr));} }
+                #ncpBody .ncp-params>div[style*="display:grid"]{display:contents !important;}
+                #ncpBody .ncp-params div[style*="text-transform:uppercase"]{font-size:0.58rem !important;margin-bottom:2px !important;}
+                #ncpBody .ncp-params .form-input{padding:5px 9px !important;font-size:0.8rem !important;min-height:32px !important;height:32px !important;border-radius:8px !important;}
+                #ncpBody .ncp-params input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;line-height:1.2;}
+                #ncpBody .ncp-params div[style*="rgba(99,102,241,0.07)"]{grid-column:1 / -1;padding:6px 8px !important;margin-bottom:0 !important;}
+                #ncpBody .ncp-params div[style*="rgba(99,102,241,0.07)"] div[style*="display:grid"]{gap:6px !important;}
+                #ncpBody .ncp-params div[style*="rgba(99,102,241,0.07)"] div[style*="font-size:0.6rem"]{font-size:0.56rem !important;margin-bottom:2px !important;margin-top:3px !important;line-height:1.3;}
+                #ncpBody .ncp-params>button{grid-column:1 / -1;padding:8px !important;font-size:0.8rem !important;}
+                </style>
+                <div class="ncp-params" style="padding:16px;border-bottom:1px solid var(--border);">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
                         <div>
                             <div style="font-size:0.65rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;margin-bottom:5px;">💰 Chit Amount (₹)</div>
