@@ -108,7 +108,25 @@ async function ncpSaveVersion(){
 }
 
 // ── New blank planner ─────────────────────────────────────────────────────────
+// ── Collapse / expand ─────────────────────────────────────────────────────────
+window._ncpBodyOpen = false; window._ncpSavedOpen = false;
+function ncpToggleBody(force){
+    var open = (typeof force === 'boolean') ? force : !window._ncpBodyOpen;
+    window._ncpBodyOpen = open;
+    var b=document.getElementById('ncpBody'), a=document.getElementById('ncpHeaderActions'), c=document.getElementById('ncpChev');
+    if(b) b.style.display = open ? 'block' : 'none';
+    if(a) a.style.display = open ? 'flex' : 'none';
+    if(c) c.style.transform = open ? 'rotate(90deg)' : '';
+}
+function ncpToggleSaved(force){
+    window._ncpSavedOpen = (typeof force === 'boolean') ? force : !window._ncpSavedOpen;
+    var l=document.getElementById('ncpSavedList'), c=document.getElementById('ncpSavedChev');
+    if(l) l.style.display = window._ncpSavedOpen ? 'block' : 'none';
+    if(c) c.style.transform = window._ncpSavedOpen ? 'rotate(90deg)' : '';
+}
+
 function ncpNewPlanner(){
+    ncpToggleBody(true);
     _ncpActive = null;
     ['ncp_amount','ncp_members','ncp_duration','ncp_start','ncp_dueday','ncp_commission','ncp_member','ncp_incr_min','ncp_incr_max'].forEach(function(id){ _ncpSet(id,''); });
     _ncpSet('ncp_version_label','');
@@ -123,6 +141,7 @@ function ncpNewPlanner(){
 async function ncpLoadVersion(key){
     var all = await _ncpFetch();
     if(!all[key]) return;
+    ncpToggleBody(true);
     _ncpActive = key;
     _ncpSet('ncp_version_label', all[key]._label);
     ncpFillForm(all[key]);
@@ -153,29 +172,26 @@ async function ncpRenderSaved(){
     var bar  = document.getElementById('ncpSavedBar');
     if(!keys.length){ bar.innerHTML = ''; return; }
 
-    var html = '<div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">📁 Saved Versions ('+keys.length+')</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:6px;">';
+    var open = !!window._ncpSavedOpen;
+    var html = '<div onclick="ncpToggleSaved()" style="display:flex;align-items:center;justify-content:space-between;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 14px;cursor:pointer;user-select:none;">'
+             + '<span style="font-size:0.72rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px;">📁 Saved Versions ('+keys.length+')</span>'
+             + '<span id="ncpSavedChev" style="color:var(--text-dim);transition:transform .2s;'+(open?'transform:rotate(90deg);':'')+'">&#9654;</span></div>';
+    html += '<div id="ncpSavedList" style="display:'+(open?'block':'none')+';">';
     keys.forEach(function(k){
         var p = all[k];
         var isActive = k === _ncpActive;
         var monthlyPay = p.amount && p.members ? Math.round(parseFloat(p.amount)/parseInt(p.members)) : 0;
-        var suggestion = ncpQuickSuggestion(p);
-        html += '<div style="background:'+(isActive?'rgba(99,102,241,0.15)':'var(--card-bg)')+';border:1px solid '+(isActive?'rgba(99,102,241,0.5)':'var(--border)')+';border-radius:12px;padding:12px 14px;">';
-        html += '<div style="display:flex;align-items:flex-start;gap:10px;">';
-        html += '<div style="flex:1;min-width:0;">';
-        html += '<div style="font-size:0.88rem;font-weight:800;color:'+(isActive?'#a5b4fc':'white')+';margin-bottom:3px;">'+(isActive?'✏️ ':'')+escHtml(p._label||k)+'</div>';
-        html += '<div style="font-size:0.68rem;color:var(--text-dim);">'+(p.name?escHtml(p.name)+' · ':'')+(p.members||'?')+' members · '+(p.duration||'?')+' months'+(monthlyPay?' · ₹'+monthlyPay.toLocaleString('en-IN')+'/mo':'')+'</div>';
-        if(suggestion){ html += '<div style="font-size:0.68rem;color:#a5b4fc;margin-top:4px;line-height:1.5;">💡 '+escHtml(suggestion)+'</div>'; }
-        html += '<div style="font-size:0.6rem;color:var(--text-dim);margin-top:2px;">💾 '+(p._savedAt||'—')+'</div>';
-        html += '</div>';
-        html += '<div style="display:flex;gap:5px;flex-shrink:0;">';
+        var info = (p.members||'?')+' members · '+(p.duration||'?')+' mo'+(monthlyPay?' · ₹'+monthlyPay.toLocaleString('en-IN')+'/mo':'');
+        // one single row per version
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;background:'+(isActive?'rgba(99,102,241,0.15)':'var(--card-bg)')+';border:1px solid '+(isActive?'rgba(99,102,241,0.5)':'var(--border)')+';border-radius:10px;padding:7px 10px;">';
+        html += '<div style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.8rem;font-weight:800;color:'+(isActive?'#a5b4fc':'white')+';">'+(isActive?'✏️ ':'')+escHtml(p._label||k)+' <span style="font-size:0.66rem;font-weight:600;color:var(--text-dim);">'+escHtml(info)+'</span></div>';
         if(!isActive){
-            html += '<button onclick="ncpLoadVersion(\''+k+'\')" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:5px 11px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">📂 Load</button>';
+            html += '<button onclick="ncpLoadVersion(\''+k+'\')" title="Load" style="flex:0 0 auto;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;padding:4px 9px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">📂</button>';
         } else {
-            html += '<button onclick="ncpSaveVersion()" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#34d399;padding:5px 11px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">💾 Update</button>';
+            html += '<button onclick="ncpSaveVersion()" title="Update" style="flex:0 0 auto;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#34d399;padding:4px 9px;border-radius:8px;font-size:0.72rem;font-weight:800;cursor:pointer;">💾</button>';
         }
-        html += '<button onclick="ncpDeleteVersion(\''+k+'\')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:5px 9px;border-radius:8px;font-size:0.72rem;cursor:pointer;">🗑</button>';
-        html += '</div></div></div>';
+        html += '<button onclick="ncpDeleteVersion(\''+k+'\')" title="Delete" style="flex:0 0 auto;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#f87171;padding:4px 8px;border-radius:8px;font-size:0.72rem;cursor:pointer;">🗑</button>';
+        html += '</div>';
     });
     html += '</div>';
     bar.innerHTML = html;

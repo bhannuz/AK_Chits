@@ -218,32 +218,12 @@ function hexToRgb(hex) {
 }
 
 function clearStatFilters() {
-    ['statGroupFilter','statModeFilter','statChitFilter','statMemberFilter','statMonthFilter'].forEach(id => {
-        const el = document.getElementById(id); if(el) el.value='';
-    });
+    const el = document.getElementById('statGroupFilter'); if(el) el.value='';
     loadStatistics();
 }
 
 // Called when Group filter changes — repopulate Member dropdown immediately
-async function onStatGroupFilterChange() {
-    const gid = (document.getElementById('statGroupFilter')||{}).value||'';
-    const ps  = await getCollection('payments');
-    const ms  = await getCollection('members');
-    const sel = document.getElementById('statMemberFilter');
-    if(!sel) { loadStatistics(); return; }
-    // Scope members to those with payments in this group (or all if no group selected)
-    const mids = new Set(
-        gid ? ps.filter(p=>p.groupId===gid).map(p=>p.memberId)
-            : ps.map(p=>p.memberId)
-    );
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">All Members</option>' +
-        ms.filter(m=>mids.has(m.id))
-          .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
-          .map(m=>`<option value="${m.name}"${m.name===cur?' selected':''}>${m.name}</option>`)
-          .join('');
-    loadStatistics();
-}
+async function onStatGroupFilterChange() { loadStatistics(); }
 
 // Legacy stubs — kept so any old calls don't error
 function onStatFilterTypeChange() {}
@@ -251,193 +231,187 @@ function applyStatSubFilter() { loadStatistics(); }
 function renderStatFilterChips() {}
 function removeStatFilter(key) {}
 
+// ── Statistics = one scorecard per group ────────────────────
+function _stEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+window._statOpen = window._statOpen || {};
+
+// every chit "seat" of a group (a member with 2 chits = 2 seats, a joint pair = 1 seat)
+function _statSeats(g, ms, ps){
+    const gps = ps.filter(p => p.groupId === g.id);
+    const seen = new Set(), seats = [];
+    ms.filter(m => m.groupIds && m.groupIds.includes(g.id)).forEach(m => {
+        const enr = (m.enrollments||[]).find(e => e.groupId === g.id);
+        const qty = enr ? parseInt(enr.qty||1) : 1;
+        const coId = enr && enr.coMemberId ? enr.coMemberId : '';
+        if(coId){ const k=[m.id,coId].sort().join('_'); if(seen.has(k)) return; seen.add(k); }
+        const co = coId ? ms.find(x => x.id === coId) : null;
+        for(let q=1; q<=qty; q++){
+            const mine = gps.filter(p => p.memberId === m.id || (coId && p.memberId === coId));
+            const sp = mine.filter(p => {
+                if(qty > 1){
+                    if(enr && enr.enrollmentId && p.enrollmentId) return p.enrollmentId === enr.enrollmentId && (p.slotNum == null || Number(p.slotNum) === q);
+                    return (p.slotNum != null ? Number(p.slotNum) : 1) === q;
+                }
+                return true;
+            });
+            seats.push({ memberId:m.id, name:m.name + (co ? ' & ' + co.name : '') + (qty>1 ? ' (C'+q+')' : ''), pays:sp });
+        }
+    });
+    return seats;
+}
+
+function _statSeatCalc(seat, dues, chitAmt, today){
+    const slotsOf = x => (Array.isArray(x.monthSlots) && x.monthSlots.length) ? x.monthSlots : null;
+    const inMonth = (x,i) => slotsOf(x) ? x.monthSlots.includes(i) : (x.monthSlot != null ? x.monthSlot === i : getMonthSlot(dues, x.date) === i);
+    const share = x => (parseFloat(x.paid)||0) / (slotsOf(x) ? x.monthSlots.length : 1);
+    const pays = seat.pays.filter(p => !p.isJointMirror);
+    let overdue=0, partial=0, dueBal=0, paidDue=0, curFull=true, monthsDue=0;
+    dues.forEach((d,i) => {
+        if(d > today) return;
+        monthsDue++;
+        const paid = pays.filter(x => inMonth(x,i)).reduce((a,x) => a+share(x), 0);
+        const full = chitAmt > 0 ? paid >= chitAmt-0.5 : paid > 0;
+        paidDue += chitAmt > 0 ? Math.min(paid, chitAmt) : paid;
+        if(!full){
+            if(paid > 0) partial++; else if(d < today) overdue++;
+            if(chitAmt > 0) dueBal += Math.max(0, chitAmt-paid);
+        }
+        curFull = full;
+    });
+    const picked = pays.find(p => p.chitPicked === 'Yes');
+    let pickedMonth = '';
+    if(picked){ const pi = dues.findIndex((_,i) => inMonth(picked,i)); pickedMonth = pi >= 0 ? 'Month '+(pi+1) : ''; }
+    let status, tone;
+    if(!monthsDue)          { status='Not started';                tone='n'; }
+    else if(overdue > 0)    { status='🔴 '+overdue+' overdue';     tone='r'; }
+    else if(partial > 0)    { status='⚡ Partial';                  tone='a'; }
+    else if(!curFull)       { status='⏳ Due today';               tone='n'; }
+    else                    { status='✅ Up to date';              tone='g'; }
+    const total = pays.reduce((a,x) => a+(parseFloat(x.paid)||0), 0);
+    return { name:seat.name, dueBal, paidDue, overdue, partial, status, tone, picked:!!picked, pickedMonth, total, monthsDue };
+}
+
+function toggleStatCard(id){
+    const body = document.getElementById('statBody_'+id), chev = document.getElementById('statChev_'+id);
+    if(!body) return;
+    const open = body.style.display === 'none';
+    body.style.display = open ? 'block' : 'none';
+    if(chev) chev.style.transform = open ? 'rotate(90deg)' : '';
+    window._statOpen[id] = open;
+}
+
 async function loadStatistics() {
     if (!isAdmin()) return;
+    const members = await getCollection('members');
+    const groups  = await getCollection('groups');
+    const allPays = await getCollection('payments');
+    const today = new Date().toISOString().split('T')[0];
 
-    const members  = await getCollection('members');
-    const groups   = await getCollection('groups');
-    const allPays  = await getCollection('payments');
-
-    // ── Populate filter dropdowns (always refresh)
-    const grpSel  = document.getElementById('statGroupFilter');
-    const modeSel = document.getElementById('statModeFilter');
-    const mbrSel  = document.getElementById('statMemberFilter');
-    const monthSel = document.getElementById('statMonthFilter');
-    
+    // group filter
+    const grpSel = document.getElementById('statGroupFilter');
     if (grpSel) {
-        const curG = grpSel.value;
-        grpSel.innerHTML = '<option value="">All Groups</option>' +
-            groups.map(g=>`<option value="${g.id}"${g.id===curG?' selected':''}>${g.name||g.id}</option>`).join('');
+        const cur = grpSel.value;
+        grpSel.innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option value="${g.id}">${_stEsc(g.name||g.id)}</option>`).join('');
+        grpSel.value = groups.some(g => g.id === cur) ? cur : '';
     }
-    if (modeSel) {
-        const curM = modeSel.value;
-        const modes = [...new Set(allPays.map(p=>p.paidBy).filter(Boolean))].sort();
-        modeSel.innerHTML = '<option value="">All Modes</option>' +
-            modes.map(m=>`<option value="${m}"${m===curM?' selected':''}>${m}</option>`).join('');
-    }
-    if (monthSel) {
-        const curMo = monthSel.value;
-        const months = [...new Set(allPays.map(p=>p.date).filter(Boolean))].map(d=>{
-            const date = new Date(d+'T00:00:00');
-            const monthStr = date.toLocaleDateString('en-IN', {month:'short', year:'numeric'});
-            const monthKey = date.toISOString().substring(0, 7);
-            return {key: monthKey, display: monthStr};
-        }).sort((a,b)=>b.key.localeCompare(a.key));
-        
-        const uniqueMonths = [...new Map(months.map(m=>[m.key, m])).values()];
-        monthSel.innerHTML = '<option value="">All Months</option>' +
-            uniqueMonths.map(m=>`<option value="${m.key}"${m.key===curMo?' selected':''}>${m.display}</option>`).join('');
-    }
+    const gFilter = grpSel ? grpSel.value : '';
+    const shown = groups.filter(g => !gFilter || g.id === gFilter);
 
-    // ── Read filters directly from inputs
-    const grpFilter  = (document.getElementById('statGroupFilter')  || {}).value || '';
-    const modeFilter = (document.getElementById('statModeFilter')   || {}).value || '';
-    const chitFilter = (document.getElementById('statChitFilter')   || {}).value || '';
-    const monthFilter = (document.getElementById('statMonthFilter')  || {}).value || '';
-    const memFilter  = ((document.getElementById('statMemberFilter')|| {}).value || '').trim();
+    const cards = [];
+    let kCollected=0, kOverdue=0, kOverdueSeats=0, kPicked=0, kSeats=0;
+    const modeMap = {};
 
-    // Populate member dropdown scoped to selected group
-    if(mbrSel){
-        const curMem = mbrSel.value;
-        const scopedMids = new Set(allPays.filter(p=>!grpFilter||p.groupId===grpFilter).map(p=>p.memberId));
-        mbrSel.innerHTML = '<option value="">All Members</option>' +
-            members.filter(m=>scopedMids.has(m.id))
-                   .sort((a,b)=>(a.name||'').localeCompare(b.name||''))
-                   .map(m=>`<option value="${m.name}"${m.name===curMem?' selected':''}>${m.name}</option>`)
-                   .join('');
-    }
+    shown.forEach(g => {
+        const dues  = getGroupDueDates(g) || [];
+        const N     = dues.length;
+        const gPays = allPays.filter(p => p.groupId === g.id && !p.isJointMirror);
+        const seats = _statSeats(g, members, allPays);
+        // monthly chit amount of the group: fixed amount first, else the latest payment's chit amount
+        const lastPay = gPays.slice().sort((a,b) => (a.date||'').localeCompare(b.date||'')).filter(p => parseFloat(p.chit) > 0).pop();
+        const chitAmt = (g.amtType !== 'variable' && parseFloat(g.fixedAmt) > 0) ? parseFloat(g.fixedAmt) : (lastPay ? parseFloat(lastPay.chit) : 0);
+        const calc  = seats.map(s => _statSeatCalc(s, dues, chitAmt, today));
+        const monthsDue = dues.filter(d => d <= today).length;
+        const expected  = calc.reduce((a,c) => a + (chitAmt * monthsDue), 0);
+        const gotDue    = calc.reduce((a,c) => a + c.paidDue, 0);
+        const overdueAmt= calc.reduce((a,c) => a + c.dueBal, 0);
+        const pct       = expected > 0 ? Math.min(100, Math.round(gotDue/expected*100)) : 0;
+        const collected = gPays.reduce((a,p) => a+(parseFloat(p.paid)||0), 0);
+        const pickedN   = calc.filter(c => c.picked).length;
+        const behind    = calc.filter(c => c.dueBal > 0).length;
+        const completed = (typeof isGroupCompleted === 'function') && isGroupCompleted(g, allPays);
+        const badge = completed ? ['COMPLETED','#a5b4fc','rgba(99,102,241,0.18)'] : (!monthsDue ? ['NOT STARTED','#9ca3af','rgba(156,163,175,0.18)'] : ['ACTIVE','#34d399','rgba(16,185,129,0.18)']);
+        const monthTxt  = monthsDue ? `Month ${Math.min(monthsDue,N)} of ${N}` : (N ? `Starts ${fmtDate(dues[0])}` : '');
 
-    const filteredMemberIds = memFilter
-        ? members.filter(m => m.name===memFilter).map(m => m.id)
-        : null;
+        kCollected += collected; kOverdue += overdueAmt; kOverdueSeats += behind; kPicked += pickedN; kSeats += seats.length;
+        gPays.forEach(p => { const m = p.paidBy || 'Unknown'; modeMap[m] = (modeMap[m]||0) + (parseFloat(p.paid)||0); });
 
-    // ── Apply filters
-    const payments = allPays.filter(p => {
-        if (grpFilter  && p.groupId !== grpFilter)   return false;
-        if (modeFilter && (p.paidBy || '') !== modeFilter) return false;
-        if (chitFilter && (p.chitPicked || 'No') !== chitFilter) return false;
-        if (filteredMemberIds && !filteredMemberIds.includes(p.memberId)) return false;
-        if (monthFilter && p.date) {
-            const pDateMonth = p.date.substring(0, 7);
-            if (pDateMonth !== monthFilter) return false;
-        }
-        return true;
+        const toneCss = { r:'background:rgba(239,68,68,0.15);color:#f87171;', a:'background:rgba(245,158,11,0.15);color:#fbbf24;', g:'background:rgba(16,185,129,0.15);color:#34d399;', n:'background:rgba(156,163,175,0.15);color:#cbd5e1;' };
+        const rows = calc.slice().sort((a,b) => (b.dueBal-a.dueBal) || a.name.localeCompare(b.name)).map(c => `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(255,255,255,0.06);">
+                <div style="min-width:0;">
+                    <div style="font-weight:700;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.picked?'🏆 ':''}${_stEsc(c.name)}</div>
+                    <div style="font-size:0.66rem;color:var(--text-dim);">Paid ${fmtAmt(c.total)}${c.pickedMonth?' · picked '+c.pickedMonth:''}</div>
+                </div>
+                <div style="text-align:right;flex:0 0 auto;">
+                    <span style="${toneCss[c.tone]}border-radius:8px;padding:2px 8px;font-size:0.68rem;font-weight:800;white-space:nowrap;">${c.status}</span>
+                    ${c.dueBal>0?`<div style="font-size:0.66rem;color:#f87171;margin-top:2px;">Due ${fmtAmt(c.dueBal)}</div>`:''}
+                </div>
+            </div>`).join('') || '<div style="padding:10px 0;color:var(--text-dim);font-size:0.78rem;">No members in this group.</div>';
+        const open = !!window._statOpen[g.id];
+        cards.push(`
+        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;${completed?'opacity:.85;':''}">
+            <div onclick="toggleStatCard('${g.id}')" style="padding:12px 14px;cursor:pointer;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <div style="min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-weight:800;font-size:0.95rem;color:var(--text-primary);">${_stEsc(g.name||g.id)}</span>
+                        <span style="background:${badge[2]};color:${badge[1]};border-radius:6px;padding:1px 7px;font-size:0.62rem;font-weight:800;">${badge[0]}</span>
+                    </div>
+                    <span id="statChev_${g.id}" style="color:var(--text-dim);transition:transform .2s;${open?'transform:rotate(90deg);':''}">&#9654;</span>
+                </div>
+                <div style="font-size:0.74rem;color:var(--text-dim);margin:4px 0 8px;">${monthTxt}${chitAmt?' · '+fmtAmt(chitAmt)+' / month':''}</div>
+                <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:9px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-top:4px;">
+                    <span style="color:#34d399;font-weight:700;">${expected>0?fmtAmt(gotDue)+' of '+fmtAmt(expected)+' due':'Nothing due yet'}</span>
+                    <span style="color:var(--text-dim);font-weight:700;">${expected>0?pct+'%':''}</span>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+                    <span style="background:rgba(245,158,11,0.15);color:#fbbf24;border-radius:8px;padding:3px 9px;font-size:0.7rem;font-weight:800;">🏆 Picked ${pickedN}/${seats.length}</span>
+                    <span style="${behind?toneCss.r:toneCss.g}border-radius:8px;padding:3px 9px;font-size:0.7rem;font-weight:800;">${behind?'🔴 '+behind+' behind · '+fmtAmt(overdueAmt):'✅ All paid up'}</span>
+                    <span style="background:rgba(99,102,241,0.15);color:#a5b4fc;border-radius:8px;padding:3px 9px;font-size:0.7rem;font-weight:800;">Collected ${fmtAmt(collected)}</span>
+                </div>
+            </div>
+            <div id="statBody_${g.id}" style="display:${open?'block':'none'};padding:0 14px 8px;">${rows}</div>
+        </div>`);
     });
 
-    // ── Summary cards
-    const totalCollected = payments.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
-    const totalBalance   = payments.reduce((s, p) => s + (parseFloat(p.balance) || 0), 0);
-    const chitsPicked    = payments.filter(p => p.chitPicked === 'Yes').length;
-    const totalMembers   = new Set(payments.map(p => p.memberId)).size || members.length;
-    const pendingChits   = payments.filter(p => (p.chitPicked || 'No') === 'No').length;
-    document.getElementById('statTotalCollected').innerText = fmtAmt(totalCollected);
-    document.getElementById('statTotalBalance').innerText   = fmtAmt(totalBalance);
-    document.getElementById('statTotalPayments').innerText  = payments.length;
-    document.getElementById('statChitsPicked').innerText    = chitsPicked;
-    document.getElementById('statTotalMembers').innerText   = totalMembers;
-    document.getElementById('statPendingChits').innerText   = pendingChits;
+    const set = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = v; };
+    set('statTotalCollected', fmtAmt(kCollected));
+    set('statOverdueAmt', fmtAmt(kOverdue));
+    set('statOverdueSub', kOverdueSeats ? kOverdueSeats + ' member' + (kOverdueSeats>1?'s':'') + ' behind' : 'everyone paid up');
+    set('statChitsPicked', kPicked + '/' + kSeats);
+    const box = document.getElementById('statScorecards');
+    if(box) box.innerHTML = cards.join('') || '<div style="padding:18px;text-align:center;color:var(--text-dim);font-size:0.85rem;">No groups yet.</div>';
 
-    // ── Monthly bar chart (last 6 months in filtered data)
-    const monthMap = {};
-    payments.forEach(p => {
-        if (!p.date) return;
-        const ym = p.date.substring(0, 7);
-        monthMap[ym] = (monthMap[ym] || 0) + (parseFloat(p.paid) || 0);
-    });
-    const sortedMonths = Object.keys(monthMap).sort().slice(-6);
-    const monthAmounts = sortedMonths.map(m => monthMap[m] || 0);
-    const maxAmt = Math.max(...monthAmounts, 1);
-    const chartEl = document.getElementById('statMonthlyChart');
-    chartEl.innerHTML = '';
-    const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    if (!sortedMonths.length) {
-        chartEl.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data for selected filters</td></tr>';
-    } else {
-        sortedMonths.forEach((ym, i) => {
-            const amt = monthAmounts[i];
-            const pct = Math.max(2, Math.round((amt / maxAmt) * 100));
-            const [y, m] = ym.split('-');
-            const label = mNames[parseInt(m, 10) - 1] + ' ' + y;
+    // payment modes (kept)
+    const modeColors = ['#6366f1','#10b981','#f39c12','#ef4444','#a5b4fc','#34d399'];
+    const modeTotal  = Object.values(modeMap).reduce((s,v) => s+v, 0) || 1;
+    const pieEl = document.getElementById('statPayModePie');
+    if(pieEl){
+        pieEl.innerHTML = '';
+        Object.entries(modeMap).sort((a,b) => b[1]-a[1]).forEach(([mode,amt],i) => {
+            const pct = Math.round(amt/modeTotal*100), color = modeColors[i % modeColors.length];
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
             tr.innerHTML = `
-                <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${label}</td>
-                <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#6366f1;text-align:right;">${fmtAmt(amt)}</td>
-                <td style="padding:7px 14px;">
-                    <div style="background:rgba(255,255,255,0.07);border-radius:3px;height:6px;overflow:hidden;">
-                        <div style="background:linear-gradient(90deg,#6366f1,#a5b4fc);width:${pct}%;height:100%;border-radius:3px;"></div>
-                    </div>
-                </td>`;
-            chartEl.appendChild(tr);
+                <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${_stEsc(mode)}</td>
+                <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;text-align:right;color:${color};">${fmtAmt(amt)}</td>
+                <td style="padding:7px 14px;font-size:0.75rem;font-weight:700;text-align:right;color:var(--text-dim);">${pct}%</td>`;
+            pieEl.appendChild(tr);
         });
+        if(!Object.keys(modeMap).length) pieEl.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
     }
-
-    // ── Group-wise breakdown
-    const groupEl = document.getElementById('statGroupList');
-    groupEl.innerHTML = '';
-    const groupTotals = groups.map(g => {
-        const gPays = payments.filter(p => p.groupId === g.id);
-        const collected = gPays.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
-        const balance   = gPays.reduce((s, p) => s + (parseFloat(p.balance) || 0), 0);
-        const mCount    = members.filter(m => m.groupIds && m.groupIds.includes(g.id)).length;
-        return { name: g.name || g.id, collected, balance, mCount };
-    }).filter(g => g.collected > 0).sort((a, b) => b.collected - a.collected);
-    const maxG = Math.max(...groupTotals.map(x => x.collected), 1);
-    groupTotals.forEach((g, i) => {
-        const pct = Math.max(2, Math.round((g.collected / maxG) * 100));
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
-        tr.innerHTML = `
-            <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px;">${g.name}</td>
-            <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#10b981;text-align:right;white-space:nowrap;">${fmtAmt(g.collected)}</td>
-            <td style="padding:7px 14px;">
-                <div style="background:rgba(255,255,255,0.07);border-radius:3px;height:6px;overflow:hidden;">
-                    <div style="background:linear-gradient(90deg,#6366f1,#10b981);width:${pct}%;height:100%;border-radius:3px;"></div>
-                </div>
-            </td>`;
-        groupEl.appendChild(tr);
-    });
-    if (!groupTotals.length) groupEl.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
-
-    // ── Payment mode chips
-    const modeMap = {};
-    payments.forEach(p => { const mode = p.paidBy || 'Unknown'; modeMap[mode] = (modeMap[mode] || 0) + (parseFloat(p.paid) || 0); });
-    const modeColors = ['#6366f1','#10b981','#f39c12','#ef4444','#a5b4fc','#34d399'];
-    const modeTotal  = Object.values(modeMap).reduce((s, v) => s + v, 0) || 1;
-    const pieEl = document.getElementById('statPayModePie');
-    pieEl.innerHTML = '';
-    Object.entries(modeMap).sort((a, b) => b[1] - a[1]).forEach(([mode, amt], i) => {
-        const pct   = Math.round((amt / modeTotal) * 100);
-        const color = modeColors[i % modeColors.length];
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
-        tr.innerHTML = `
-            <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${mode}</td>
-            <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;text-align:right;color:${color};">${fmtAmt(amt)}</td>
-            <td style="padding:7px 14px;font-size:0.75rem;font-weight:700;text-align:right;color:var(--text-dim);">${pct}%</td>`;
-        pieEl.appendChild(tr);
-    });
-    if (!Object.keys(modeMap).length) pieEl.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
-
-    // ── Top members
-    const memberTotals = members.map(m => {
-        const mp  = payments.filter(p => p.memberId === m.id);
-        const amt = mp.reduce((s, p) => s + (parseFloat(p.paid) || 0), 0);
-        return { name: m.name, amt };
-    }).filter(x => x.amt > 0).sort((a, b) => b.amt - a.amt).slice(0, 5);
-    const topEl = document.getElementById('statTopMembers');
-    topEl.innerHTML = '';
-    const maxM = Math.max(...memberTotals.map(x => x.amt), 1);
-    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
-    memberTotals.forEach((m, i) => {
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
-        tr.innerHTML = `
-            <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-primary);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px;">${medals[i]} ${m.name}</td>
-            <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;color:#f39c12;text-align:right;white-space:nowrap;">${fmtAmt(m.amt)}</td>`;
-        topEl.appendChild(tr);
-    });
-    if (!memberTotals.length) topEl.innerHTML = '<tr><td colspan="2" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
 }
 
 // Stubs so other files don't error
