@@ -79,29 +79,21 @@ function deleteGroupFromModal(){
 // ══════════════════════════════════════════
 let _activeGroupsSubTab = 'groups';
 
-function switchGroupsSubTab(tab){
-    _activeGroupsSubTab = tab;
-    _applyGroupsSubTabStyles();
-    if(tab === 'collections') renderCollectionsTab();
-}
+// Groups + Monthly Collection are now ONE page (group icons → group card → monthly collection)
+function switchGroupsSubTab(){ renderGroupsTab(); }
+function _applyGroupsSubTabStyles(){}
 
-function _applyGroupsSubTabStyles(){
-    const grpBtn = document.getElementById('grpSubGroups');
-    const colBtn = document.getElementById('grpSubCollections');
-    const grpArea = document.getElementById('groupListArea');
-    const colArea = document.getElementById('collectionsArea');
-    if(!grpBtn||!colBtn||!grpArea||!colArea) return;
-    if(_activeGroupsSubTab === 'groups'){
-        grpBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:rgba(243,156,18,0.18);color:#f39c12;';
-        colBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:transparent;color:#888;';
-        grpArea.style.display='block';
-        colArea.style.display='none';
-    } else {
-        colBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:rgba(52,211,153,0.15);color:#34d399;';
-        grpBtn.style.cssText='flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:transparent;color:#888;';
-        grpArea.style.display='none';
-        colArea.style.display='block';
-    }
+let _selGroupId = null;
+function selectGroupIcon(gid){ _selGroupId = gid; renderGroupsTab(); }
+
+// tap a month chip → jump to that month's row in the collection table
+function scrollToCollectionRow(gid, idx){
+    const body = document.getElementById('colbody_'+gid); if(body) body.style.display = 'block';
+    const chev = document.getElementById('colchev_'+gid); if(chev) chev.style.transform = 'rotate(90deg)';
+    const row = document.getElementById('colrow_'+gid+'_'+idx); if(!row) return;
+    row.scrollIntoView({behavior:'smooth', block:'center'});
+    const old = row.style.background; row.style.background = 'rgba(99,102,241,0.35)';
+    setTimeout(()=>{ row.style.background = old; }, 1400);
 }
 
 // ── Payout storage helpers (shared across devices via Firestore) ─────────────
@@ -145,11 +137,12 @@ function toggleCollectionCard(gid){
     if(chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(90deg)';
 }
 
-async function renderCollectionsTab(){
-    const colArea = document.getElementById('collectionsArea');
+async function renderCollectionsTab(gidFilter){
+    const colArea = document.getElementById(gidFilter ? 'groupMonthArea' : 'collectionsArea');
     if(!colArea) return;
     colArea.innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;font-size:0.85rem;">Loading...</div>';
-    const gs = await getCollection('groups');
+    let gs = await getCollection('groups');
+    if(gidFilter) gs = gs.filter(x => x.id === gidFilter);
     const ps = await getCollection('payments');
     const ms = await getCollection('members');
     const payouts = await _getPayouts();
@@ -188,6 +181,7 @@ async function renderCollectionsTab(){
         const totalCommitment = totalSlots * totalMonths * monthlyAmount;
         const totalBalance = Math.max(0, totalCommitment - totalReceived);
 
+        const chips = [];
         const rows = allDD.map((dueDate, idx)=>{
             const slotPays = gPays.filter(p=>{
                 if(Array.isArray(p.monthSlots)) return p.monthSlots.includes(idx);
@@ -268,7 +262,8 @@ async function renderCollectionsTab(){
             const membersPaidBadge = totalSlots > 0 
                 ? `<span style="background:rgba(167,139,250,0.15);color:#a78bfa;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:5px;">${membersPaidThisMonth}/${totalSlots}</span>`
                 : '—';
-            return '<tr style="background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
+            chips.push({idx, status, dueDate});
+            return '<tr id="colrow_'+g.id+'_'+idx+'" style="background:'+rowBg+';border-bottom:1px solid rgba(255,255,255,0.04);">'
                 +'<td style="text-align:center;color:var(--text-dim);font-size:0.68rem;padding:7px 4px;font-weight:700;">'+(idx+1)+'</td>'
                 +'<td style="font-size:0.75rem;color:'+dateColor+';padding:7px 8px;white-space:nowrap;">'+fmtDate(dueDate)+'</td>'
                 +'<td id="colrec_'+g.id+'_'+idx+'" data-received="'+received+'" style="font-size:0.78rem;font-weight:700;color:'+(received>0?'#34d399':'var(--text-dim)')+';padding:7px 8px;">'+(received>0?fmtAmt(received):'—')+'</td>'
@@ -287,19 +282,28 @@ async function renderCollectionsTab(){
         const balColor = totalBalance<0?'#f87171':totalBalance>0?'#34d399':'var(--text-dim)';
 
         const gid = g.id;
+        const curIdx = allDD.reduce((c,d,i)=> d<=todayStr ? i : c, -1);
+        const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const strip = `<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:10px 12px 6px;">`+chips.map(c=>{
+            const col = c.status==='full' ? '#34d399' : (c.status==='overdue'||c.status==='deficit') ? '#f87171' : (c.status==='upcoming') ? 'rgba(255,255,255,0.12)' : '#f59e0b';
+            const cur = c.idx===curIdx;
+            return `<div onclick="scrollToCollectionRow('${gid}',${c.idx})" title="${fmtDate(c.dueDate)}" style="text-align:center;font-size:0.68rem;font-weight:700;color:${c.status==='upcoming'?'var(--text-dim)':'var(--text-primary)'};border:${cur?'2px solid #6366f1':'1px solid rgba(255,255,255,0.1)'};border-radius:8px;padding:${cur?'4px 0 2px':'5px 0 3px'};cursor:pointer;">${MONS[parseInt(String(c.dueDate).slice(5,7),10)-1]}<div style="height:4px;border-radius:2px;margin:3px 6px 0;background:${col};"></div></div>`;
+        }).join('')+`</div><div style="font-size:0.64rem;color:var(--text-dim);padding:0 14px 6px;">Tap a month to jump to it · green settled · amber partly paid · red overdue</div>`;
+        const openBody = !!gidFilter;
         return `<div style="background:#1c253b;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
             <div onclick="toggleCollectionCard('${gid}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
                 <div>
-                    <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">&#128194; ${g.name}</div>
+                    <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">&#128197; Monthly collection${gidFilter?'':' · '+g.name}</div>
                     <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap;">
                         <span style="font-size:0.68rem;color:#34d399;">Rcvd: ${fmtAmt(totalReceived)}</span>
                         <span style="font-size:0.68rem;color:#a5b4fc;">Paid out: ${fmtAmt(totalPayout)}</span>
                         <span style="font-size:0.68rem;color:var(--text-dim);">${elapsed}/${totalMonths} mo</span>
                     </div>
                 </div>
-                <span id="colchev_${gid}" style="font-size:0.85rem;color:var(--text-dim);transition:transform .2s;transform:rotate(0deg);">&#9654;</span>
+                <span id="colchev_${gid}" style="font-size:0.85rem;color:var(--text-dim);transition:transform .2s;transform:rotate(${openBody?90:0}deg);">&#9654;</span>
             </div>
-            <div id="colbody_${gid}" style="display:none;border-top:1px solid var(--border);">
+            <div id="colbody_${gid}" style="display:${openBody?'block':'none'};border-top:1px solid var(--border);">
+                ${strip}
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;min-width:380px;">
                         <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
@@ -362,30 +366,21 @@ function sortGroups(key) {
 }
 
 async function renderGroupsTab(){
-    _applyGroupsSubTabStyles();
-    // Ensure default sort arrow is shown
-    const defaultArrow = document.getElementById('gsortNameArrow');
-    if (defaultArrow && !defaultArrow.textContent) defaultArrow.textContent = ' ↑';
-    const gs=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');const cs=await getCollection('memberCommitments');
-    if(!gs.length){document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';return;}
-
-    // ── Apply sort
-    gs.sort((a, b) => {
-        if (_gsortKey === 'name') {
-            return _gsortDir * (a.name||'').localeCompare(b.name||'');
-        }
-        if (_gsortKey === 'commitment') {
-            const ca = parseFloat(a.gAmt || a.chitAmt || 0);
-            const cb = parseFloat(b.gAmt || b.chitAmt || 0);
-            return _gsortDir * (ca - cb);
-        }
-        if (_gsortKey === 'months') {
-            const da = parseInt(a.duration || a.gDuration || 0);
-            const db = parseInt(b.duration || b.gDuration || 0);
-            return _gsortDir * (da - db);
-        }
-        return 0;
-    });
+    const gsAll=await getCollection('groups');const ms=await getCollection('members');const ps=await getCollection('payments');const cs=await getCollection('memberCommitments');
+    const bar=document.getElementById('groupIconBar'), monthArea=document.getElementById('groupMonthArea');
+    if(!gsAll.length){
+        document.getElementById('groupListArea').innerHTML='<div style="text-align:center;color:var(--text-dim);padding:40px;">No groups yet.</div>';
+        if(bar) bar.innerHTML=''; if(monthArea) monthArea.innerHTML=''; return;
+    }
+    // ── group icons: active groups first, completed ones carry a tick
+    const ordered=gsAll.slice().sort((a,b)=>((isGroupCompleted(a,ps)?1:0)-(isGroupCompleted(b,ps)?1:0))||(a.name||'').localeCompare(b.name||''));
+    if(!_selGroupId||!gsAll.some(x=>x.id===_selGroupId)) _selGroupId=ordered[0].id;
+    const pal=['linear-gradient(145deg,#f7b733,#e67e22)','linear-gradient(145deg,#3ddc97,#1e9e6a)','linear-gradient(145deg,#38bdf8,#2563eb)','linear-gradient(145deg,#a78bfa,#6d28d9)','linear-gradient(145deg,#fb923c,#ec4899)'];
+    if(bar) bar.innerHTML=ordered.map((x,i)=>{
+        const done=isGroupCompleted(x,ps);
+        return `<button type="button" class="ios-app${x.id===_selGroupId?' ios-active':''}" onclick="selectGroupIcon('${x.id}')"><span class="ios-ico" style="background:${pal[i%pal.length]};${done?'opacity:.8;':''}">${done?'✅':'📂'}</span><span class="ios-lbl" style="max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${x.name}</span></button>`;
+    }).join('')+`<button type="button" class="ios-app" onclick="openAddGroup()"><span class="ios-ico" style="background:rgba(255,255,255,0.08);border:1px dashed rgba(255,255,255,0.35);box-shadow:none;">➕</span><span class="ios-lbl">New</span></button>`;
+    const gs=gsAll.filter(x=>x.id===_selGroupId);      // the selected group's card
 
     document.getElementById('groupListArea').innerHTML=gs.map((g,gIdx)=>{
         const gMs=ms.filter(m=>(m.enrollments||[]).some(e=>e.groupId===g.id)||(m.groupIds||[]).includes(g.id));
@@ -598,6 +593,7 @@ async function renderGroupsTab(){
             </div>
         </div>`;
     }).join('');
+    renderCollectionsTab(_selGroupId);   // its monthly collection sits right below
 }
 
 

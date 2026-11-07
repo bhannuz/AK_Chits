@@ -180,30 +180,16 @@ async function executeRestore(){
 
 // ── Backup Sub-tab Switcher ──────────────────────────────────
 function switchBackupSubTab(tab) {
-    const statsBtn   = document.getElementById('bkSubStats');
-    const backupBtn  = document.getElementById('bkSubBackup');
-    const statsPanel = document.getElementById('bkStatsPanel');
-    const backupPanel= document.getElementById('bkBackupPanel');
-
+    const statsPanel  = document.getElementById('bkStatsPanel');
+    const backupPanel = document.getElementById('bkBackupPanel');
+    if (!statsPanel || !backupPanel) return;
     if (tab === 'stats') {
         statsPanel.style.display  = '';
         backupPanel.style.display = 'none';
-        statsBtn.style.background  = 'rgba(99,102,241,0.85)';
-        statsBtn.style.color       = 'white';
-        statsBtn.style.border      = 'none';
-        backupBtn.style.background = 'var(--card-bg)';
-        backupBtn.style.color      = 'var(--text-dim)';
-        backupBtn.style.border     = '1px solid var(--border)';
         loadStatistics();
     } else {
         statsPanel.style.display  = 'none';
         backupPanel.style.display = '';
-        backupBtn.style.background = 'rgba(99,102,241,0.85)';
-        backupBtn.style.color      = 'white';
-        backupBtn.style.border     = 'none';
-        statsBtn.style.background  = 'var(--card-bg)';
-        statsBtn.style.color       = 'var(--text-dim)';
-        statsBtn.style.border      = '1px solid var(--border)';
     }
 }
 
@@ -231,9 +217,13 @@ function applyStatSubFilter() { loadStatistics(); }
 function renderStatFilterChips() {}
 function removeStatFilter(key) {}
 
-// ── Statistics = one scorecard per group ────────────────────
+// ── Statistics: group icons + Month wise / Member wise ──────
 function _stEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-window._statOpen = window._statOpen || {};
+window._stSel   = window._stSel   || 'all';
+window._stView  = window._stView  || 'month';
+window._stOpenM = window._stOpenM || null;
+const _ST_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const _ST_PAL = ['linear-gradient(145deg,#f7b733,#e67e22)','linear-gradient(145deg,#3ddc97,#1e9e6a)','linear-gradient(145deg,#38bdf8,#2563eb)','linear-gradient(145deg,#a78bfa,#6d28d9)','linear-gradient(145deg,#fb923c,#ec4899)'];
 
 // every chit "seat" of a group (a member with 2 chits = 2 seats, a joint pair = 1 seat)
 function _statSeats(g, ms, ps){
@@ -260,45 +250,26 @@ function _statSeats(g, ms, ps){
     return seats;
 }
 
-function _statSeatCalc(seat, dues, chitAmt, today){
+// state of every month of one seat: p paid · t partial · o overdue · d due today · f future
+function _statSeatMonths(seat, dues, chitAmt, today){
     const slotsOf = x => (Array.isArray(x.monthSlots) && x.monthSlots.length) ? x.monthSlots : null;
     const inMonth = (x,i) => slotsOf(x) ? x.monthSlots.includes(i) : (x.monthSlot != null ? x.monthSlot === i : getMonthSlot(dues, x.date) === i);
     const share = x => (parseFloat(x.paid)||0) / (slotsOf(x) ? x.monthSlots.length : 1);
     const pays = seat.pays.filter(p => !p.isJointMirror);
-    let overdue=0, partial=0, dueBal=0, paidDue=0, curFull=true, monthsDue=0;
-    dues.forEach((d,i) => {
-        if(d > today) return;
-        monthsDue++;
+    const months = dues.map((d,i) => {
         const paid = pays.filter(x => inMonth(x,i)).reduce((a,x) => a+share(x), 0);
         const full = chitAmt > 0 ? paid >= chitAmt-0.5 : paid > 0;
-        paidDue += chitAmt > 0 ? Math.min(paid, chitAmt) : paid;
-        if(!full){
-            if(paid > 0) partial++; else if(d < today) overdue++;
-            if(chitAmt > 0) dueBal += Math.max(0, chitAmt-paid);
-        }
-        curFull = full;
+        let st;
+        if(full) st = 'p'; else if(paid > 0) st = 't';
+        else st = d > today ? 'f' : (d < today ? 'o' : 'd');
+        return { st, paid, date:d, due: d <= today };
     });
-    const picked = pays.find(p => p.chitPicked === 'Yes');
-    let pickedMonth = '';
-    if(picked){ const pi = dues.findIndex((_,i) => inMonth(picked,i)); pickedMonth = pi >= 0 ? 'Month '+(pi+1) : ''; }
-    let status, tone;
-    if(!monthsDue)          { status='Not started';                tone='n'; }
-    else if(overdue > 0)    { status='🔴 '+overdue+' overdue';     tone='r'; }
-    else if(partial > 0)    { status='⚡ Partial';                  tone='a'; }
-    else if(!curFull)       { status='⏳ Due today';               tone='n'; }
-    else                    { status='✅ Up to date';              tone='g'; }
-    const total = pays.reduce((a,x) => a+(parseFloat(x.paid)||0), 0);
-    return { name:seat.name, dueBal, paidDue, overdue, partial, status, tone, picked:!!picked, pickedMonth, total, monthsDue };
+    return { months, picked: pays.some(p => p.chitPicked === 'Yes'), total: pays.reduce((a,x) => a+(parseFloat(x.paid)||0), 0) };
 }
 
-function toggleStatCard(id){
-    const body = document.getElementById('statBody_'+id), chev = document.getElementById('statChev_'+id);
-    if(!body) return;
-    const open = body.style.display === 'none';
-    body.style.display = open ? 'block' : 'none';
-    if(chev) chev.style.transform = open ? 'rotate(90deg)' : '';
-    window._statOpen[id] = open;
-}
+function statPickGroup(id){ window._stSel = id; window._stOpenM = null; loadStatistics(); }
+function statSetView(v){ window._stView = v; loadStatistics(); }
+function statToggleMonth(k){ window._stOpenM = (window._stOpenM === k) ? '' : k; loadStatistics(); }
 
 async function loadStatistics() {
     if (!isAdmin()) return;
@@ -306,111 +277,134 @@ async function loadStatistics() {
     const groups  = await getCollection('groups');
     const allPays = await getCollection('payments');
     const today = new Date().toISOString().split('T')[0];
+    const inr = n => (typeof fmtAmt === 'function') ? fmtAmt(n) : '₹' + Math.round(n).toLocaleString('en-IN');
 
-    // group filter
-    const grpSel = document.getElementById('statGroupFilter');
-    if (grpSel) {
-        const cur = grpSel.value;
-        grpSel.innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option value="${g.id}">${_stEsc(g.name||g.id)}</option>`).join('');
-        grpSel.value = groups.some(g => g.id === cur) ? cur : '';
-    }
-    const gFilter = grpSel ? grpSel.value : '';
-    const shown = groups.filter(g => !gFilter || g.id === gFilter);
+    if(window._stSel !== 'all' && !groups.some(g => g.id === window._stSel)) window._stSel = 'all';
+    const sel = window._stSel, view = window._stView;
 
-    const cards = [];
-    let kCollected=0, kOverdue=0, kOverdueSeats=0, kPicked=0, kSeats=0;
-    const modeMap = {};
-
-    shown.forEach(g => {
+    // ── data per group
+    const data = groups.map(g => {
         const dues  = getGroupDueDates(g) || [];
-        const N     = dues.length;
         const gPays = allPays.filter(p => p.groupId === g.id && !p.isJointMirror);
-        const seats = _statSeats(g, members, allPays);
-        // monthly chit amount of the group: fixed amount first, else the latest payment's chit amount
         const lastPay = gPays.slice().sort((a,b) => (a.date||'').localeCompare(b.date||'')).filter(p => parseFloat(p.chit) > 0).pop();
-        const chitAmt = (g.amtType !== 'variable' && parseFloat(g.fixedAmt) > 0) ? parseFloat(g.fixedAmt) : (lastPay ? parseFloat(lastPay.chit) : 0);
-        const calc  = seats.map(s => _statSeatCalc(s, dues, chitAmt, today));
-        const monthsDue = dues.filter(d => d <= today).length;
-        const expected  = calc.reduce((a,c) => a + (chitAmt * monthsDue), 0);
-        const gotDue    = calc.reduce((a,c) => a + c.paidDue, 0);
-        const overdueAmt= calc.reduce((a,c) => a + c.dueBal, 0);
-        const pct       = expected > 0 ? Math.min(100, Math.round(gotDue/expected*100)) : 0;
-        const collected = gPays.reduce((a,p) => a+(parseFloat(p.paid)||0), 0);
-        const pickedN   = calc.filter(c => c.picked).length;
-        const behind    = calc.filter(c => c.dueBal > 0).length;
+        const chit = (g.amtType !== 'variable' && parseFloat(g.fixedAmt) > 0) ? parseFloat(g.fixedAmt) : (lastPay ? parseFloat(lastPay.chit) : 0);
+        const seats = _statSeats(g, members, allPays).map(s => Object.assign({ gid:g.id, gname:g.name||g.id }, s, _statSeatMonths(s, dues, chit, today)));
         const completed = (typeof isGroupCompleted === 'function') && isGroupCompleted(g, allPays);
-        const badge = completed ? ['COMPLETED','#a5b4fc','rgba(99,102,241,0.18)'] : (!monthsDue ? ['NOT STARTED','#9ca3af','rgba(156,163,175,0.18)'] : ['ACTIVE','#34d399','rgba(16,185,129,0.18)']);
-        const monthTxt  = monthsDue ? `Month ${Math.min(monthsDue,N)} of ${N}` : (N ? `Starts ${fmtDate(dues[0])}` : '');
-
-        kCollected += collected; kOverdue += overdueAmt; kOverdueSeats += behind; kPicked += pickedN; kSeats += seats.length;
-        gPays.forEach(p => { const m = p.paidBy || 'Unknown'; modeMap[m] = (modeMap[m]||0) + (parseFloat(p.paid)||0); });
-
-        const toneCss = { r:'background:rgba(239,68,68,0.15);color:#f87171;', a:'background:rgba(245,158,11,0.15);color:#fbbf24;', g:'background:rgba(16,185,129,0.15);color:#34d399;', n:'background:rgba(156,163,175,0.15);color:#cbd5e1;' };
-        const rows = calc.slice().sort((a,b) => (b.dueBal-a.dueBal) || a.name.localeCompare(b.name)).map(c => `
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-top:1px solid rgba(255,255,255,0.06);">
-                <div style="min-width:0;">
-                    <div style="font-weight:700;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.picked?'🏆 ':''}${_stEsc(c.name)}</div>
-                    <div style="font-size:0.66rem;color:var(--text-dim);">Paid ${fmtAmt(c.total)}${c.pickedMonth?' · picked '+c.pickedMonth:''}</div>
-                </div>
-                <div style="text-align:right;flex:0 0 auto;">
-                    <span style="${toneCss[c.tone]}border-radius:8px;padding:2px 8px;font-size:0.68rem;font-weight:800;white-space:nowrap;">${c.status}</span>
-                    ${c.dueBal>0?`<div style="font-size:0.66rem;color:#f87171;margin-top:2px;">Due ${fmtAmt(c.dueBal)}</div>`:''}
-                </div>
-            </div>`).join('') || '<div style="padding:10px 0;color:var(--text-dim);font-size:0.78rem;">No members in this group.</div>';
-        const open = !!window._statOpen[g.id];
-        cards.push(`
-        <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;${completed?'opacity:.85;':''}">
-            <div onclick="toggleStatCard('${g.id}')" style="padding:12px 14px;cursor:pointer;">
-                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-                    <div style="min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <span style="font-weight:800;font-size:0.95rem;color:var(--text-primary);">${_stEsc(g.name||g.id)}</span>
-                        <span style="background:${badge[2]};color:${badge[1]};border-radius:6px;padding:1px 7px;font-size:0.62rem;font-weight:800;">${badge[0]}</span>
-                    </div>
-                    <span id="statChev_${g.id}" style="color:var(--text-dim);transition:transform .2s;${open?'transform:rotate(90deg);':''}">&#9654;</span>
-                </div>
-                <div style="font-size:0.74rem;color:var(--text-dim);margin:4px 0 8px;">${monthTxt}${chitAmt?' · '+fmtAmt(chitAmt)+' / month':''}</div>
-                <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:9px;overflow:hidden;">
-                    <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#10b981,#34d399);"></div>
-                </div>
-                <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-top:4px;">
-                    <span style="color:#34d399;font-weight:700;">${expected>0?fmtAmt(gotDue)+' of '+fmtAmt(expected)+' due':'Nothing due yet'}</span>
-                    <span style="color:var(--text-dim);font-weight:700;">${expected>0?pct+'%':''}</span>
-                </div>
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
-                    <span style="background:rgba(245,158,11,0.15);color:#fbbf24;border-radius:8px;padding:3px 9px;font-size:0.7rem;font-weight:800;">🏆 Picked ${pickedN}/${seats.length}</span>
-                    <span style="${behind?toneCss.r:toneCss.g}border-radius:8px;padding:3px 9px;font-size:0.7rem;font-weight:800;">${behind?'🔴 '+behind+' behind · '+fmtAmt(overdueAmt):'✅ All paid up'}</span>
-                    <span style="background:rgba(99,102,241,0.15);color:#a5b4fc;border-radius:8px;padding:3px 9px;font-size:0.7rem;font-weight:800;">Collected ${fmtAmt(collected)}</span>
-                </div>
-            </div>
-            <div id="statBody_${g.id}" style="display:${open?'block':'none'};padding:0 14px 8px;">${rows}</div>
-        </div>`);
+        return { g, dues, chit, seats, gPays, completed };
     });
+    const shown = data.filter(d => sel === 'all' || d.g.id === sel);
 
-    const set = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = v; };
-    set('statTotalCollected', fmtAmt(kCollected));
-    set('statOverdueAmt', fmtAmt(kOverdue));
-    set('statOverdueSub', kOverdueSeats ? kOverdueSeats + ' member' + (kOverdueSeats>1?'s':'') + ' behind' : 'everyone paid up');
-    set('statChitsPicked', kPicked + '/' + kSeats);
-    const box = document.getElementById('statScorecards');
-    if(box) box.innerHTML = cards.join('') || '<div style="padding:18px;text-align:center;color:var(--text-dim);font-size:0.85rem;">No groups yet.</div>';
+    // ── group icons
+    let icons = `<button type="button" class="ios-app${sel==='all'?' ios-active':''}" onclick="statPickGroup('all')"><span class="ios-ico" style="background:${_ST_PAL[2]};">📊</span><span class="ios-lbl">All</span></button>`;
+    data.forEach((d,i) => {
+        icons += `<button type="button" class="ios-app${sel===d.g.id?' ios-active':''}" onclick="statPickGroup('${d.g.id}')"><span class="ios-ico" style="background:${_ST_PAL[i % _ST_PAL.length]};${d.completed?'opacity:.8;':''}">${d.completed?'✅':'📂'}</span><span class="ios-lbl" style="max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_stEsc(d.g.name||d.g.id)}</span></button>`;
+    });
+    const iconBar = document.getElementById('statIconBar'); if(iconBar) iconBar.innerHTML = icons;
 
-    // payment modes (kept)
+    // ── totals for the selection
+    let collected = 0, dueTill = 0, overdue = 0, overdueSeats = 0;
+    shown.forEach(d => {
+        collected += d.gPays.reduce((a,p) => a+(parseFloat(p.paid)||0), 0);
+        d.seats.forEach(s => {
+            let seatOver = 0;
+            s.months.forEach(m => {
+                if(!m.due || m.st === 'p') return;
+                const left = Math.max(0, d.chit - m.paid);
+                dueTill += left;
+                if(m.st === 'o') seatOver += left;
+            });
+            overdue += seatOver; if(seatOver > 0) overdueSeats++;
+        });
+    });
+    const kpi = (lbl, val, col, sub) => `<div style="flex:1;min-width:0;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:9px 11px;"><div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">${lbl}</div><div style="font-size:1rem;font-weight:800;color:${col};white-space:nowrap;">${val}</div><div style="font-size:0.62rem;color:var(--text-dim);">${sub}</div></div>`;
+    const kp = document.getElementById('statKpis');
+    if(kp) kp.innerHTML = kpi('Collected', inr(collected), '#34d399', 'all payments') + kpi('Due till now', inr(dueTill), '#fbbf24', 'unpaid so far') + kpi('Overdue', inr(overdue), '#f87171', overdueSeats ? overdueSeats + ' behind' : 'none behind');
+
+    // ── segmented control
+    const sm = document.getElementById('statSegMonth'), sb = document.getElementById('statSegMember');
+    const on = 'flex:1;padding:8px 0;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:rgba(99,102,241,0.85);color:#fff;';
+    const off = 'flex:1;padding:8px 0;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;background:transparent;color:var(--text-dim);';
+    if(sm) sm.style.cssText = view === 'month' ? on : off;
+    if(sb) sb.style.cssText = view === 'member' ? on : off;
+
+    const chip = (tone, txt) => { const c = { r:'background:rgba(239,68,68,0.15);color:#f87171;', a:'background:rgba(245,158,11,0.15);color:#fbbf24;', g:'background:rgba(16,185,129,0.15);color:#34d399;', n:'background:rgba(156,163,175,0.15);color:#cbd5e1;' }[tone]; return `<span style="${c}border-radius:8px;padding:2px 8px;font-size:0.68rem;font-weight:800;white-space:nowrap;">${txt}</span>`; };
+    let list = '';
+
+    if(view === 'month'){
+        // calendar months covered by the selected groups
+        const keys = new Set();
+        shown.forEach(d => d.dues.forEach(x => keys.add(x.slice(0,7))));
+        const sorted = Array.from(keys).sort();
+        const todayKey = today.slice(0,7);
+        let lastDue = ''; shown.forEach(d => d.dues.forEach(x => { if(x <= today && x.slice(0,7) > lastDue) lastDue = x.slice(0,7); }));
+        const nextKey = sorted.find(k => k > lastDue) || '';
+        const openKey = (window._stOpenM === null || window._stOpenM === undefined) ? lastDue : window._stOpenM;
+        sorted.filter(k => k <= lastDue || k === nextKey).forEach(k => {
+            const [yy, mm] = k.split('-'), label = _ST_MON[parseInt(mm,10)-1] + ' ' + yy;
+            let tot = 0, paidN = 0, got = 0, exp = 0; const miss = [];
+            shown.forEach(d => {
+                const idx = d.dues.findIndex(x => x.slice(0,7) === k); if(idx < 0 || d.dues[idx] > today) return;
+                d.seats.forEach(s => {
+                    const m = s.months[idx]; tot++; exp += d.chit; got += Math.min(m.paid, d.chit || m.paid);
+                    if(m.st === 'p') paidN++; else miss.push(_stEsc(s.name) + (sel==='all' ? ' <span style="color:var(--text-dim);">· ' + _stEsc(d.g.name||'') + '</span>' : '') + (m.st==='t' ? ' (partial)' : ''));
+                });
+            });
+            if(!tot){ list += `<div style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 0;display:flex;justify-content:space-between;"><span style="font-size:0.85rem;color:var(--text-dim);">${label}</span><span style="font-size:0.72rem;color:var(--text-dim);">Not due yet</span></div>`; return; }
+            const pct = exp > 0 ? Math.min(100, Math.round(got/exp*100)) : 0, isOpen = openKey === k;
+            list += `<div onclick="statToggleMonth('${k}')" style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 0;cursor:pointer;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <span style="font-size:0.88rem;font-weight:800;">${label}${k===lastDue?' <span style="background:rgba(99,102,241,0.2);color:#a5b4fc;border-radius:6px;padding:1px 7px;font-size:0.62rem;font-weight:800;">Now</span>':''}</span>
+                    <span style="font-size:0.78rem;font-weight:700;color:${paidN===tot?'#34d399':'var(--text-dim)'};">${paidN} of ${tot} paid</span>
+                </div>
+                <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:7px;overflow:hidden;margin-top:6px;"><div style="width:${pct}%;height:100%;background:#34d399;"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text-dim);margin-top:3px;"><span>${inr(got)} of ${inr(exp)}</span><span>${pct}%</span></div>
+                ${isOpen && miss.length ? `<div style="font-size:0.74rem;color:#f87171;margin-top:6px;line-height:1.5;">Not paid: ${miss.join(', ')}</div>` : ''}
+                ${isOpen && !miss.length ? `<div style="font-size:0.74rem;color:#34d399;margin-top:6px;">Everyone has paid</div>` : ''}
+            </div>`;
+        });
+        if(!list) list = '<div style="padding:18px;text-align:center;color:var(--text-dim);font-size:0.85rem;">Nothing is due yet.</div>';
+    } else {
+        const rows = [];
+        shown.forEach(d => d.seats.forEach(s => {
+            let paidN = 0, ov = 0, pa = 0, dn = 0, dueAmt = 0;
+            s.months.forEach(m => {
+                if(m.st === 'p') paidN++;
+                if(!m.due) return;
+                if(m.st === 'o') ov++; else if(m.st === 't') pa++; else if(m.st === 'd') dn++;
+                if(m.st !== 'p') dueAmt += Math.max(0, d.chit - m.paid);
+            });
+            rows.push({ s, d, paidN, ov, pa, dn, dueAmt });
+        }));
+        rows.sort((a,b) => (b.ov - a.ov) || (b.dueAmt - a.dueAmt) || a.s.name.localeCompare(b.s.name));
+        const dotCss = { p:'background:#34d399;', t:'background:#fbbf24;', o:'background:#f87171;', d:'border:1.5px solid #fbbf24;', f:'border:1px solid rgba(255,255,255,0.28);' };
+        rows.forEach(r => {
+            const c = r.ov ? chip('r', r.ov + ' overdue') : r.pa ? chip('a', 'Partial') : r.dn ? chip('a', 'Due now') : r.s.months.some(m => m.due) ? chip('g', 'Up to date') : chip('n', 'Not started');
+            const dots = r.s.months.map(m => `<span style="width:9px;height:9px;border-radius:50%;box-sizing:border-box;display:inline-block;margin-right:3px;${dotCss[m.st]}"></span>`).join('');
+            list += `<div style="border-top:1px solid rgba(255,255,255,0.06);padding:10px 0;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
+                    <span style="font-size:0.88rem;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.s.picked?'🏆 ':''}${_stEsc(r.s.name)}${sel==='all'?' <span style="font-size:0.66rem;font-weight:600;color:var(--text-dim);">'+_stEsc(r.d.g.name||'')+'</span>':''}</span>${c}
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;">
+                    <span style="line-height:1;">${dots}</span>
+                    <span style="font-size:0.68rem;color:var(--text-dim);white-space:nowrap;">${r.paidN}/${r.s.months.length} paid${r.dueAmt?' · due '+inr(r.dueAmt):''}</span>
+                </div>
+            </div>`;
+        });
+        if(!list) list = '<div style="padding:18px;text-align:center;color:var(--text-dim);font-size:0.85rem;">No members yet.</div>';
+    }
+    const box = document.getElementById('statList'); if(box) box.innerHTML = list;
+
+    // ── payment modes (kept)
+    const modeMap = {}; shown.forEach(d => d.gPays.forEach(p => { const m = p.paidBy || 'Unknown'; modeMap[m] = (modeMap[m]||0) + (parseFloat(p.paid)||0); }));
     const modeColors = ['#6366f1','#10b981','#f39c12','#ef4444','#a5b4fc','#34d399'];
-    const modeTotal  = Object.values(modeMap).reduce((s,v) => s+v, 0) || 1;
+    const modeTotal = Object.values(modeMap).reduce((s,v) => s+v, 0) || 1;
     const pieEl = document.getElementById('statPayModePie');
     if(pieEl){
-        pieEl.innerHTML = '';
-        Object.entries(modeMap).sort((a,b) => b[1]-a[1]).forEach(([mode,amt],i) => {
-            const pct = Math.round(amt/modeTotal*100), color = modeColors[i % modeColors.length];
-            const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid rgba(255,255,255,0.04)';
-            tr.innerHTML = `
-                <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${_stEsc(mode)}</td>
-                <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;text-align:right;color:${color};">${fmtAmt(amt)}</td>
-                <td style="padding:7px 14px;font-size:0.75rem;font-weight:700;text-align:right;color:var(--text-dim);">${pct}%</td>`;
-            pieEl.appendChild(tr);
-        });
-        if(!Object.keys(modeMap).length) pieEl.innerHTML = '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
+        pieEl.innerHTML = Object.entries(modeMap).sort((a,b) => b[1]-a[1]).map(([mode,amt],i) => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+            <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${_stEsc(mode)}</td>
+            <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;text-align:right;color:${modeColors[i % modeColors.length]};">${inr(amt)}</td>
+            <td style="padding:7px 14px;font-size:0.75rem;font-weight:700;text-align:right;color:var(--text-dim);">${Math.round(amt/modeTotal*100)}%</td></tr>`).join('')
+            || '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
     }
 }
 
