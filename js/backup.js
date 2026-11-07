@@ -179,18 +179,11 @@ async function executeRestore(){
 }
 
 // ── Backup Sub-tab Switcher ──────────────────────────────────
-function switchBackupSubTab(tab) {
-    const statsPanel  = document.getElementById('bkStatsPanel');
-    const backupPanel = document.getElementById('bkBackupPanel');
-    if (!statsPanel || !backupPanel) return;
-    if (tab === 'stats') {
-        statsPanel.style.display  = '';
-        backupPanel.style.display = 'none';
-        loadStatistics();
-    } else {
-        statsPanel.style.display  = 'none';
-        backupPanel.style.display = '';
-    }
+// Backup & restore moved to an icon on the Home tab; this tab is Statistics only
+function switchBackupSubTab() {
+    const statsPanel = document.getElementById('bkStatsPanel');
+    if (statsPanel) statsPanel.style.display = '';
+    loadStatistics();
 }
 
 // ── Statistics Loader ───────────────────────────────────────
@@ -222,6 +215,8 @@ function _stEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&am
 window._stSel   = window._stSel   || 'all';
 window._stView  = window._stView  || 'month';
 window._stOpenM = window._stOpenM || null;
+window._stSelMonth  = window._stSelMonth  || '';      // '' = all months, else 'YYYY-MM'
+window._stSelMember = window._stSelMember || '';      // '' = all members, else seat key
 window._stMode  = window._stMode  || 'all';       // payment-mode filter (PhonePe / Gpay / UPI / Cash …)
 const _ST_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const _ST_PAL = ['linear-gradient(145deg,#f7b733,#e67e22)','linear-gradient(145deg,#3ddc97,#1e9e6a)','linear-gradient(145deg,#38bdf8,#2563eb)','linear-gradient(145deg,#a78bfa,#6d28d9)','linear-gradient(145deg,#fb923c,#ec4899)'];
@@ -230,6 +225,14 @@ const _ST_PAL = ['linear-gradient(145deg,#f7b733,#e67e22)','linear-gradient(145d
 function _stModeKey(v){ return String(v||'Unknown').toLowerCase().replace(/[^a-z0-9]/g,'') || 'unknown'; }
 function _stModeLabel(v){ const s = String(v||'Unknown').trim(); return s || 'Unknown'; }
 function statSetMode(k){ window._stMode = k; loadStatistics(); }
+function statSetMonth(v){ window._stSelMonth = v; loadStatistics(); }
+function statSetMember(v){ window._stSelMember = v; loadStatistics(); }
+function _stMonthLabel(k){ const p = String(k).split('-'); return _ST_MON[parseInt(p[1],10)-1] + ' ' + p[0]; }
+// month indexes (0-based) a payment was made for
+function _stPayIdxs(p, dues){
+    const sl = (Array.isArray(p.monthSlots) && p.monthSlots.length) ? p.monthSlots : (p.monthSlot != null ? [p.monthSlot] : [getMonthSlot(dues, p.date)]);
+    return sl.filter(i => i != null && i >= 0 && i < dues.length);
+}
 
 // every chit "seat" of a group (a member with 2 chits = 2 seats, a joint pair = 1 seat)
 function _statSeats(g, ms, ps){
@@ -335,6 +338,72 @@ async function loadStatistics() {
         const ks = Object.keys(agg).sort((a,b) => agg[b].n - agg[a].n);
         return ks.length ? ks.map(k => `<span style="color:#a5b4fc;font-weight:700;">${_stEsc(agg[k].label)} ${agg[k].n}</span>`).join('<span style="color:var(--text-dim);"> · </span>') : '<span style="color:var(--text-dim);">No payments</span>';
     };
+
+    // ── Payment summary: pick a month and / or a member → how they paid, with subtotals
+    const seatList = [];
+    shown.forEach(d => d.seats.forEach((s,i) => seatList.push({ key:d.g.id+'::'+i, label:s.name + (sel==='all' ? ' · '+(d.g.name||'') : ''), s, d })));
+    seatList.sort((a,b) => a.label.localeCompare(b.label));
+    if(window._stSelMember && !seatList.some(x => x.key === window._stSelMember)) window._stSelMember = '';
+    const monthKeys = new Set();
+    shown.forEach(d => {
+        d.dues.forEach(x => { if(x <= today) monthKeys.add(x.slice(0,7)); });
+        d.seats.forEach(s => s.pays.forEach(p => _stPayIdxs(p, d.dues).forEach(i => monthKeys.add(d.dues[i].slice(0,7)))));
+    });
+    const monthList = Array.from(monthKeys).sort();
+    if(window._stSelMonth && !monthKeys.has(window._stSelMonth)) window._stSelMonth = '';
+    const selM = window._stSelMonth, selS = window._stSelMember;
+    const mSelEl = document.getElementById('statMonthSel');
+    if(mSelEl){ mSelEl.innerHTML = '<option value="">All months</option>' + monthList.map(k => `<option value="${k}">${_stMonthLabel(k)}</option>`).join(''); mSelEl.value = selM; }
+    const sSelEl = document.getElementById('statMemberSel');
+    if(sSelEl){ sSelEl.innerHTML = '<option value="">All members</option>' + seatList.map(x => `<option value="${x.key}">${_stEsc(x.label)}</option>`).join(''); sSelEl.value = selS; }
+
+    const entries = [];
+    seatList.filter(x => !selS || x.key === selS).forEach(x => {
+        x.s.pays.filter(p => !p.isJointMirror).forEach(p => {
+            const mk = _stModeKey(p.paidBy), ml = _stModeLabel(p.paidBy);
+            if(mSel !== 'all' && mk !== mSel) return;
+            const idxs = _stPayIdxs(p, x.d.dues);
+            if(selM){
+                const hit = idxs.filter(i => x.d.dues[i].slice(0,7) === selM);
+                if(!hit.length) return;
+                entries.push({ name:x.label, date:p.date||'', forTxt:_stMonthLabel(selM), mk, ml, amt:(parseFloat(p.paid)||0) * hit.length / (idxs.length||1) });
+            } else {
+                const nm = idxs.map(i => _stMonthLabel(x.d.dues[i].slice(0,7)));
+                entries.push({ name:x.label, date:p.date||'', forTxt: nm.length ? (nm.length > 2 ? nm[0]+' – '+nm[nm.length-1] : nm.join(', ')) : '—', mk, ml, amt:parseFloat(p.paid)||0 });
+            }
+        });
+    });
+    const byMode = {}; const allNames = new Set(); let totN = 0, totAmt = 0;
+    entries.forEach(e => {
+        const o = byMode[e.mk] = byMode[e.mk] || { label:e.ml, names:new Set(), n:0, amt:0 };
+        o.names.add(e.name); o.n++; o.amt += e.amt; allNames.add(e.name); totN++; totAmt += e.amt;
+    });
+    const modeRows = Object.keys(byMode).sort((a,b) => byMode[b].amt - byMode[a].amt);
+    const sumEl = document.getElementById('statSummary');
+    if(sumEl){
+        const who = selS ? _stEsc((seatList.find(x => x.key === selS)||{}).label || '') : 'All members';
+        const th = 'padding:6px 10px;font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;';
+        let html = `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
+            <div style="padding:10px 14px;font-size:0.7rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">💳 Paid via · ${selM ? _stMonthLabel(selM) : 'All months'} · ${who}${mSel!=='all' ? ' · '+_stEsc(modeInfo[mSel].label)+' only' : ''}</div>`;
+        if(!entries.length){
+            html += '<div style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.8rem;">No payments for this selection.</div>';
+        } else {
+            html += `<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="${th}text-align:left;">Mode</th><th style="${th}text-align:right;">${selS?'':'Members'}</th><th style="${th}text-align:right;">Payments</th><th style="${th}text-align:right;">Amount</th></tr></thead><tbody>`;
+            modeRows.forEach(k => {
+                const o = byMode[k];
+                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:8px 10px;font-size:0.82rem;font-weight:800;vertical-align:top;">${_stEsc(o.label)}${selS?'':`<div style="font-size:0.66rem;font-weight:500;color:var(--text-dim);line-height:1.4;margin-top:2px;">${Array.from(o.names).map(_stEsc).join(', ')}</div>`}</td><td style="padding:8px 10px;text-align:right;font-size:0.82rem;vertical-align:top;">${selS?'':o.names.size}</td><td style="padding:8px 10px;text-align:right;font-size:0.82rem;vertical-align:top;">${o.n}</td><td style="padding:8px 10px;text-align:right;font-size:0.82rem;font-weight:800;color:#34d399;vertical-align:top;">${inr(o.amt)}</td></tr>`;
+            });
+            html += `<tr style="background:rgba(99,102,241,0.1);"><td style="padding:9px 10px;font-size:0.8rem;font-weight:800;">Subtotal</td><td style="padding:9px 10px;text-align:right;font-size:0.82rem;font-weight:800;">${selS?'':allNames.size}</td><td style="padding:9px 10px;text-align:right;font-size:0.82rem;font-weight:800;">${totN}</td><td style="padding:9px 10px;text-align:right;font-size:0.9rem;font-weight:800;color:#34d399;">${inr(totAmt)}</td></tr></tbody></table>`;
+            if(selS){          // a member is chosen: show every payment
+                html += `<div style="padding:8px 14px 2px;font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">Payments</div>`;
+                entries.slice().sort((a,b) => a.date.localeCompare(b.date)).forEach(e => {
+                    html += `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 14px;border-top:1px solid rgba(255,255,255,0.05);font-size:0.78rem;"><span style="min-width:0;"><b>${(typeof fmtDate==='function')?fmtDate(e.date):e.date}</b> <span style="color:var(--text-dim);">· ${_stEsc(e.forTxt)}</span></span><span style="white-space:nowrap;"><span style="color:#a5b4fc;font-weight:700;">${_stEsc(e.ml)}</span> <b>${inr(e.amt)}</b></span></div>`;
+                });
+                html += '<div style="height:6px;"></div>';
+            }
+        }
+        sumEl.innerHTML = html + '</div>';
+    }
 
     // ── totals for the selection
     let collected = 0, dueTill = 0, overdue = 0, overdueSeats = 0;
