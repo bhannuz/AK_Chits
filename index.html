@@ -499,12 +499,10 @@
 
     <!-- GROUPS TAB -->
     <div id="groupsTab" class="tab-content">
-        <div style="display:flex;gap:6px;margin:10px 0;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:5px;">
-            <button id="grpSubGroups" onclick="switchGroupsSubTab('groups')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .2s;">📂 Groups</button>
-            <button id="grpSubCollections" onclick="switchGroupsSubTab('collections')" style="flex:1;padding:8px;border:none;border-radius:9px;font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .2s;">📅 Monthly Collection</button>
-        </div>
-
+        <div style="margin:10px 0 2px;font-size:0.95rem;font-weight:800;color:#f39c12;">📂 Groups</div>
+        <div id="groupIconBar" class="ios-grid" style="padding:4px 0 8px;"></div>
         <div id="groupListArea" class="mt-2"></div>
+        <div id="groupMonthArea" style="margin-top:12px;"></div>
         <div id="collectionsArea" style="display:none;"></div>
     </div>
 
@@ -664,46 +662,30 @@
 
     <!-- BACKUP TAB -->
     <div id="backupTab" class="tab-content">
-        <h5 class="mt-4 mb-3 text-warning text-center">💾 Data Management</h5>
-
-        <!-- ── Sub-tab buttons ── -->
-        <div style="display:flex;gap:8px;margin-bottom:16px;">
-            <button id="bkSubStats" onclick="switchBackupSubTab('stats')" style="flex:1;padding:10px;border:none;border-radius:12px;font-size:0.85rem;font-weight:800;cursor:pointer;background:rgba(99,102,241,0.85);color:white;transition:all .2s;">📊 Statistics</button>
-            <button id="bkSubBackup" onclick="switchBackupSubTab('backup')" style="flex:1;padding:10px;border:none;border-radius:12px;font-size:0.85rem;font-weight:800;cursor:pointer;background:var(--card-bg);color:var(--text-dim);border:1px solid var(--border);transition:all .2s;">💾 Backup</button>
-        </div>
-
         <!-- ── Statistics Sub-tab ── -->
-        <div id="bkStatsPanel">
+        <div id="bkStatsPanel" style="padding-top:12px;">
 
-            <!-- Overall -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px;margin-bottom:10px;">
-                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
-                    <div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">Collected</div>
-                    <div id="statTotalCollected" style="font-size:1.05rem;font-weight:800;color:#34d399;">-</div>
-                    <div style="font-size:0.62rem;color:var(--text-dim);">all payments received</div>
-                </div>
-                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
-                    <div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">Overdue</div>
-                    <div id="statOverdueAmt" style="font-size:1.05rem;font-weight:800;color:#f87171;">-</div>
-                    <div id="statOverdueSub" style="font-size:0.62rem;color:var(--text-dim);">&nbsp;</div>
-                </div>
-                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;">
-                    <div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">Chits picked</div>
-                    <div id="statChitsPicked" style="font-size:1.05rem;font-weight:800;color:#fbbf24;">-</div>
-                    <div style="font-size:0.62rem;color:var(--text-dim);">members who took the chit</div>
+            <!-- Header: Backup now lives behind the cloud icon -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">📊 Statistics</div>
+                <div style="display:flex;gap:6px;">
+                    <button type="button" onclick="loadStatistics()" title="Refresh" aria-label="Refresh" style="width:38px;height:34px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:10px;cursor:pointer;">🔄</button>
+                    <button type="button" onclick="switchBackupSubTab('backup')" title="Backup and restore" aria-label="Backup and restore" style="width:38px;height:34px;background:rgba(243,156,18,0.15);border:1px solid rgba(243,156,18,0.35);color:#f39c12;border-radius:10px;cursor:pointer;">☁️</button>
                 </div>
             </div>
 
-            <!-- Group filter -->
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-                <select id="statGroupFilter" class="form-input" style="flex:1;min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;" onchange="onStatGroupFilterChange()">
-                    <option value="">All groups</option>
-                </select>
-                <button type="button" onclick="loadStatistics()" title="Refresh" style="flex:0 0 auto;width:42px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:10px;font-size:1rem;cursor:pointer;">🔄</button>
-            </div>
+            <!-- Group icons -->
+            <div id="statIconBar" class="ios-grid" style="padding:4px 0 8px;"></div>
 
-            <!-- One scorecard per group (tap to see members) -->
-            <div id="statScorecards"></div>
+            <!-- Totals for the selected group -->
+            <div id="statKpis" style="display:flex;gap:8px;margin-bottom:10px;"></div>
+
+            <!-- Month wise / Member wise -->
+            <div style="display:flex;gap:4px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:6px;">
+                <button id="statSegMonth" type="button" onclick="statSetView('month')">Month wise</button>
+                <button id="statSegMember" type="button" onclick="statSetView('member')">Member wise</button>
+            </div>
+            <div id="statList" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:0 14px 4px;margin-bottom:10px;"></div>
 
             <!-- Payment modes -->
             <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
@@ -714,7 +696,8 @@
         </div>
 
         <!-- ── Backup Sub-tab ── -->
-        <div id="bkBackupPanel" style="display:none;">
+        <div id="bkBackupPanel" style="display:none;padding-top:12px;">
+            <button type="button" onclick="switchBackupSubTab('stats')" style="background:var(--card-bg);border:1px solid var(--border);color:var(--text-dim);border-radius:10px;padding:6px 12px;font-size:0.78rem;font-weight:800;cursor:pointer;margin-bottom:10px;">← Statistics</button>
             <div class="stat-card p-4">
                 <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
                 <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
@@ -1083,11 +1066,11 @@
 <script src="js/ui.js?v=20261102_v10"></script>
 <script src="js/ledger.js?v=20261017_v2"></script>
 <script src="js/members.js?v=20260610_v1"></script>
-<script src="js/groups.js?v=20261104_v1"></script>
+<script src="js/groups.js?v=20261106_v2"></script>
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/backup.js?v=20261105_v1"></script>
+<script src="js/backup.js?v=20261106_v2"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
 <script src="js/auth.js?v=20260614_v4"></script>
