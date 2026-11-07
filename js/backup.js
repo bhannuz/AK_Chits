@@ -222,8 +222,14 @@ function _stEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&am
 window._stSel   = window._stSel   || 'all';
 window._stView  = window._stView  || 'month';
 window._stOpenM = window._stOpenM || null;
+window._stMode  = window._stMode  || 'all';       // payment-mode filter (PhonePe / Gpay / UPI / Cash …)
 const _ST_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const _ST_PAL = ['linear-gradient(145deg,#f7b733,#e67e22)','linear-gradient(145deg,#3ddc97,#1e9e6a)','linear-gradient(145deg,#38bdf8,#2563eb)','linear-gradient(145deg,#a78bfa,#6d28d9)','linear-gradient(145deg,#fb923c,#ec4899)'];
+
+// payment mode helpers — 'Phone Pe' / 'PhonePe' / 'phonepe' count as one mode
+function _stModeKey(v){ return String(v||'Unknown').toLowerCase().replace(/[^a-z0-9]/g,'') || 'unknown'; }
+function _stModeLabel(v){ const s = String(v||'Unknown').trim(); return s || 'Unknown'; }
+function statSetMode(k){ window._stMode = k; loadStatistics(); }
 
 // every chit "seat" of a group (a member with 2 chits = 2 seats, a joint pair = 1 seat)
 function _statSeats(g, ms, ps){
@@ -256,13 +262,24 @@ function _statSeatMonths(seat, dues, chitAmt, today){
     const inMonth = (x,i) => slotsOf(x) ? x.monthSlots.includes(i) : (x.monthSlot != null ? x.monthSlot === i : getMonthSlot(dues, x.date) === i);
     const share = x => (parseFloat(x.paid)||0) / (slotsOf(x) ? x.monthSlots.length : 1);
     const pays = seat.pays.filter(p => !p.isJointMirror);
+    // which payment mode was used for which month (count of payments + amount)
+    const modesByMonth = dues.map(() => ({}));
+    pays.forEach(x => {
+        const idxs = slotsOf(x) ? x.monthSlots : (x.monthSlot != null ? [x.monthSlot] : [getMonthSlot(dues, x.date)]);
+        const key = _stModeKey(x.paidBy);
+        idxs.forEach(i => {
+            if(i == null || i < 0 || i >= dues.length) return;
+            const o = modesByMonth[i][key] = modesByMonth[i][key] || { label:_stModeLabel(x.paidBy), n:0, amt:0 };
+            o.n++; o.amt += share(x);
+        });
+    });
     const months = dues.map((d,i) => {
         const paid = pays.filter(x => inMonth(x,i)).reduce((a,x) => a+share(x), 0);
         const full = chitAmt > 0 ? paid >= chitAmt-0.5 : paid > 0;
         let st;
         if(full) st = 'p'; else if(paid > 0) st = 't';
         else st = d > today ? 'f' : (d < today ? 'o' : 'd');
-        return { st, paid, date:d, due: d <= today };
+        return { st, paid, date:d, due: d <= today, modes: modesByMonth[i] };
     });
     return { months, picked: pays.some(p => p.chitPicked === 'Yes'), total: pays.reduce((a,x) => a+(parseFloat(x.paid)||0), 0) };
 }
@@ -300,6 +317,24 @@ async function loadStatistics() {
         icons += `<button type="button" class="ios-app${sel===d.g.id?' ios-active':''}" onclick="statPickGroup('${d.g.id}')"><span class="ios-ico" style="background:${_ST_PAL[i % _ST_PAL.length]};${d.completed?'opacity:.8;':''}">${d.completed?'✅':'📂'}</span><span class="ios-lbl" style="max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_stEsc(d.g.name||d.g.id)}</span></button>`;
     });
     const iconBar = document.getElementById('statIconBar'); if(iconBar) iconBar.innerHTML = icons;
+
+    // ── payment modes present in the selection
+    const modeInfo = {};
+    shown.forEach(d => d.gPays.forEach(p => {
+        const k = _stModeKey(p.paidBy), o = modeInfo[k] = modeInfo[k] || { label:_stModeLabel(p.paidBy), n:0, amt:0 };
+        o.n++; o.amt += (parseFloat(p.paid)||0);
+    }));
+    if(window._stMode !== 'all' && !modeInfo[window._stMode]) window._stMode = 'all';
+    const mSel = window._stMode;
+    const mKeys = Object.keys(modeInfo).sort((a,b) => modeInfo[b].n - modeInfo[a].n);
+    const pill = (active, onclick, txt) => `<button type="button" onclick="${onclick}" style="flex:0 0 auto;border-radius:99px;padding:5px 12px;font-size:0.74rem;font-weight:800;cursor:pointer;white-space:nowrap;${active?'background:rgba(99,102,241,0.85);color:#fff;border:1px solid transparent;':'background:var(--card-bg);color:var(--text-dim);border:1px solid var(--border);'}">${txt}</button>`;
+    const chipBar = document.getElementById('statModeChips');
+    if(chipBar) chipBar.innerHTML = pill(mSel==='all', "statSetMode('all')", 'All modes') + mKeys.map(k => pill(mSel===k, `statSetMode('${k}')`, _stEsc(modeInfo[k].label) + ' <span style="opacity:.75;">' + modeInfo[k].n + '</span>')).join('');
+    const modeLine = (agg) => {           // agg: {key:{label,n,amt}}
+        if(mSel !== 'all'){ const o = agg[mSel]; return o ? `<span style="color:#a5b4fc;font-weight:700;">${_stEsc(o.label)}: ${o.n} payment${o.n>1?'s':''} · ${inr(o.amt)}</span>` : `<span style="color:var(--text-dim);">None via ${_stEsc(modeInfo[mSel].label)}</span>`; }
+        const ks = Object.keys(agg).sort((a,b) => agg[b].n - agg[a].n);
+        return ks.length ? ks.map(k => `<span style="color:#a5b4fc;font-weight:700;">${_stEsc(agg[k].label)} ${agg[k].n}</span>`).join('<span style="color:var(--text-dim);"> · </span>') : '<span style="color:var(--text-dim);">No payments</span>';
+    };
 
     // ── totals for the selection
     let collected = 0, dueTill = 0, overdue = 0, overdueSeats = 0;
@@ -341,11 +376,16 @@ async function loadStatistics() {
         const openKey = (window._stOpenM === null || window._stOpenM === undefined) ? lastDue : window._stOpenM;
         sorted.filter(k => k <= lastDue || k === nextKey).forEach(k => {
             const [yy, mm] = k.split('-'), label = _ST_MON[parseInt(mm,10)-1] + ' ' + yy;
-            let tot = 0, paidN = 0, got = 0, exp = 0; const miss = [];
+            let tot = 0, paidN = 0, got = 0, exp = 0; const miss = []; const modeAgg = {}, modeNames = {};
             shown.forEach(d => {
                 const idx = d.dues.findIndex(x => x.slice(0,7) === k); if(idx < 0 || d.dues[idx] > today) return;
                 d.seats.forEach(s => {
                     const m = s.months[idx]; tot++; exp += d.chit; got += Math.min(m.paid, d.chit || m.paid);
+                    Object.keys(m.modes).forEach(mk => {
+                        const o = modeAgg[mk] = modeAgg[mk] || { label:m.modes[mk].label, n:0, amt:0 };
+                        o.n += m.modes[mk].n; o.amt += m.modes[mk].amt;
+                        (modeNames[mk] = modeNames[mk] || []).push(_stEsc(s.name) + (sel==='all' ? ' <span style="color:var(--text-dim);">· ' + _stEsc(d.g.name||'') + '</span>' : ''));
+                    });
                     if(m.st === 'p') paidN++; else miss.push(_stEsc(s.name) + (sel==='all' ? ' <span style="color:var(--text-dim);">· ' + _stEsc(d.g.name||'') + '</span>' : '') + (m.st==='t' ? ' (partial)' : ''));
                 });
             });
@@ -358,6 +398,8 @@ async function loadStatistics() {
                 </div>
                 <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:7px;overflow:hidden;margin-top:6px;"><div style="width:${pct}%;height:100%;background:#34d399;"></div></div>
                 <div style="display:flex;justify-content:space-between;font-size:0.68rem;color:var(--text-dim);margin-top:3px;"><span>${inr(got)} of ${inr(exp)}</span><span>${pct}%</span></div>
+                <div style="font-size:0.72rem;margin-top:4px;">${modeLine(modeAgg)}</div>
+                ${isOpen ? Object.keys(modeAgg).filter(mk => mSel==='all' || mk===mSel).sort((a,b)=>modeAgg[b].n-modeAgg[a].n).map(mk => `<div style="font-size:0.72rem;margin-top:4px;line-height:1.5;"><b style="color:#a5b4fc;">${_stEsc(modeAgg[mk].label)}</b> <span style="color:var(--text-dim);">(${modeAgg[mk].n} · ${inr(modeAgg[mk].amt)})</span>: ${modeNames[mk].join(', ')}</div>`).join('') : ''}
                 ${isOpen && miss.length ? `<div style="font-size:0.74rem;color:#f87171;margin-top:6px;line-height:1.5;">Not paid: ${miss.join(', ')}</div>` : ''}
                 ${isOpen && !miss.length ? `<div style="font-size:0.74rem;color:#34d399;margin-top:6px;">Everyone has paid</div>` : ''}
             </div>`;
@@ -373,7 +415,9 @@ async function loadStatistics() {
                 if(m.st === 'o') ov++; else if(m.st === 't') pa++; else if(m.st === 'd') dn++;
                 if(m.st !== 'p') dueAmt += Math.max(0, d.chit - m.paid);
             });
-            rows.push({ s, d, paidN, ov, pa, dn, dueAmt });
+            const byMode = {};
+            s.pays.filter(p => !p.isJointMirror).forEach(p => { const k = _stModeKey(p.paidBy), o = byMode[k] = byMode[k] || { label:_stModeLabel(p.paidBy), n:0, amt:0 }; o.n++; o.amt += (parseFloat(p.paid)||0); });
+            rows.push({ s, d, paidN, ov, pa, dn, dueAmt, byMode });
         }));
         rows.sort((a,b) => (b.ov - a.ov) || (b.dueAmt - a.dueAmt) || a.s.name.localeCompare(b.s.name));
         const dotCss = { p:'background:#34d399;', t:'background:#fbbf24;', o:'background:#f87171;', d:'border:1.5px solid #fbbf24;', f:'border:1px solid rgba(255,255,255,0.28);' };
@@ -388,6 +432,7 @@ async function loadStatistics() {
                     <span style="line-height:1;">${dots}</span>
                     <span style="font-size:0.68rem;color:var(--text-dim);white-space:nowrap;">${r.paidN}/${r.s.months.length} paid${r.dueAmt?' · due '+inr(r.dueAmt):''}</span>
                 </div>
+                <div style="font-size:0.72rem;margin-top:5px;">${modeLine(r.byMode)}</div>
             </div>`;
         });
         if(!list) list = '<div style="padding:18px;text-align:center;color:var(--text-dim);font-size:0.85rem;">No members yet.</div>';
@@ -395,13 +440,13 @@ async function loadStatistics() {
     const box = document.getElementById('statList'); if(box) box.innerHTML = list;
 
     // ── payment modes (kept)
-    const modeMap = {}; shown.forEach(d => d.gPays.forEach(p => { const m = p.paidBy || 'Unknown'; modeMap[m] = (modeMap[m]||0) + (parseFloat(p.paid)||0); }));
+    const modeMap = {}, modeCnt = {}; shown.forEach(d => d.gPays.forEach(p => { const m = _stModeLabel(p.paidBy); modeMap[m] = (modeMap[m]||0) + (parseFloat(p.paid)||0); modeCnt[m] = (modeCnt[m]||0) + 1; }));
     const modeColors = ['#6366f1','#10b981','#f39c12','#ef4444','#a5b4fc','#34d399'];
     const modeTotal = Object.values(modeMap).reduce((s,v) => s+v, 0) || 1;
     const pieEl = document.getElementById('statPayModePie');
     if(pieEl){
         pieEl.innerHTML = Object.entries(modeMap).sort((a,b) => b[1]-a[1]).map(([mode,amt],i) => `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-            <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${_stEsc(mode)}</td>
+            <td style="padding:7px 14px;font-size:0.78rem;color:var(--text-dim);">${_stEsc(mode)} <span style="opacity:.7;">· ${modeCnt[mode]} payment${modeCnt[mode]>1?'s':''}</span></td>
             <td style="padding:7px 14px;font-size:0.82rem;font-weight:800;text-align:right;color:${modeColors[i % modeColors.length]};">${inr(amt)}</td>
             <td style="padding:7px 14px;font-size:0.75rem;font-weight:700;text-align:right;color:var(--text-dim);">${Math.round(amt/modeTotal*100)}%</td></tr>`).join('')
             || '<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.78rem;">No data</td></tr>';
