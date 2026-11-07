@@ -197,11 +197,13 @@
                 <button type="button" class="ios-app" data-tool="wa" onclick="iosOpenTool('wa')" title="WhatsApp reminders"><span class="ios-ico" style="background:linear-gradient(145deg,#38bdf8,#2563eb);">🔔</span><span class="ios-lbl">Reminders</span></button>
                 <button type="button" class="ios-app" data-tool="qr" onclick="iosOpenTool('qr')" title="QR payment generator"><span class="ios-ico" style="background:linear-gradient(145deg,#a78bfa,#6d28d9);">📲</span><span class="ios-lbl">QR Pay</span></button>
                 <button type="button" class="ios-app" data-tool="spin" onclick="iosOpenTool('spin')" title="Spin wheel"><span class="ios-ico" style="background:linear-gradient(145deg,#fb923c,#ec4899);">🎡</span><span class="ios-lbl">Spin Wheel</span></button>
+                <button type="button" class="ios-app" data-tool="backup" onclick="iosOpenTool('backup')" title="Backup and restore"><span class="ios-ico" style="background:linear-gradient(145deg,#94a3b8,#475569);">☁️</span><span class="ios-lbl">Backup</span></button>
             </div>
         </div>
         <script>
         // Only ONE tool panel is open at a time: tapping another icon closes the open one and opens the new one
-        var IOS_TOOLS={qr:['qrSectionBody','toggleQrSection','qrGeneratorSection'],wa:['waSectionBody','toggleWaSection','waReminderSection'],spin:['spinSectionBody','toggleSpinSection','spinWheelSection']};
+        var IOS_TOOLS={qr:['qrSectionBody','toggleQrSection','qrGeneratorSection'],wa:['waSectionBody','toggleWaSection','waReminderSection'],spin:['spinSectionBody','toggleSpinSection','spinWheelSection'],backup:['backupSectionBody','toggleBackupSection','backupSection']};
+        function toggleBackupSection(){ var b=document.getElementById('backupSectionBody'); if(b) b.style.display=(b.style.display==='block')?'none':'block'; }
         function iosMarkActive(which){
             document.querySelectorAll('.ios-app[data-tool]').forEach(function(b){ b.classList.toggle('ios-active', b.getAttribute('data-tool')===which); });
         }
@@ -461,6 +463,27 @@
             </div>
             <div id="spinSectionBody" style="display:none;border-top:1px solid var(--border);"></div>
         </div>
+                <!-- ── Backup & restore (Admin only) — opened from the Backup icon ── -->
+        <div id="backupSection" class="admin-only-section" style="margin-top:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
+            <div onclick="toggleBackupSection()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:26px;height:26px;background:#64748b;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;">☁️</div>
+                    <span style="font-size:0.82rem;font-weight:800;color:#cbd5e1;text-transform:uppercase;letter-spacing:.5px;">Backup &amp; Restore</span>
+                </div>
+                <span id="backupSectionChevron" style="font-size:0.9rem;color:var(--text-dim);transition:transform .25s;">&#9654;</span>
+            </div>
+            <div id="backupSectionBody" style="display:none;border-top:1px solid var(--border);padding:12px;">
+            <div class="stat-card p-4">
+                <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
+                <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
+                <hr style="border-color:var(--border);">
+                <p class="small mb-2" style="color:var(--text-dim);">Restore all data from backup file:</p>
+                <input type="file" id="restoreFile" class="form-control mb-2 bg-dark text-white border-secondary" accept=".json">
+                <button class="btn btn-outline-info w-100 py-3 fw-bold" onclick="confirmRestore()">🔄 Restore All Data</button>
+                <p class="small mt-2 text-center" style="color:#ef4444;">⚠️ This will overwrite existing data</p>
+            </div>
+            </div>
+        </div>
         </div><!-- /homeToolRow -->
 
     </div>
@@ -670,7 +693,6 @@
                 <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">📊 Statistics</div>
                 <div style="display:flex;gap:6px;">
                     <button type="button" onclick="loadStatistics()" title="Refresh" aria-label="Refresh" style="width:38px;height:34px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.35);color:#a5b4fc;border-radius:10px;cursor:pointer;">🔄</button>
-                    <button type="button" onclick="switchBackupSubTab('backup')" title="Backup and restore" aria-label="Backup and restore" style="width:38px;height:34px;background:rgba(243,156,18,0.15);border:1px solid rgba(243,156,18,0.35);color:#f39c12;border-radius:10px;cursor:pointer;">☁️</button>
                 </div>
             </div>
 
@@ -683,6 +705,13 @@
             <!-- Paid via: filter by payment mode (PhonePe / Gpay / UPI / Cash …) -->
             <div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px;">Paid via</div>
             <div id="statModeChips" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
+
+            <!-- Pick a month and / or a member → who paid how, with subtotal -->
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <select id="statMonthSel" class="form-input" onchange="statSetMonth(this.value)" style="flex:1;min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All months</option></select>
+                <select id="statMemberSel" class="form-input" onchange="statSetMember(this.value)" style="flex:1;min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All members</option></select>
+            </div>
+            <div id="statSummary"></div>
 
             <!-- Month wise / Member wise -->
             <div style="display:flex;gap:4px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:6px;">
@@ -700,18 +729,6 @@
         </div>
 
         <!-- ── Backup Sub-tab ── -->
-        <div id="bkBackupPanel" style="display:none;padding-top:12px;">
-            <button type="button" onclick="switchBackupSubTab('stats')" style="background:var(--card-bg);border:1px solid var(--border);color:var(--text-dim);border-radius:10px;padding:6px 12px;font-size:0.78rem;font-weight:800;cursor:pointer;margin-bottom:10px;">← Statistics</button>
-            <div class="stat-card p-4">
-                <button class="btn btn-warning w-100 py-3 mb-2 fw-bold" onclick="exportFullBackup()">💾 Download JSON Backup</button>
-                <button class="btn btn-success w-100 py-3 mb-3 fw-bold" onclick="exportToExcel()">📊 Export to Excel (.xlsx)</button>
-                <hr style="border-color:var(--border);">
-                <p class="small mb-2" style="color:var(--text-dim);">Restore all data from backup file:</p>
-                <input type="file" id="restoreFile" class="form-control mb-2 bg-dark text-white border-secondary" accept=".json">
-                <button class="btn btn-outline-info w-100 py-3 fw-bold" onclick="confirmRestore()">🔄 Restore All Data</button>
-                <p class="small mt-2 text-center" style="color:#ef4444;">⚠️ This will overwrite existing data</p>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -1074,7 +1091,7 @@
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/backup.js?v=20261106_v3"></script>
+<script src="js/backup.js?v=20261106_v5"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
 <script src="js/auth.js?v=20260614_v4"></script>
