@@ -702,29 +702,15 @@
             <!-- Totals for the selected group -->
             <div id="statKpis" style="display:flex;gap:8px;margin-bottom:10px;"></div>
 
-            <!-- Paid via: filter by payment mode (PhonePe / Gpay / UPI / Cash …) -->
-            <div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;margin-bottom:4px;">Paid via</div>
-            <div id="statModeChips" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:4px;-webkit-overflow-scrolling:touch;"></div>
-
-            <!-- Pick a month and / or a member → who paid how, with subtotal -->
-            <div style="display:flex;gap:8px;margin-bottom:8px;">
-                <select id="statMonthSel" class="form-input" onchange="statSetMonth(this.value)" style="flex:1;min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All months</option></select>
-                <select id="statMemberSel" class="form-input" onchange="statSetMember(this.value)" style="flex:1;min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All members</option></select>
+            <!-- Filters: pick a month, a member, a payment mode — the result below follows -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
+                <select id="statMonthSel" class="form-input" onchange="statSetMonth(this.value)" style="min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All months</option></select>
+                <select id="statMemberSel" class="form-input" onchange="statSetMember(this.value)" style="min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All members</option></select>
+                <select id="statModeSel" class="form-input" onchange="statSetMode(this.value)" style="min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="all">All modes</option></select>
             </div>
+
+            <!-- Result -->
             <div id="statSummary"></div>
-
-            <!-- Month wise / Member wise -->
-            <div style="display:flex;gap:4px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:6px;">
-                <button id="statSegMonth" type="button" onclick="statSetView('month')">Month wise</button>
-                <button id="statSegMember" type="button" onclick="statSetView('member')">Member wise</button>
-            </div>
-            <div id="statList" style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:0 14px 4px;margin-bottom:10px;"></div>
-
-            <!-- Payment modes -->
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
-                <div style="padding:10px 14px;font-size:0.7rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">💳 How members paid</div>
-                <table style="width:100%;border-collapse:collapse;"><tbody id="statPayModePie"></tbody></table>
-            </div>
 
         </div>
 
@@ -1091,7 +1077,7 @@
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/backup.js?v=20261106_v5"></script>
+<script src="js/backup.js?v=20261107_v6"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
 <script src="js/auth.js?v=20260614_v4"></script>
