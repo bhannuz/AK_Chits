@@ -286,7 +286,9 @@ function _statSeatMonths(seat, dues, chitAmt, today){
     return { months, picked: pays.some(p => p.chitPicked === 'Yes'), total: pays.reduce((a,x) => a+(parseFloat(x.paid)||0), 0) };
 }
 
-function statPickGroup(id){ window._stSel = id; window._stOpenM = null; loadStatistics(); }
+function statPickGroup(id){ window._stSel = id; window._stOpenM = null; window._stSelMember = ''; window._stSelMonth = ''; loadStatistics(); }
+window._stOpenMode = window._stOpenMode || {};
+function statToggleMode(k){ window._stOpenMode[k] = !window._stOpenMode[k]; loadStatistics(); }
 
 async function loadStatistics() {
     if (!isAdmin()) return;
@@ -311,12 +313,12 @@ async function loadStatistics() {
     });
     const shown = data.filter(d => sel === 'all' || d.g.id === sel);
 
-    // ── group icons
-    let icons = `<button type="button" class="ios-app${sel==='all'?' ios-active':''}" onclick="statPickGroup('all')"><span class="ios-ico" style="background:${_ST_PAL[2]};">📊</span><span class="ios-lbl">All</span></button>`;
-    data.forEach((d,i) => {
-        icons += `<button type="button" class="ios-app${sel===d.g.id?' ios-active':''}" onclick="statPickGroup('${d.g.id}')"><span class="ios-ico" style="background:${_ST_PAL[i % _ST_PAL.length]};${d.completed?'opacity:.8;':''}">${d.completed?'✅':'📂'}</span><span class="ios-lbl" style="max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_stEsc(d.g.name||d.g.id)}</span></button>`;
-    });
-    const iconBar = document.getElementById('statIconBar'); if(iconBar) iconBar.innerHTML = icons;
+    // ── group dropdown (replaces the icon chips)
+    const grpSelEl = document.getElementById('statGroupSel');
+    if(grpSelEl){
+        grpSelEl.innerHTML = '<option value="all">All groups</option>' + data.map(d => `<option value="${d.g.id}">${_stEsc(d.g.name||d.g.id)}${d.completed?' ✓':''}</option>`).join('');
+        grpSelEl.value = sel;
+    }
 
     // ── totals for the selected group(s)
     let collected = 0, dueTill = 0, overdue = 0, overdueSeats = 0;
@@ -390,27 +392,51 @@ async function loadStatistics() {
 
     const sumEl = document.getElementById('statSummary');
     if(sumEl){
-        const who = selS ? _stEsc((seatList.find(x => x.key === selS)||{}).label || '') : 'All members';
-        const th = 'padding:6px 10px;font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;';
-        let html = `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
-            <div style="padding:10px 14px;font-size:0.7rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.5px;">💳 ${selM ? _stMonthLabel(selM) : 'All months'} · ${who} · ${mSel!=='all' ? _stEsc(modeInfo[mSel].label) : 'All modes'}</div>`;
+        const who  = selS ? _stEsc((seatList.find(x => x.key === selS)||{}).label || '') : 'All members';
+        const sub  = [selM ? _stMonthLabel(selM) : 'All months', who, mSel!=='all' ? _stEsc(modeInfo[mSel].label) : 'All modes'].join('  ·  ');
+        const thS  = 'padding:5px 10px;font-size:0.6rem;font-weight:800;letter-spacing:.4px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap;';
+        const num  = 'font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;';
+        let html = `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);">
+                <span style="font-size:0.8rem;font-weight:800;">Payments by mode</span>
+                <span style="font-size:0.68rem;color:var(--text-dim);text-align:right;">${sub}</span>
+            </div>`;
         if(!entries.length){
-            html += '<div style="padding:16px;text-align:center;color:var(--text-dim);font-size:0.82rem;">No payments for this selection.</div>';
+            html += '<div style="padding:16px;text-align:center;color:var(--text-dim);font-size:0.8rem;">No payments for this selection.</div>';
         } else {
-            html += `<table style="width:100%;border-collapse:collapse;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="${th}text-align:left;">Paid via</th><th style="${th}text-align:right;">${selS?'':'Members'}</th><th style="${th}text-align:right;">Payments</th><th style="${th}text-align:right;">Amount</th></tr></thead><tbody>`;
-            modeRows.forEach(k => {
-                const o = byMode[k];
-                html += `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);"><td style="padding:8px 10px;font-size:0.82rem;font-weight:800;vertical-align:top;">${_stEsc(o.label)}${selS?'':`<div style="font-size:0.66rem;font-weight:500;color:var(--text-dim);line-height:1.4;margin-top:2px;">${Array.from(o.names).map(_stEsc).join(', ')}</div>`}</td><td style="padding:8px 10px;text-align:right;font-size:0.82rem;vertical-align:top;">${selS?'':o.names.size}</td><td style="padding:8px 10px;text-align:right;font-size:0.82rem;vertical-align:top;">${o.n}</td><td style="padding:8px 10px;text-align:right;font-size:0.82rem;font-weight:800;color:#34d399;vertical-align:top;">${inr(o.amt)}</td></tr>`;
+            html += `<table style="width:100%;border-collapse:collapse;table-layout:auto;">
+                <thead><tr style="background:rgba(255,255,255,0.03);">
+                    <th style="${thS}text-align:left;">Paid via</th>
+                    ${selS?'':`<th style="${thS}${num}">Members</th>`}
+                    <th style="${thS}${num}">Pmts</th>
+                    <th style="${thS}${num}">Amount</th>
+                    <th style="${thS}${num}">Share</th>
+                </tr></thead><tbody>`;
+            modeRows.forEach((k,i) => {
+                const o = byMode[k], pct = totAmt > 0 ? Math.round(o.amt/totAmt*100) : 0, open = !selS && !!window._stOpenMode[k];
+                html += `<tr ${selS?'':`onclick="statToggleMode('${k}')"`} style="border-top:1px solid rgba(255,255,255,0.05);${selS?'':'cursor:pointer;'}${i%2?'background:rgba(255,255,255,0.015);':''}">
+                    <td style="padding:6px 10px;font-size:0.78rem;font-weight:700;white-space:nowrap;">${selS?'':`<span style="display:inline-block;width:10px;color:var(--text-dim);font-size:0.6rem;">${open?'▾':'▸'}</span>`}${_stEsc(o.label)}</td>
+                    ${selS?'':`<td style="padding:6px 10px;font-size:0.78rem;${num}">${o.names.size}</td>`}
+                    <td style="padding:6px 10px;font-size:0.78rem;${num}">${o.n}</td>
+                    <td style="padding:6px 10px;font-size:0.78rem;font-weight:800;color:#34d399;${num}">${inr(o.amt)}</td>
+                    <td style="padding:6px 10px;font-size:0.7rem;color:var(--text-dim);${num}"><span style="display:inline-block;width:34px;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);vertical-align:middle;margin-right:5px;overflow:hidden;"><span style="display:block;width:${pct}%;height:100%;background:#6366f1;"></span></span>${pct}%</td>
+                </tr>`;
+                if(open) html += `<tr><td colspan="5" style="padding:2px 12px 8px 22px;font-size:0.7rem;color:var(--text-dim);line-height:1.5;">${Array.from(o.names).map(_stEsc).join(', ')}</td></tr>`;
             });
-            html += `<tr style="background:rgba(99,102,241,0.1);"><td style="padding:9px 10px;font-size:0.8rem;font-weight:800;">Subtotal</td><td style="padding:9px 10px;text-align:right;font-size:0.82rem;font-weight:800;">${selS?'':allNames.size}</td><td style="padding:9px 10px;text-align:right;font-size:0.82rem;font-weight:800;">${totN}</td><td style="padding:9px 10px;text-align:right;font-size:0.9rem;font-weight:800;color:#34d399;">${inr(totAmt)}</td></tr></tbody></table>`;
-            if(selS || selM){          // a month or a member is chosen: list the payments behind the numbers
-                html += `<div style="padding:8px 14px 2px;font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">Payments</div>`;
-                entries.slice().sort((a,b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name)).forEach(e => {
-                    const left = selS ? `<b>${(typeof fmtDate==='function')?fmtDate(e.date):e.date}</b> <span style="color:var(--text-dim);">· ${_stEsc(e.forTxt)}</span>`
-                                      : `<b>${_stEsc(e.name)}</b> <span style="color:var(--text-dim);">· ${(typeof fmtDate==='function')?fmtDate(e.date):e.date}</span>`;
-                    html += `<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 14px;border-top:1px solid rgba(255,255,255,0.05);font-size:0.78rem;"><span style="min-width:0;">${left}</span><span style="white-space:nowrap;"><span style="color:#a5b4fc;font-weight:700;">${_stEsc(e.ml)}</span> <b>${inr(e.amt)}</b></span></div>`;
+            html += `<tr style="background:rgba(99,102,241,0.12);border-top:1px solid rgba(99,102,241,0.35);">
+                    <td style="padding:7px 10px;font-size:0.78rem;font-weight:800;">Total</td>
+                    ${selS?'':`<td style="padding:7px 10px;font-size:0.78rem;font-weight:800;${num}">${allNames.size}</td>`}
+                    <td style="padding:7px 10px;font-size:0.78rem;font-weight:800;${num}">${totN}</td>
+                    <td style="padding:7px 10px;font-size:0.84rem;font-weight:800;color:#34d399;${num}">${inr(totAmt)}</td>
+                    <td style="padding:7px 10px;font-size:0.7rem;color:var(--text-dim);${num}">100%</td>
+                </tr></tbody></table>`;
+            if(selS || selM){          // a month or a member is chosen: the payments behind the numbers
+                html += `<div style="padding:7px 12px 3px;font-size:0.6rem;font-weight:800;letter-spacing:.4px;color:var(--text-dim);text-transform:uppercase;border-top:1px solid var(--border);background:rgba(255,255,255,0.03);">Payments (${entries.length})</div>`;
+                entries.slice().sort((a,b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name)).forEach((e,i) => {
+                    const dt = (typeof fmtDate==='function') ? fmtDate(e.date) : e.date;
+                    const left = selS ? `<b>${dt}</b> <span style="color:var(--text-dim);">${_stEsc(e.forTxt)}</span>` : `<b>${_stEsc(e.name)}</b> <span style="color:var(--text-dim);">${dt}</span>`;
+                    html += `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 12px;border-top:1px solid rgba(255,255,255,0.04);font-size:0.74rem;${i%2?'background:rgba(255,255,255,0.015);':''}"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${left}</span><span style="white-space:nowrap;font-variant-numeric:tabular-nums;"><span style="color:#a5b4fc;">${_stEsc(e.ml)}</span>  <b>${inr(e.amt)}</b></span></div>`;
                 });
-                html += '<div style="height:6px;"></div>';
             }
         }
         sumEl.innerHTML = html + '</div>';
