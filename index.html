@@ -688,7 +688,7 @@
         <!-- ── Statistics Sub-tab ── -->
         <div id="bkStatsPanel" style="padding-top:12px;">
 
-            <!-- Header: Backup now lives behind the cloud icon -->
+            <!-- Header -->
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                 <div style="font-size:0.95rem;font-weight:800;color:#f39c12;">📊 Statistics</div>
                 <div style="display:flex;gap:6px;">
@@ -696,18 +696,20 @@
                 </div>
             </div>
 
-            <!-- Group icons -->
-            <div id="statIconBar" class="ios-grid" style="padding:4px 0 8px;"></div>
+            <!-- Filters in ONE row: group · month · member · payment mode -->
+            <style>
+            #bkStatsPanel .stat-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px;}
+            #bkStatsPanel .stat-filters select.form-input{min-width:0;width:100%;margin:0;height:34px !important;min-height:34px !important;padding:4px 22px 4px 8px !important;font-size:0.72rem !important;border-radius:9px !important;text-overflow:ellipsis;}
+            </style>
+            <div class="stat-filters">
+                <select id="statGroupSel" class="form-input" onchange="statPickGroup(this.value)" title="Chit group"><option value="all">All groups</option></select>
+                <select id="statMonthSel" class="form-input" onchange="statSetMonth(this.value)" title="Month"><option value="">All months</option></select>
+                <select id="statMemberSel" class="form-input" onchange="statSetMember(this.value)" title="Member"><option value="">All members</option></select>
+                <select id="statModeSel" class="form-input" onchange="statSetMode(this.value)" title="Paid via"><option value="all">All modes</option></select>
+            </div>
 
             <!-- Totals for the selected group -->
             <div id="statKpis" style="display:flex;gap:8px;margin-bottom:10px;"></div>
-
-            <!-- Filters: pick a month, a member, a payment mode — the result below follows -->
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px;">
-                <select id="statMonthSel" class="form-input" onchange="statSetMonth(this.value)" style="min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All months</option></select>
-                <select id="statMemberSel" class="form-input" onchange="statSetMember(this.value)" style="min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="">All members</option></select>
-                <select id="statModeSel" class="form-input" onchange="statSetMode(this.value)" style="min-width:0;margin-bottom:0;font-size:0.8rem;padding:8px 10px;"><option value="all">All modes</option></select>
-            </div>
 
             <!-- Result -->
             <div id="statSummary"></div>
@@ -1077,7 +1079,7 @@
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/backup.js?v=20261107_v6"></script>
+<script src="js/backup.js?v=20261111_v7"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
 <script src="js/auth.js?v=20260614_v4"></script>
