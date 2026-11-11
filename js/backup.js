@@ -320,25 +320,6 @@ async function loadStatistics() {
         grpSelEl.value = sel;
     }
 
-    // ── totals for the selected group(s)
-    let collected = 0, dueTill = 0, overdue = 0, overdueSeats = 0;
-    shown.forEach(d => {
-        collected += d.gPays.reduce((a,p) => a+(parseFloat(p.paid)||0), 0);
-        d.seats.forEach(s => {
-            let seatOver = 0;
-            s.months.forEach(m => {
-                if(!m.due || m.st === 'p') return;
-                const left = Math.max(0, d.chit - m.paid);
-                dueTill += left;
-                if(m.st === 'o') seatOver += left;
-            });
-            overdue += seatOver; if(seatOver > 0) overdueSeats++;
-        });
-    });
-    const kpi = (lbl, val, col, sub) => `<div style="flex:1;min-width:0;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:9px 11px;"><div style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">${lbl}</div><div style="font-size:1rem;font-weight:800;color:${col};white-space:nowrap;">${val}</div><div style="font-size:0.62rem;color:var(--text-dim);">${sub}</div></div>`;
-    const kp = document.getElementById('statKpis');
-    if(kp) kp.innerHTML = kpi('Collected', inr(collected), '#34d399', 'all payments') + kpi('Due till now', inr(dueTill), '#fbbf24', 'unpaid so far') + kpi('Overdue', inr(overdue), '#f87171', overdueSeats ? overdueSeats + ' behind' : 'none behind');
-
     // ── filter options: month · member · payment mode
     const modeInfo = {};
     shown.forEach(d => d.gPays.forEach(p => {
