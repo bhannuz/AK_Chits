@@ -215,6 +215,7 @@ function _stEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&am
 window._stSel   = window._stSel   || 'all';
 window._stOpenM = window._stOpenM || null;
 window._stSelMonth  = window._stSelMonth  || '';      // '' = all months, else 'YYYY-MM'
+window._stMonthInit = window._stMonthInit || false;  // first open selects the current month
 window._stSelMember = window._stSelMember || '';      // '' = all members, else seat key
 window._stMode  = window._stMode  || 'all';       // payment-mode filter (PhonePe / Gpay / UPI / Cash …)
 const _ST_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -225,6 +226,7 @@ function _stModeKey(v){ return String(v||'Unknown').toLowerCase().replace(/[^a-z
 function _stModeLabel(v){ const s = String(v||'Unknown').trim(); return s || 'Unknown'; }
 function statSetMode(k){ window._stMode = k; loadStatistics(); }
 function statSetMonth(v){ window._stSelMonth = v; loadStatistics(); }
+function statPickMonth(k){ window._stSelMonth = (window._stSelMonth === k) ? '' : k; loadStatistics(); }
 function statSetMember(v){ window._stSelMember = v; loadStatistics(); }
 function _stMonthLabel(k){ const p = String(k).split('-'); return _ST_MON[parseInt(p[1],10)-1] + ' ' + p[0]; }
 // month indexes (0-based) a payment was made for
@@ -313,12 +315,12 @@ async function loadStatistics() {
     });
     const shown = data.filter(d => sel === 'all' || d.g.id === sel);
 
-    // ── group dropdown (replaces the icon chips)
-    const grpSelEl = document.getElementById('statGroupSel');
-    if(grpSelEl){
-        grpSelEl.innerHTML = '<option value="all">All groups</option>' + data.map(d => `<option value="${d.g.id}">${_stEsc(d.g.name||d.g.id)}${d.completed?' ✓':''}</option>`).join('');
-        grpSelEl.value = sel;
-    }
+    // ── group icons (same as the Groups tab)
+    let icons = `<button type="button" class="ios-app${sel==='all'?' ios-active':''}" onclick="statPickGroup('all')"><span class="ios-ico" style="background:${_ST_PAL[2]};">📊</span><span class="ios-lbl">All</span></button>`;
+    data.forEach((d,i) => {
+        icons += `<button type="button" class="ios-app${sel===d.g.id?' ios-active':''}" onclick="statPickGroup('${d.g.id}')"><span class="ios-ico" style="background:${_ST_PAL[i % _ST_PAL.length]};${d.completed?'opacity:.8;':''}">${d.completed?'✅':'📂'}</span><span class="ios-lbl" style="max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${_stEsc(d.g.name||d.g.id)}</span></button>`;
+    });
+    const iconBar = document.getElementById('statIconBar'); if(iconBar) iconBar.innerHTML = icons;
 
     // ── filter options: month · member · payment mode
     const modeInfo = {};
@@ -340,12 +342,47 @@ async function loadStatistics() {
     });
     const monthList = Array.from(monthKeys).sort();
     if(window._stSelMonth && !monthKeys.has(window._stSelMonth)) window._stSelMonth = '';
+    // first open: pick the current month (last due date up to today)
+    if(!window._stMonthInit){
+        window._stMonthInit = true;
+        let cur = ''; shown.forEach(d => d.dues.forEach(x => { if(x <= today && x.slice(0,7) > cur) cur = x.slice(0,7); }));
+        if(cur) window._stSelMonth = cur;
+    }
     const selM = window._stSelMonth, selS = window._stSelMember;
 
-    const fill = (id, html, val) => { const el = document.getElementById(id); if(el){ el.innerHTML = html; el.value = val; } };
-    fill('statMonthSel',  '<option value="">All months</option>'  + monthList.map(k => `<option value="${k}">${_stMonthLabel(k)}</option>`).join(''), selM);
-    fill('statMemberSel', '<option value="">All members</option>' + seatList.map(x => `<option value="${x.key}">${_stEsc(x.label)}</option>`).join(''), selS);
-    fill('statModeSel',   '<option value="all">All modes</option>' + Object.keys(modeInfo).sort((a,b) => modeInfo[b].n - modeInfo[a].n).map(k => `<option value="${k}">${_stEsc(modeInfo[k].label)} (${modeInfo[k].n})</option>`).join(''), mSel);
+    // ── month strip: one small chip per month, underline = how complete it is
+    const allKeys = new Set(); shown.forEach(d => d.dues.forEach(x => allKeys.add(x.slice(0,7))));
+    const stripKeys = Array.from(allKeys).sort();
+    let stripHtml = '', infoHtml = '';
+    const monAgg = k => {                          // seats due in month k across the shown groups
+        let tot = 0, paidN = 0, got = 0, exp = 0;
+        shown.forEach(d => {
+            const idx = d.dues.findIndex(x => x.slice(0,7) === k); if(idx < 0 || d.dues[idx] > today) return;
+            d.seats.forEach(s => { const m = s.months[idx]; tot++; exp += d.chit; got += Math.min(m.paid, d.chit || m.paid); if(m.st === 'p') paidN++; });
+        });
+        return { tot, paidN, got, exp };
+    };
+    const monCount = {}; stripKeys.forEach(k => { const m = k.slice(5); monCount[m] = (monCount[m]||0) + 1; });
+    const needYear = Object.values(monCount).some(c => c > 1);           // same month name twice → show the year too
+    stripKeys.forEach(k => {
+        const mo = monAgg(k), mon = _ST_MON[parseInt(k.slice(5),10)-1] + (needYear ? ' <span style="font-size:0.56rem;font-weight:600;color:var(--text-dim);">' + k.slice(2,4) + '</span>' : ''), on = (k === selM);
+        const fut = mo.tot === 0;
+        const col = fut ? 'rgba(255,255,255,0.12)' : (mo.paidN === mo.tot ? '#34d399' : (mo.got > 0 ? '#f59e0b' : '#f87171'));
+        stripHtml += `<div ${fut?'':`onclick="statPickMonth('${k}')"`} title="${_stMonthLabel(k)}" style="text-align:center;font-size:0.68rem;font-weight:700;border:${on?'2px solid #6366f1':'1px solid rgba(255,255,255,0.1)'};border-radius:8px;padding:${on?'4px 0 2px':'5px 0 3px'};${fut?'color:var(--text-dim);':'cursor:pointer;'}">${mon}<div style="height:4px;border-radius:2px;margin:3px 6px 0;background:${col};"></div></div>`;
+    });
+    if(selM){
+        const mo = monAgg(selM), pct = mo.exp > 0 ? Math.min(100, Math.round(mo.got/mo.exp*100)) : 0;
+        infoHtml = `<div style="display:flex;justify-content:space-between;gap:8px;font-size:0.74rem;"><span style="font-weight:800;">${_stMonthLabel(selM)}</span><span style="color:${mo.tot && mo.paidN===mo.tot?'#34d399':'var(--text-dim)'};font-weight:700;">${mo.paidN} of ${mo.tot} paid</span></div>
+            <div style="background:rgba(255,255,255,0.08);border-radius:4px;height:5px;overflow:hidden;margin:4px 0 3px;"><div style="width:${pct}%;height:100%;background:#34d399;"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:0.66rem;color:var(--text-dim);"><span>${inr(mo.got)} of ${inr(mo.exp)}</span><span>${pct}%</span></div>`;
+    } else {
+        infoHtml = `<div style="font-size:0.74rem;font-weight:800;">All months</div>`;
+    }
+    const stripEl = document.getElementById('statMonthStrip'); if(stripEl) stripEl.innerHTML = stripHtml;
+    const infoEl  = document.getElementById('statMonthInfo');  if(infoEl)  infoEl.innerHTML = infoHtml;
+
+    const memOpts  = '<option value="">All members</option>' + seatList.map(x => `<option value="${x.key}"${x.key===selS?' selected':''}>${_stEsc(x.label)}</option>`).join('');
+    const modeOpts = '<option value="all">All modes</option>' + Object.keys(modeInfo).sort((a,b) => modeInfo[b].n - modeInfo[a].n).map(k => `<option value="${k}"${k===mSel?' selected':''}>${_stEsc(modeInfo[k].label)} (${modeInfo[k].n})</option>`).join('');
 
     // ── result: every payment that matches the three filters
     const entries = [];
@@ -378,9 +415,14 @@ async function loadStatistics() {
         const thS  = 'padding:5px 10px;font-size:0.6rem;font-weight:800;letter-spacing:.4px;color:var(--text-dim);text-transform:uppercase;white-space:nowrap;';
         const num  = 'font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;';
         let html = `<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;">
-            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:9px 12px;border-bottom:1px solid var(--border);">
-                <span style="font-size:0.8rem;font-weight:800;">Payments by mode</span>
-                <span style="font-size:0.68rem;color:var(--text-dim);text-align:right;">${sub}</span>
+            <div style="padding:9px 12px 8px;border-bottom:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:7px;">
+                    <span style="font-size:0.8rem;font-weight:800;">💳 Paid via · ${selM ? _stMonthLabel(selM) : 'All months'}</span>
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <select class="form-input" onchange="statSetMember(this.value)" style="flex:1;min-width:0;margin:0;height:32px !important;min-height:32px !important;padding:3px 22px 3px 8px !important;font-size:0.72rem !important;border-radius:9px !important;">${memOpts}</select>
+                    <select class="form-input" onchange="statSetMode(this.value)" style="flex:1;min-width:0;margin:0;height:32px !important;min-height:32px !important;padding:3px 22px 3px 8px !important;font-size:0.72rem !important;border-radius:9px !important;">${modeOpts}</select>
+                </div>
             </div>`;
         if(!entries.length){
             html += '<div style="padding:16px;text-align:center;color:var(--text-dim);font-size:0.8rem;">No payments for this selection.</div>';
@@ -428,3 +470,12 @@ async function loadStatistics() {
 function loadEmailConfigToForm(){}
 function updateBackupStatusUI(){}
 function checkAndShowBackupReminder(){}
+
+// Home tab: open / close the Backup & Restore panel
+function toggleBackupSection(){
+    const body = document.getElementById('backupSectionBody'), chev = document.getElementById('backupSectionChevron');
+    if(!body) return;
+    const open = body.style.display !== 'block';
+    body.style.display = open ? 'block' : 'none';
+    if(chev) chev.style.transform = open ? 'rotate(90deg)' : '';
+}
