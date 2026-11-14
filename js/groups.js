@@ -86,16 +86,6 @@ function _applyGroupsSubTabStyles(){}
 let _selGroupId = null;
 function selectGroupIcon(gid){ _selGroupId = gid; renderGroupsTab(); }
 
-// tap a month chip → jump to that month's row in the collection table
-function scrollToCollectionRow(gid, idx){
-    const body = document.getElementById('colbody_'+gid); if(body) body.style.display = 'block';
-    const chev = document.getElementById('colchev_'+gid); if(chev) chev.style.transform = 'rotate(90deg)';
-    const row = document.getElementById('colrow_'+gid+'_'+idx); if(!row) return;
-    row.scrollIntoView({behavior:'smooth', block:'center'});
-    const old = row.style.background; row.style.background = 'rgba(99,102,241,0.35)';
-    setTimeout(()=>{ row.style.background = old; }, 1400);
-}
-
 // ── Payout storage helpers (shared across devices via Firestore) ─────────────
 async function _getPayouts(){
     try{
@@ -282,13 +272,6 @@ async function renderCollectionsTab(gidFilter){
         const balColor = totalBalance<0?'#f87171':totalBalance>0?'#34d399':'var(--text-dim)';
 
         const gid = g.id;
-        const curIdx = allDD.reduce((c,d,i)=> d<=todayStr ? i : c, -1);
-        const MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        const strip = `<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;padding:10px 12px 6px;">`+chips.map(c=>{
-            const col = c.status==='full' ? '#34d399' : (c.status==='overdue'||c.status==='deficit') ? '#f87171' : (c.status==='upcoming') ? 'rgba(255,255,255,0.12)' : '#f59e0b';
-            const cur = c.idx===curIdx;
-            return `<div onclick="scrollToCollectionRow('${gid}',${c.idx})" title="${fmtDate(c.dueDate)}" style="text-align:center;font-size:0.68rem;font-weight:700;color:${c.status==='upcoming'?'var(--text-dim)':'var(--text-primary)'};border:${cur?'2px solid #6366f1':'1px solid rgba(255,255,255,0.1)'};border-radius:8px;padding:${cur?'4px 0 2px':'5px 0 3px'};cursor:pointer;">${MONS[parseInt(String(c.dueDate).slice(5,7),10)-1]}<div style="height:4px;border-radius:2px;margin:3px 6px 0;background:${col};"></div></div>`;
-        }).join('')+`</div><div style="font-size:0.64rem;color:var(--text-dim);padding:0 14px 6px;">Tap a month to jump to it · green settled · amber partly paid · red overdue</div>`;
         const openBody = !!gidFilter;
         return `<div style="background:#1c253b;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:10px;">
             <div onclick="toggleCollectionCard('${gid}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
@@ -303,7 +286,6 @@ async function renderCollectionsTab(gidFilter){
                 <span id="colchev_${gid}" style="font-size:0.85rem;color:var(--text-dim);transition:transform .2s;transform:rotate(${openBody?90:0}deg);">&#9654;</span>
             </div>
             <div id="colbody_${gid}" style="display:${openBody?'block':'none'};border-top:1px solid var(--border);">
-                ${strip}
                 <div style="overflow-x:auto;">
                     <table style="width:100%;border-collapse:collapse;min-width:380px;">
                         <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
@@ -331,17 +313,21 @@ const _grpMemberSort = {}; // { [gid]: { key, dir } }
 function sortGroupMembers(gid, key) {
     if (!_grpMemberSort[gid]) _grpMemberSort[gid] = { key: '', dir: 0 };
     const s = _grpMemberSort[gid];
-    
+    const first = (key === 'paid') ? -1 : 1;          // Paid starts with the highest payer on top
     if (s.key === key) {
-        // Same column: cycle dir: 1 (asc) → -1 (desc) → 0 (no sort) → 1 (asc)
-        if (s.dir === 0) { s.dir = 1; }
-        else if (s.dir === 1) { s.dir = -1; }
+        // Same column: first → opposite → none (back to A–Z)
+        if (s.dir === 0) { s.dir = first; }
+        else if (s.dir === first) { s.dir = -first; }
         else { s.dir = 0; s.key = ''; }
     } else {
-        // Different column: start with ascending (dir=1)
         s.key = key;
-        s.dir = 1;
+        s.dir = first;
     }
+    renderGroupsTab();
+}
+// the four sort buttons above the members table
+function setGroupMemberSort(gid, key, dir) {
+    _grpMemberSort[gid] = { key, dir };
     renderGroupsTab();
 }
 
@@ -431,10 +417,27 @@ async function renderGroupsTab(){
 
         // ── Per-group member sort
         const gSort = _grpMemberSort[g.id];
-        if (gSort && gSort.key) {
+        const eff = (gSort && gSort.key) ? gSort : { key:'member', dir:1 };      // default: A–Z
+        // total paid by one chit slot (joint pairs count together)
+        const _slotPaid = (s) => {
+            const enr = (s.m.enrollments||[]).find(e=>e.groupId===g.id);
+            const qty = enr ? parseInt(enr.qty||1) : 1;
+            const all = ps.filter(p => (p.memberId===s.m.id || (s.coMid && p.memberId===s.coMid)) && p.groupId===g.id && !p.isJointMirror);
+            const mine = qty>1 ? all.filter(p => {
+                if(enr && enr.enrollmentId && p.enrollmentId) return p.enrollmentId===enr.enrollmentId && (p.slotNum==null || p.slotNum===s.slotNum);
+                if(p.slotNum!=null) return p.slotNum===s.slotNum;
+                return s.slotNum===1;
+            }) : all;
+            return mine.reduce((a,p)=>a+(parseFloat(p.paid)||0),0);
+        };
+        if (eff.key) {
+            const gSort = eff;
             expandedSlots.sort((a, b) => {
+                if (gSort.key === 'paid') {
+                    return (gSort.dir * (_slotPaid(a) - _slotPaid(b))) || (a.m.name||'').localeCompare(b.m.name||'');
+                }
                 if (gSort.key === 'member') {
-                    return gSort.dir * (a.m.name||'').localeCompare(b.m.name||'');
+                    return gSort.dir * (a.m.name||'').localeCompare(b.m.name||'') || (a.slotNum - b.slotNum);
                 }
                 if (gSort.key === 'months') {
                     const allMpA = ps.filter(p=>p.memberId===a.m.id&&p.groupId===g.id);
@@ -578,14 +581,18 @@ async function renderGroupsTab(){
             </div>
             <div class="group-body" id="${bodyId}" style="max-height:0px;opacity:0;margin-top:0;">
 
-                ${gMs.length?`<div class="table-wrap"><table class="table-custom group-member-table">
+                ${gMs.length?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 4px 6px;">
+                    <span style="font-size:0.62rem;font-weight:800;color:var(--text-dim);text-transform:uppercase;">Sort</span>
+                    ${[['member',1,'A–Z'],['member',-1,'Z–A'],['paid',-1,'Most paid'],['paid',1,'Least paid']].map(o=>{const on=eff.key===o[0]&&eff.dir===o[1];return `<button type="button" onclick="setGroupMemberSort('${g.id}','${o[0]}',${o[1]})" style="border-radius:99px;padding:3px 10px;font-size:0.68rem;font-weight:800;cursor:pointer;${on?'background:rgba(99,102,241,0.85);color:#fff;border:1px solid transparent;':'background:var(--card-bg);color:var(--text-dim);border:1px solid var(--border);'}">${o[2]}</button>`;}).join('')}
+                </div>
+                <div class="table-wrap"><table class="table-custom group-member-table">
                     <thead><tr>
                         <th>#</th>
-                        <th onclick="sortGroupMembers('${g.id}','member')" style="cursor:pointer;user-select:none;white-space:nowrap;">Member ${(gSort&&gSort.key==='member')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th>Paid</th>
+                        <th onclick="sortGroupMembers('${g.id}','member')" style="cursor:pointer;user-select:none;white-space:nowrap;">Member ${eff.key==='member'?(eff.dir===1?'↑':'↓'):'⇅'}</th>
+                        <th onclick="sortGroupMembers('${g.id}','paid')" style="cursor:pointer;user-select:none;white-space:nowrap;">Paid ${eff.key==='paid'?(eff.dir===-1?'↓':'↑'):'⇅'}</th>
                         <th>Bal</th>
-                        <th onclick="sortGroupMembers('${g.id}','months')" style="cursor:pointer;user-select:none;white-space:nowrap;">Mo ${(gSort&&gSort.key==='months')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
-                        <th onclick="sortGroupMembers('${g.id}','commitment')" style="cursor:pointer;user-select:none;white-space:nowrap;">Commit ${(gSort&&gSort.key==='commitment')?(gSort.dir===1?'↑':gSort.dir===-1?'↓':'⇅'):'⇅'}</th>
+                        <th onclick="sortGroupMembers('${g.id}','months')" style="cursor:pointer;user-select:none;white-space:nowrap;">Mo ${eff.key==='months'?(eff.dir===1?'↑':'↓'):'⇅'}</th>
+                        <th onclick="sortGroupMembers('${g.id}','commitment')" style="cursor:pointer;user-select:none;white-space:nowrap;">Commit ${eff.key==='commitment'?(eff.dir===1?'↑':'↓'):'⇅'}</th>
                         <th>Picked</th><th></th>
                     </tr></thead>
                     <tbody>${memberRows}</tbody>
