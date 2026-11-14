@@ -22,7 +22,7 @@
     body{overflow-x:hidden;}
     </style>
     <style id="homeToolRowCss">
-    /* iPhone-style icons (used by the Groups tab) */
+    /* iPhone-style app icons */
     .ios-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:16px 6px;padding:8px 2px 4px;justify-items:center;}
     .ios-app{background:none;border:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;width:76px;-webkit-tap-highlight-color:transparent;}
     .ios-ico{position:relative;width:60px;height:60px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;box-shadow:0 4px 10px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.28);transition:transform .12s;}
@@ -30,19 +30,10 @@
     .ios-app.ios-active .ios-ico{box-shadow:0 0 0 2px #fff,0 4px 10px rgba(0,0,0,.35);}
     .ios-lbl{font-size:.7rem;font-weight:600;color:#e5e7eb;text-align:center;line-height:1.1;}
     .ios-ico .qa-badge{position:absolute;top:-6px;right:-6px;box-shadow:0 0 0 2px #0b1020;}
-    /* Home tab: QR / WhatsApp / Spin Wheel / Backup as buttons in ONE row; the opened one expands full width underneath */
-    #homeToolRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px;}
-    #homeToolRow>div:not([style*="display: none"]):not([style*="display:none"]){display:contents;}
-    #homeToolRow>div>div:first-child{order:1;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:10px 12px !important;min-width:0;}
-    #homeToolRow>div>div:nth-child(2){order:2;grid-column:1 / -1;background:var(--card-bg);border:1px solid var(--border) !important;border-radius:16px;overflow:hidden;}
-    #homeToolRow>div>div:first-child span[style*="uppercase"]{font-size:0.7rem !important;white-space:normal;line-height:1.15;}
-    @media (max-width:600px){
-        #homeToolRow{gap:6px;}
-        #homeToolRow>div>div:first-child{flex-direction:column;justify-content:center;align-items:center !important;gap:4px;text-align:center;padding:9px 3px !important;}
-        #homeToolRow>div>div:first-child>div{flex-direction:column;gap:4px !important;}
-        #homeToolRow>div>div:first-child span[style*="uppercase"]{font-size:0.56rem !important;letter-spacing:0 !important;}
-        #homeToolRow>div>div:first-child [id$="SectionChevron"]{display:none;}
-    }
+    /* QR / WhatsApp reminders / Spin Wheel: the icons replace the old header bars; a panel shows only while open */
+    #homeToolRow>div>div:first-child{display:none !important;}
+    #homeToolRow>div>div:nth-child(2){border-top:none !important;}
+    #homeToolRow>div:not(:has(>div:nth-child(2)[style*="display: block"])):not(:has(>div:nth-child(2)[style*="display:block"])){display:none !important;}
     </style>
 
     <!-- ── CDN Libraries (load before app.js) ── -->
@@ -185,24 +176,6 @@
 
         </div>
 
-        <!-- Admin-only quick action buttons — hidden by default, shown via JS for admin -->
-        <div id="adminQuickBtns" style="display:none;margin-top:10px;">
-            <div class="qa-bar" role="toolbar" aria-label="Quick actions">
-                <button type="button" class="qa-seg" onclick="openAddMember()" title="Create member">
-                    <svg class="qa-ico" style="color:#f39c12" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M16 19h6"/><path d="M19 16v6"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4"/></svg>
-                    <span class="qa-txt">Member</span>
-                </button>
-                <button type="button" class="qa-seg" onclick="openAddGroup()" title="Create new group">
-                    <svg class="qa-ico" style="color:#2ecc71" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l18 0"/><path d="M3 10l18 0"/><path d="M5 6l7 -3l7 3"/><path d="M4 10l0 11"/><path d="M20 10l0 11"/><path d="M8 14l0 3"/><path d="M12 14l0 3"/><path d="M16 14l0 3"/></svg>
-                    <span class="qa-txt">Group</span>
-                </button>
-                <button type="button" class="qa-seg" onclick="openAckQueue()" title="WhatsApp acknowledgements" aria-label="WhatsApp acknowledgements">
-                    <svg class="qa-ico" style="color:#25D366" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
-                    <span class="qa-txt">Messages</span><span id="ackQueueCount" class="qa-badge" style="display:none;">0</span>
-                </button>
-            </div>
-        </div>
-
         <div id="adminMemberSearch" class="my-3" style="background:var(--card-bg);border-radius:18px;border:1px solid var(--border);padding:14px;">
             <div style="display:flex;gap:8px;align-items:flex-start;">
                 <div style="position:relative;flex:1;">
@@ -214,6 +187,43 @@
             </div>
             <div id="ledgerData"></div>
         </div>
+
+        <!-- Admin-only app-icon launcher (iPhone style) below the search box — shown via JS for admin -->
+        <div id="adminQuickBtns" style="display:none;margin-top:6px;">
+            <div class="ios-grid" role="toolbar" aria-label="Quick actions">
+                <button type="button" class="ios-app" onclick="iosCloseTools();openAddMember()" title="Create member"><span class="ios-ico" style="background:linear-gradient(145deg,#f7b733,#e67e22);">👤</span><span class="ios-lbl">Member</span></button>
+                <button type="button" class="ios-app" onclick="iosCloseTools();openAddGroup()" title="Create new group"><span class="ios-ico" style="background:linear-gradient(145deg,#3ddc97,#1e9e6a);">🏛️</span><span class="ios-lbl">Group</span></button>
+                <button type="button" class="ios-app" onclick="iosCloseTools();openAckQueue()" title="WhatsApp acknowledgements" aria-label="WhatsApp acknowledgements"><span class="ios-ico" style="background:linear-gradient(145deg,#4be07f,#128c7e);">💬<span id="ackQueueCount" class="qa-badge" style="display:none;">0</span></span><span class="ios-lbl">Messages</span></button>
+                <button type="button" class="ios-app" data-tool="wa" onclick="iosOpenTool('wa')" title="WhatsApp reminders"><span class="ios-ico" style="background:linear-gradient(145deg,#38bdf8,#2563eb);">🔔</span><span class="ios-lbl">Reminders</span></button>
+                <button type="button" class="ios-app" data-tool="qr" onclick="iosOpenTool('qr')" title="QR payment generator"><span class="ios-ico" style="background:linear-gradient(145deg,#a78bfa,#6d28d9);">📲</span><span class="ios-lbl">QR Pay</span></button>
+                <button type="button" class="ios-app" data-tool="spin" onclick="iosOpenTool('spin')" title="Spin wheel"><span class="ios-ico" style="background:linear-gradient(145deg,#fb923c,#ec4899);">🎡</span><span class="ios-lbl">Spin Wheel</span></button>
+                <button type="button" class="ios-app" data-tool="backup" onclick="iosOpenTool('backup')" title="Backup and restore"><span class="ios-ico" style="background:linear-gradient(145deg,#94a3b8,#475569);">☁️</span><span class="ios-lbl">Backup</span></button>
+            </div>
+        </div>
+        <script>
+        // Only ONE tool panel is open at a time: tapping another icon closes the open one and opens the new one
+        var IOS_TOOLS={qr:['qrSectionBody','toggleQrSection','qrGeneratorSection'],wa:['waSectionBody','toggleWaSection','waReminderSection'],spin:['spinSectionBody','toggleSpinSection','spinWheelSection'],backup:['backupSectionBody','toggleBackupSection','backupSection']};
+        function toggleBackupSection(){ var b=document.getElementById('backupSectionBody'); if(b) b.style.display=(b.style.display==='block')?'none':'block'; }
+        function iosMarkActive(which){
+            document.querySelectorAll('.ios-app[data-tool]').forEach(function(b){ b.classList.toggle('ios-active', b.getAttribute('data-tool')===which); });
+        }
+        function iosCloseTools(except){
+            Object.keys(IOS_TOOLS).forEach(function(k){
+                if(k===except) return;
+                var b=document.getElementById(IOS_TOOLS[k][0]), fn=window[IOS_TOOLS[k][1]];
+                if(b && b.style.display==='block'){ if(typeof fn==='function') fn(); else b.style.display='none'; }
+            });
+            if(!except) iosMarkActive(null);
+        }
+        function iosOpenTool(which){
+            iosCloseTools(which);
+            var m=IOS_TOOLS[which], b=document.getElementById(m[0]), fn=window[m[1]];
+            var wasOpen=!!(b && b.style.display==='block');
+            if(typeof fn==='function') fn();
+            iosMarkActive(wasOpen?null:which);
+            if(!wasOpen){ var sec=document.getElementById(m[2]); if(sec) setTimeout(function(){ sec.scrollIntoView({behavior:'smooth',block:'nearest'}); },60); }
+        }
+        </script>
 
         <!-- Member Statistics Panel -->
         <div id="mStatsPanel" style="display:none;margin-top:4px;">
@@ -453,7 +463,7 @@
             </div>
             <div id="spinSectionBody" style="display:none;border-top:1px solid var(--border);"></div>
         </div>
-        <!-- ── Backup & restore (Admin only) — opened from the Backup icon ── -->
+                <!-- ── Backup & restore (Admin only) — opened from the Backup icon ── -->
         <div id="backupSection" class="admin-only-section" style="margin-top:14px;background:var(--card-bg);border:1px solid var(--border);border-radius:16px;overflow:hidden;">
             <div onclick="toggleBackupSection()" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;user-select:none;">
                 <div style="display:flex;align-items:center;gap:8px;">
