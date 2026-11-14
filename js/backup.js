@@ -419,9 +419,9 @@ async function loadStatistics() {
                 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:7px;">
                     <span style="font-size:0.8rem;font-weight:800;">💳 Paid via · ${selM ? _stMonthLabel(selM) : 'All months'}</span>
                 </div>
-                <div style="display:flex;gap:6px;">
-                    <select class="form-input" onchange="statSetMember(this.value)" style="flex:1;min-width:0;margin:0;height:32px !important;min-height:32px !important;padding:3px 22px 3px 8px !important;font-size:0.72rem !important;border-radius:9px !important;">${memOpts}</select>
-                    <select class="form-input" onchange="statSetMode(this.value)" style="flex:1;min-width:0;margin:0;height:32px !important;min-height:32px !important;padding:3px 22px 3px 8px !important;font-size:0.72rem !important;border-radius:9px !important;">${modeOpts}</select>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    <select class="form-input" onchange="statSetMember(this.value)" style="flex:1 1 150px;min-width:0;margin:0;height:32px !important;min-height:32px !important;padding:3px 22px 3px 8px !important;font-size:0.72rem !important;border-radius:9px !important;">${memOpts}</select>
+                    <select class="form-input" onchange="statSetMode(this.value)" style="flex:1 1 150px;min-width:0;margin:0;height:32px !important;min-height:32px !important;padding:3px 22px 3px 8px !important;font-size:0.72rem !important;border-radius:9px !important;">${modeOpts}</select>
                 </div>
             </div>`;
         if(!entries.length){
