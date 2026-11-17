@@ -58,6 +58,8 @@ async function updateUI(){
     document.getElementById('groupCount').innerText=g.length;
     const today=new Date().toISOString().split('T')[0];
     document.getElementById('todayColl').innerText=fmtAmt(p.filter(x=>x.date===today).reduce((s,x)=>s+(parseFloat(x.paid)||0),0));
+    const _ht=document.getElementById('homeTodayAmt'); if(_ht) _ht.innerText='Today '+document.getElementById('todayColl').innerText;
+    if(typeof renderHomeGroups==='function') renderHomeGroups(m,g,p);          // Home tab: groups + member lists
     if(document.getElementById('groupsTab').classList.contains('active'))renderGroupsTab();
 }
 
