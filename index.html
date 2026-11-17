@@ -21,6 +21,27 @@
     html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;}
     body{overflow-x:hidden;}
     </style>
+    <style id="homeAdvancedCss">
+    /* Home tab: icon tile, Record Payment, group cards with member rows */
+    .hm-tile{background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:8px 4px 4px;}
+    .hm-pay{display:flex;align-items:center;gap:10px;width:100%;height:48px;padding:0 16px;border:none;border-radius:14px;background:#ffc107;color:#1a1a1a;font-size:0.95rem;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(255,193,7,0.22);}
+    .hm-pay small{margin-left:auto;font-size:0.72rem;font-weight:600;opacity:.75;}
+    .hm-sbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card-bg);color:var(--text-dim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.8rem;padding:0;}
+    .hm-sbox{display:flex;align-items:center;gap:6px;background:var(--card-bg);border:1px solid rgba(99,102,241,0.6);border-radius:99px;padding:0 12px;height:32px;width:190px;}
+    .hm-sbox input{border:none;background:transparent;outline:none;font-size:0.8rem;color:var(--text-primary);width:100%;min-width:0;}
+    .hm-grp{background:var(--card-bg);border:1px solid var(--border);border-radius:14px;margin-top:8px;overflow:hidden;}
+    .hm-grp.on{border:1.5px solid rgba(99,102,241,0.75);}
+    .hm-gh{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+    .hm-list{display:grid;grid-template-columns:minmax(0,1fr);}
+    @media (min-width:700px){ .hm-list{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px;} }
+    .hm-mem{display:grid;grid-template-columns:30px minmax(0,1fr) auto;align-items:center;gap:10px;padding:7px 12px;border-top:1px solid rgba(255,255,255,0.06);cursor:pointer;}
+    .hm-mem:active{background:rgba(255,255,255,0.04);}
+    .hm-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;flex-shrink:0;}
+    .hm-nm{font-size:0.82rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .hm-chip{border-radius:6px;padding:0 7px;font-size:0.66rem;font-weight:800;white-space:nowrap;display:inline-block;}
+    /* the ledger area shows only while a ledger is open */
+    #adminMemberSearch:has(#ledgerData:empty){display:none;}
+    </style>
     <style id="homeToolRowCss">
     /* iPhone-style app icons */
     .ios-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:16px 6px;padding:8px 2px 4px;justify-items:center;}
@@ -166,30 +187,14 @@
 
     <!-- HOME TAB -->
     <div id="homeTab" class="tab-content active">
-        <div id="adminStatCards" class="row g-2 mt-3 text-center" style="margin-left:0;margin-right:0;">
+        <div id="adminStatCards" class="row g-2 mt-3 text-center" style="margin-left:0;margin-right:0;display:none;">
             <div class="col-4"><div class="stat-card" onclick="openMembersQuickView()" style="cursor:pointer;active:scale(0.97);transition:transform .1s;" title="View all members"><span class="stat-num" id="memberCount">-</span><span class="stat-label">Members</span></div></div>
             <div class="col-4"><div class="stat-card" onclick="openGroupsQuickView()" style="cursor:pointer;" title="View all groups"><span class="stat-num" id="groupCount">-</span><span class="stat-label">Groups</span></div></div>
             <div class="col-4"><div class="stat-card"><span class="stat-num text-success" id="todayColl">₹0</span><span class="stat-label">Today</span></div></div>
         </div>
-        <div id="adminActionBtns" style="display:flex;gap:8px;margin-top:12px;">
-            <button class="btn btn-warning w-100 fw-bold shadow" onclick="openPaymentModal()" style="border-radius:16px;padding:15px;font-size:1.05rem;">💳 Record Payment</button>
-
-        </div>
-
-        <div id="adminMemberSearch" class="my-3" style="background:var(--card-bg);border-radius:18px;border:1px solid var(--border);padding:14px;">
-            <div style="display:flex;gap:8px;align-items:flex-start;">
-                <div style="position:relative;flex:1;">
-                    <input type="text" id="summarySearch" class="form-input" style="margin-bottom:0;" placeholder="🔍 Search Member for Summary / PDF..." oninput="filterSearch('summarySearch','summaryList','summaryView')">
-                    <input type="hidden" id="summaryView">
-                    <div id="summaryList" class="suggestions-list"></div>
-                </div>
-                <button onclick="clearMemberSearch()" title="Clear / Refresh" style="background:var(--input-bg);border:1px solid var(--border);color:#f39c12;border-radius:12px;padding:12px 14px;font-size:1rem;cursor:pointer;flex-shrink:0;line-height:1;">🔄</button>
-            </div>
-            <div id="ledgerData"></div>
-        </div>
-
         <!-- Admin-only app-icon launcher (iPhone style) below the search box — shown via JS for admin -->
-        <div id="adminQuickBtns" style="display:none;margin-top:6px;">
+        <div id="adminQuickBtns" style="display:none;margin-top:12px;">
+            <div class="hm-tile" style="flex:1;min-width:0;">
             <div class="ios-grid" role="toolbar" aria-label="Quick actions">
                 <button type="button" class="ios-app" onclick="iosCloseTools();openAddMember()" title="Create member"><span class="ios-ico" style="background:linear-gradient(145deg,#f7b733,#e67e22);">👤</span><span class="ios-lbl">Member</span></button>
                 <button type="button" class="ios-app" onclick="iosCloseTools();openAddGroup()" title="Create new group"><span class="ios-ico" style="background:linear-gradient(145deg,#3ddc97,#1e9e6a);">🏛️</span><span class="ios-lbl">Group</span></button>
@@ -198,6 +203,7 @@
                 <button type="button" class="ios-app" data-tool="qr" onclick="iosOpenTool('qr')" title="QR payment generator"><span class="ios-ico" style="background:linear-gradient(145deg,#a78bfa,#6d28d9);">📲</span><span class="ios-lbl">QR Pay</span></button>
                 <button type="button" class="ios-app" data-tool="spin" onclick="iosOpenTool('spin')" title="Spin wheel"><span class="ios-ico" style="background:linear-gradient(145deg,#fb923c,#ec4899);">🎡</span><span class="ios-lbl">Spin Wheel</span></button>
                 <button type="button" class="ios-app" data-tool="backup" onclick="iosOpenTool('backup')" title="Backup and restore"><span class="ios-ico" style="background:linear-gradient(145deg,#94a3b8,#475569);">☁️</span><span class="ios-lbl">Backup</span></button>
+            </div>
             </div>
         </div>
         <script>
@@ -224,66 +230,6 @@
             if(!wasOpen){ var sec=document.getElementById(m[2]); if(sec) setTimeout(function(){ sec.scrollIntoView({behavior:'smooth',block:'nearest'}); },60); }
         }
         </script>
-
-        <!-- Member Statistics Panel -->
-        <div id="mStatsPanel" style="display:none;margin-top:4px;">
-            <!-- Filters -->
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
-                <div style="font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;">🔍 Filters</div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px;">
-                    <div>
-                        <label style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">🏦 Group</label>
-                        <select id="mStatsGroupFilter" class="form-input" style="margin-bottom:0;font-size:0.75rem;padding:6px 8px;" onchange="renderMemberStats()">
-                            <option value="">All Groups</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">📅 Month</label>
-                        <select id="mStatsMonthFilter" class="form-input" style="margin-bottom:0;font-size:0.75rem;padding:6px 8px;" onchange="renderMemberStats()">
-                            <option value="">All Months</option>
-                        </select>
-                    </div>
-                </div>
-                <button onclick="document.getElementById('mStatsGroupFilter').value='';document.getElementById('mStatsMonthFilter').value='';renderMemberStats();" style="width:100%;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:8px;padding:6px;font-size:0.72rem;font-weight:800;cursor:pointer;">✕ Clear Filters</button>
-            </div>
-            <!-- Summary + Groups 2-col -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-                    <div style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📊 Summary</div>
-                    <table style="width:100%;border-collapse:collapse;"><tbody id="mStatsSummary"></tbody></table>
-                </div>
-                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
-                    <div style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">🏦 Groups <span style="font-size:0.5rem;font-weight:400;color:var(--text-dim);">tap=filter</span></div>
-                    <table style="width:100%;border-collapse:collapse;">
-                        <thead><tr style="background:rgba(255,255,255,0.02);">
-                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
-                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
-                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Bal</th>
-                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">%</th>
-                        </tr></thead>
-                        <tbody id="mStatsGroups"></tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- Payment History full width -->
-            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;">
-                <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📅 Payment History</div>
-                <table style="width:100%;border-collapse:collapse;">
-                    <thead><tr style="background:rgba(255,255,255,0.02);">
-                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Date</th>
-                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
-                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Mode</th>
-                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
-                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:center;">Chit</th>
-                    </tr></thead>
-                    <tbody id="mStatsMonthly"></tbody>
-                </table>
-            </div>
-        </div>
-
-        
-
-
 
         <!-- QR / WhatsApp / Spin Wheel: three buttons side by side, the opened one expands full width below -->
         <div id="homeToolRow">
@@ -485,6 +431,93 @@
             </div>
         </div>
         </div><!-- /homeToolRow -->
+
+        <div id="adminActionBtns" style="display:flex;gap:8px;margin-top:10px;">
+            <button class="hm-pay" onclick="openPaymentModal()"><span style="font-size:1.1rem;">💳</span><span>Record Payment</span><small id="homeTodayAmt">Today ₹0</small></button>
+        </div>
+
+        <!-- Groups: slim rows; a group opens only when selected. Small search on the right. -->
+        <div id="homeGroupsHead" style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 4px;">
+            <div><span style="font-size:0.95rem;font-weight:800;">Groups</span> <span id="homeGroupsCount" style="font-size:0.72rem;color:var(--text-dim);"></span></div>
+            <div style="display:flex;align-items:center;">
+                <div id="hmSearchBox" class="hm-sbox" style="display:none;"><span style="font-size:0.8rem;">🔍</span><input id="hmSearchInput" type="text" placeholder="Search member" autocomplete="off" oninput="hmQ(this.value)" onblur="hmSearchBlur()"></div>
+                <button id="hmSearchBtn" class="hm-sbtn" type="button" onclick="hmSearchOpen()" aria-label="Search member">🔍</button>
+            </div>
+        </div>
+        <div id="homeGroups"></div>
+
+        <!-- Member ledger (opens when a member row is tapped) — the old search box lives here hidden: the code still uses its fields -->
+        <div id="adminMemberSearch" class="my-3">
+            <div id="ledgerBar" style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 6px;font-size:0.8rem;font-weight:800;color:#a5b4fc;"><span>📋 Member ledger</span><button type="button" onclick="clearMemberSearch()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:8px;padding:3px 10px;font-size:0.7rem;font-weight:800;cursor:pointer;">✕ Close</button></div>
+            <div style="display:none;">
+                <input type="text" id="summarySearch" class="form-input" oninput="filterSearch('summarySearch','summaryList','summaryView')">
+                <input type="hidden" id="summaryView">
+                <div id="summaryList" class="suggestions-list"></div>
+            </div>
+            <div id="ledgerData"></div>
+        </div>
+
+        <!-- Member Statistics Panel -->
+        <div id="mStatsPanel" style="display:none;margin-top:4px;">
+            <!-- Filters -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+                <div style="font-size:0.62rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px;">🔍 Filters</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px;">
+                    <div>
+                        <label style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">🏦 Group</label>
+                        <select id="mStatsGroupFilter" class="form-input" style="margin-bottom:0;font-size:0.75rem;padding:6px 8px;" onchange="renderMemberStats()">
+                            <option value="">All Groups</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.6rem;color:var(--text-dim);font-weight:700;text-transform:uppercase;display:block;margin-bottom:3px;">📅 Month</label>
+                        <select id="mStatsMonthFilter" class="form-input" style="margin-bottom:0;font-size:0.75rem;padding:6px 8px;" onchange="renderMemberStats()">
+                            <option value="">All Months</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('mStatsGroupFilter').value='';document.getElementById('mStatsMonthFilter').value='';renderMemberStats();" style="width:100%;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:8px;padding:6px;font-size:0.72rem;font-weight:800;cursor:pointer;">✕ Clear Filters</button>
+            </div>
+            <!-- Summary + Groups 2-col -->
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📊 Summary</div>
+                    <table style="width:100%;border-collapse:collapse;"><tbody id="mStatsSummary"></tbody></table>
+                </div>
+                <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+                    <div style="padding:7px 10px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">🏦 Groups <span style="font-size:0.5rem;font-weight:400;color:var(--text-dim);">tap=filter</span></div>
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead><tr style="background:rgba(255,255,255,0.02);">
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Bal</th>
+                            <th style="padding:5px 8px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">%</th>
+                        </tr></thead>
+                        <tbody id="mStatsGroups"></tbody>
+                    </table>
+                </div>
+            </div>
+            <!-- Payment History full width -->
+            <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:8px;">
+                <div style="padding:7px 12px;border-bottom:1px solid var(--border);font-size:0.6rem;font-weight:800;color:#a5b4fc;text-transform:uppercase;letter-spacing:.4px;">📅 Payment History</div>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:rgba(255,255,255,0.02);">
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Date</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:right;">Paid</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Mode</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:left;">Group</th>
+                        <th style="padding:5px 10px;font-size:0.57rem;color:var(--text-dim);font-weight:700;text-align:center;">Chit</th>
+                    </tr></thead>
+                    <tbody id="mStatsMonthly"></tbody>
+                </table>
+            </div>
+        </div>
+
+        
+
+
+
+
 
     </div>
 
@@ -1071,13 +1104,14 @@
 <script src="js/config.js"></script>
 <script src="js/firebase.js?v=20260610_v1"></script>
 <script src="js/helpers.js?v=20260619_v2"></script>
-<script src="js/ui.js?v=20261102_v10"></script>
+<script src="js/ui.js?v=20261114_v11"></script>
 <script src="js/ledger.js?v=20261017_v2"></script>
 <script src="js/members.js?v=20260610_v1"></script>
 <script src="js/groups.js?v=20261113_v3"></script>
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
+<script src="js/home.js?v=20261114_v1"></script>
 <script src="js/backup.js?v=20261112_v10"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
