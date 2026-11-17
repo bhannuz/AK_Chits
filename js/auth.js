@@ -4,16 +4,35 @@
 
 const ADMIN_PHONE = '9876543210';
 
-function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
-function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
-function clearSession(){ sessionStorage.removeItem('akdf_session'); }
+// Login lasts 3 days (admin and members) — kept on the device, not just for the open tab
+const SESSION_KEY  = 'akdf_session';
+const SESSION_DAYS = 3;
+function saveSession(user){
+    const rec = JSON.stringify({ user: user, exp: Date.now() + SESSION_DAYS*24*60*60*1000 });
+    try{ localStorage.setItem(SESSION_KEY, rec); sessionStorage.removeItem(SESSION_KEY); }
+    catch(e){ sessionStorage.setItem(SESSION_KEY, JSON.stringify(user)); }      // storage blocked: tab-only fallback
+}
+function loadSession(){
+    try{
+        const raw = localStorage.getItem(SESSION_KEY);
+        if(raw){
+            const o = JSON.parse(raw);
+            if(o && o.user && o.exp > Date.now()) return o.user;
+            localStorage.removeItem(SESSION_KEY);                                // 3 days are over → login again
+            return null;
+        }
+        const old = sessionStorage.getItem(SESSION_KEY);                          // session from before this change
+        if(old){ const u = JSON.parse(old); if(u && u.role){ saveSession(u); return u; } }
+    }catch(e){}
+    return null;
+}
+function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} sessionStorage.removeItem(SESSION_KEY); }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function initAuth(){
-    const saved = sessionStorage.getItem('akdf_session');
-    if(saved){
+    const u = loadSession();
+    if(u){
         try{
-            const u = JSON.parse(saved);
             CURRENT_USER = u;
             applyUserSession(u);
             return;
@@ -32,7 +51,7 @@ async function handleLoginSubmit(){
     if(phone === ADMIN_PHONE){
         const user = {phone: phone, role: 'admin', name: 'Admin'};
         CURRENT_USER = user;
-        sessionStorage.setItem('akdf_session', JSON.stringify(user));
+        saveSession(user);
         applyUserSession(user);
         return;
     }
@@ -52,7 +71,7 @@ async function handleLoginSubmit(){
             if(matched){
                 const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
                 CURRENT_USER = user;
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                saveSession(user);
                 applyUserSession(user);
             } else {
                 showToast('✅ Approved but no member profile yet. Contact admin.', false);
@@ -93,7 +112,7 @@ async function checkAccessStatus(){
             });
             if(matched){
                 const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                saveSession(user);
                 showToast('✅ Access approved! Loading…', true);
                 setTimeout(function(){ location.reload(); }, 800);
                 return;
@@ -136,7 +155,7 @@ async function silentCheckStatus(){
         });
         if(matched){
             const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
-            sessionStorage.setItem('akdf_session', JSON.stringify(user));
+            saveSession(user);
             showToast('✅ Access approved! Loading…', true);
             setTimeout(function(){ location.reload(); }, 1000);
         }
@@ -215,7 +234,7 @@ function applyUserSession(user){
 function handleLogout(){
     document.body.classList.remove('admin-mode');
     document.documentElement.classList.remove('admin-mode-early');
-    sessionStorage.removeItem('akdf_session');
+    clearSession();
     CURRENT_USER = null;
     document.getElementById('adminHeader').style.display = 'flex';
     document.getElementById('memberHeader').style.display = 'none';
