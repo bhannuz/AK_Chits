@@ -39,6 +39,27 @@
     .hm-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;flex-shrink:0;}
     .hm-nm{font-size:0.82rem;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .hm-chip{border-radius:6px;padding:0 7px;font-size:0.66rem;font-weight:800;white-space:nowrap;display:inline-block;}
+    .hm-more{display:block;width:100%;margin-top:8px;padding:8px;border:1px dashed var(--border);border-radius:12px;background:transparent;color:var(--text-dim);font-size:0.74rem;font-weight:700;cursor:pointer;}
+    /* view dropdown + advanced view */
+    .hm-vsel{height:32px;border-radius:99px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-primary);font-size:0.74rem;font-weight:700;padding:0 10px;outline:none;cursor:pointer;}
+    .hm-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px;}
+    .hm-sum>div{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:7px 10px;}
+    .hm-sum span{display:block;font-size:0.62rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;}
+    .hm-sum b{font-size:0.86rem;font-weight:800;}
+    .hm-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .hm-chips{display:flex;gap:5px;flex-wrap:wrap;}
+    .hm-fchip{border:1px solid var(--border);background:var(--card-bg);color:var(--text-dim);border-radius:99px;padding:3px 10px;font-size:0.7rem;font-weight:700;cursor:pointer;}
+    .hm-fchip b{color:var(--text-primary);margin-left:2px;}
+    .hm-fchip.on{border-color:rgba(99,102,241,0.8);background:rgba(99,102,241,0.18);color:#c7d2fe;}
+    .hm-sortlbl{font-size:0.7rem;color:var(--text-dim);display:flex;align-items:center;gap:5px;}
+    .hm-sel{height:28px;border-radius:8px;border:1px solid var(--border);background:var(--card-bg);color:var(--text-primary);font-size:0.72rem;padding:0 6px;outline:none;}
+    .hm-adv{padding:0 12px 9px;}
+    .hm-bar{height:5px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;}
+    .hm-bar i{display:block;height:100%;border-radius:99px;}
+    .hm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;margin-top:8px;}
+    .hm-grid span{display:block;font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.3px;}
+    .hm-grid b{font-size:0.78rem;font-weight:800;}
+    @media (min-width:700px){ .hm-grid{grid-template-columns:repeat(6,minmax(0,1fr));} }
     /* the ledger area shows only while a ledger is open */
     #adminMemberSearch:has(#ledgerData:empty){display:none;}
     </style>
@@ -440,11 +461,16 @@
         <!-- Groups: slim rows; a group opens only when selected. Small search on the right. -->
         <div id="homeGroupsHead" style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 4px;">
             <div><span style="font-size:0.95rem;font-weight:800;">Groups</span> <span id="homeGroupsCount" style="font-size:0.72rem;color:var(--text-dim);"></span></div>
-            <div style="display:flex;align-items:center;">
+            <div style="display:flex;align-items:center;gap:6px;">
+                <select id="hmViewSel" class="hm-vsel" onchange="hmView(this.value)" aria-label="Group view">
+                    <option value="compact">▤ Compact</option>
+                    <option value="advanced">⚙ Advanced</option>
+                </select>
                 <div id="hmSearchBox" class="hm-sbox" style="display:none;"><span style="font-size:0.8rem;">🔍</span><input id="hmSearchInput" type="text" placeholder="Search member" autocomplete="off" oninput="hmQ(this.value)" onblur="hmSearchBlur()"></div>
                 <button id="hmSearchBtn" class="hm-sbtn" type="button" onclick="hmSearchOpen()" aria-label="Search member">🔍</button>
             </div>
         </div>
+        <div id="hmAdvBar" style="display:none;"></div>
         <div id="homeGroups"></div>
 
         <!-- Member ledger (opens when a member row is tapped) — the old search box lives here hidden: the code still uses its fields -->
@@ -1112,7 +1138,7 @@
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/home.js?v=20261114_v1"></script>
+<script src="js/home.js?v=20261118_v3"></script>
 <script src="js/backup.js?v=20261112_v10"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
