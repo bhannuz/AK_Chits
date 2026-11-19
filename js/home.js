@@ -9,8 +9,8 @@ window._hmQ   = '';            // member search text
 let _hmCache = null;           // {ms, gs, ps}
 function _hmLoad(k, d){ try{ return localStorage.getItem(k) || d; }catch(e){ return d; } }
 function _hmSave(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
-window._hmView   = _hmLoad('hmView', 'compact');   // 'compact' | 'advanced'
-window._hmFilter = _hmLoad('hmFilter2', 'active');   // active (default) | all | overdue | completed
+window._hmView   = 'advanced';                      // Advanced view only
+window._hmFilter = _hmLoad('hmFilter2', 'active');   // active (default) | all | overdue | notstarted | completed
 window._hmSort   = _hmLoad('hmSort', 'name');      // name | overdue | progress | members | next
 
 function _hmEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -73,7 +73,7 @@ function renderHomeGroups(ms, gs, ps){
         const picked = seats.filter(s => s.picked).length;
         return { g, dues, chit, seats, monthsDue, got, over, exp, pct, completed, next, overMembers, picked };
     });
-    const adv = window._hmView === 'advanced';
+    const adv = true;   // Advanced view only
     const byName = (a,b) => (a.g.name||'').localeCompare(b.g.name||'');
     const sorters = {
         name:     (a,b) => ((a.completed?1:0) - (b.completed?1:0)) || byName(a,b),
@@ -84,12 +84,11 @@ function renderHomeGroups(ms, gs, ps){
     };
     data.sort(adv ? (sorters[window._hmSort] || sorters.name) : sorters.name);
     const allData = data;
-    const isActive = d => !d.completed;
-    const nDone = data.filter(d => d.completed).length;
-    const shown = q ? data : data.filter(d => {
-        const f = window._hmFilter;
-        return f === 'active' ? isActive(d) : f === 'overdue' ? d.over > 0 : f === 'completed' ? d.completed : true;
-    });
+    // Active = started (first due date reached) and not completed. A group that has not started yet is NOT active.
+    const isActive     = d => !d.completed && d.monthsDue > 0;
+    const isNotStarted = d => !d.completed && d.monthsDue === 0;
+    const matches = (d, f) => f === 'active' ? isActive(d) : f === 'overdue' ? d.over > 0 : f === 'notstarted' ? isNotStarted(d) : f === 'completed' ? d.completed : true;
+    const shown = q ? data : data.filter(d => matches(d, window._hmFilter));
 
     const totalSeats = data.reduce((a,d) => a + d.seats.length, 0);
     const cnt = document.getElementById('homeGroupsCount');
@@ -101,9 +100,9 @@ function renderHomeGroups(ms, gs, ps){
     if(bar){
         if(!adv){ bar.style.display = 'none'; bar.innerHTML = ''; }
         else {
-            const tOver = data.reduce((a,d) => a + d.over, 0), tGot = data.reduce((a,d) => a + d.got, 0), tExp = data.reduce((a,d) => a + d.exp, 0);
-            const cnts = { all:data.length, active:data.filter(isActive).length, overdue:data.filter(d => d.over > 0).length, completed:data.filter(d => d.completed).length };
-            const chips = [['all','All'],['active','Active'],['overdue','Overdue'],['completed','Completed']].map(c => `<button type="button" class="hm-fchip${window._hmFilter===c[0]?' on':''}" onclick="hmFilter('${c[0]}')">${c[1]} <b>${cnts[c[0]]}</b></button>`).join('');
+            const tOver = shown.reduce((a,d) => a + d.over, 0), tGot = shown.reduce((a,d) => a + d.got, 0), tExp = shown.reduce((a,d) => a + d.exp, 0);   // totals follow the selected filter
+            const cnts = { all:data.length, active:data.filter(isActive).length, overdue:data.filter(d => d.over > 0).length, notstarted:data.filter(isNotStarted).length, completed:data.filter(d => d.completed).length };
+            const chips = [['all','All'],['active','Active'],['overdue','Overdue'],['notstarted','Not started'],['completed','Completed']].filter(c => c[0] !== 'notstarted' || cnts.notstarted > 0 || window._hmFilter === 'notstarted').map(c => `<button type="button" class="hm-fchip${window._hmFilter===c[0]?' on':''}" onclick="hmFilter('${c[0]}')">${c[1]} <b>${cnts[c[0]]}</b></button>`).join('');
             const sopt = [['name','Name'],['overdue','Most overdue'],['progress','Lowest collection'],['members','Most members'],['next','Next due date']].map(o => `<option value="${o[0]}"${window._hmSort===o[0]?' selected':''}>${o[1]}</option>`).join('');
             bar.style.display = 'block';
             bar.innerHTML = `<div class="hm-sum"><div><span>Collected</span><b style="color:#34d399;">${inr(tGot)}</b></div><div><span>Expected</span><b>${inr(tExp)}</b></div><div><span>Overdue</span><b style="color:${tOver?'#f87171':'#34d399'};">${inr(tOver)}</b></div></div>
@@ -117,7 +116,7 @@ function renderHomeGroups(ms, gs, ps){
         const rows = d.seats.filter(s => !q || s.name.toLowerCase().includes(q));
         if(q && !rows.length) return;
         const open = q ? true : window._hmSel === d.g.id;
-        const ringCol = d.pct >= 100 ? '#34d399' : d.pct >= 80 ? '#fbbf24' : '#f87171';
+        const ringCol = !d.monthsDue ? '#9ca3af' : d.pct >= 100 ? '#34d399' : d.pct >= 80 ? '#fbbf24' : '#f87171';
         const tag = d.completed ? ['COMPLETED','#a5b4fc','rgba(99,102,241,0.18)'] : (!d.monthsDue ? ['NOT STARTED','#9ca3af','rgba(156,163,175,0.18)'] : ['ACTIVE','#34d399','rgba(16,185,129,0.18)']);
         let list = '';
         if(open) list = rows.map((s,k) => {
@@ -160,8 +159,5 @@ function renderHomeGroups(ms, gs, ps){
             ${open?`<div style="display:flex;gap:14px;flex-wrap:wrap;padding:0 12px 8px 62px;font-size:0.7rem;color:var(--text-dim);"><span>Collected <b style="color:#34d399;">${_hmShort(d.got)}</b></span><span>Expected <b style="color:var(--text-primary);">${_hmShort(d.exp)}</b></span><span>Rate <b style="color:var(--text-primary);">${d.pct}%</b></span></div><div class="hm-list">${list}</div>`:''}
         </div>`;
     });
-    if(!adv && !q && nDone){
-        html += `<button type="button" class="hm-more" onclick="hmFilter('${window._hmFilter==='active'?'all':'active'}')">${window._hmFilter==='active' ? 'Show ' + nDone + ' completed group' + (nDone===1?'':'s') : 'Hide completed groups'}</button>`;
-    }
     host.innerHTML = html || '<div style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.82rem;">' + (q ? 'No member matches.' : (allData.length ? 'No groups match this filter.' : 'No groups yet.')) + '</div>';
 }
