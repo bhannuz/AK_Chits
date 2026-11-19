@@ -4,16 +4,33 @@
 
 const ADMIN_PHONE = '9876543210';
 
-function saveSession(user){ sessionStorage.setItem('akdf_session', JSON.stringify(user)); }
-function loadSession(){ try{ return JSON.parse(sessionStorage.getItem('akdf_session'))||null; }catch(e){ return null; } }
-function clearSession(){ sessionStorage.removeItem('akdf_session'); }
+// Login stays for 3 days (survives closing the tab/browser), then asks for login again.
+const SESSION_KEY = 'akdf_session';
+const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+function saveSession(user){
+    try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ user: user, exp: Date.now() + SESSION_TTL_MS })); }
+    catch(e){ try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(user)); }catch(e2){} }   // storage blocked: fall back to this tab only
+}
+function loadSession(){
+    try{
+        const raw = localStorage.getItem(SESSION_KEY);
+        if(raw){
+            const s = JSON.parse(raw);
+            if(s && s.user && s.exp && Date.now() < s.exp) return s.user;
+            localStorage.removeItem(SESSION_KEY);                 // expired or malformed
+        }
+        const legacy = sessionStorage.getItem(SESSION_KEY);       // old tab-only session or fallback
+        if(legacy){ const u = JSON.parse(legacy); if(u && u.role){ saveSession(u); return u; } }
+    }catch(e){}
+    return null;
+}
+function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function initAuth(){
-    const saved = sessionStorage.getItem('akdf_session');
-    if(saved){
+    const u = loadSession();
+    if(u){
         try{
-            const u = JSON.parse(saved);
             CURRENT_USER = u;
             applyUserSession(u);
             return;
@@ -32,7 +49,7 @@ async function handleLoginSubmit(){
     if(phone === ADMIN_PHONE){
         const user = {phone: phone, role: 'admin', name: 'Admin'};
         CURRENT_USER = user;
-        sessionStorage.setItem('akdf_session', JSON.stringify(user));
+        saveSession(user);
         applyUserSession(user);
         return;
     }
@@ -52,7 +69,7 @@ async function handleLoginSubmit(){
             if(matched){
                 const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
                 CURRENT_USER = user;
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                saveSession(user);
                 applyUserSession(user);
             } else {
                 showToast('✅ Approved but no member profile yet. Contact admin.', false);
@@ -93,7 +110,7 @@ async function checkAccessStatus(){
             });
             if(matched){
                 const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
-                sessionStorage.setItem('akdf_session', JSON.stringify(user));
+                saveSession(user);
                 showToast('✅ Access approved! Loading…', true);
                 setTimeout(function(){ location.reload(); }, 800);
                 return;
@@ -136,7 +153,7 @@ async function silentCheckStatus(){
         });
         if(matched){
             const user = {phone: phone, role: 'member', memberId: matched.id, name: matched.name};
-            sessionStorage.setItem('akdf_session', JSON.stringify(user));
+            saveSession(user);
             showToast('✅ Access approved! Loading…', true);
             setTimeout(function(){ location.reload(); }, 1000);
         }
@@ -215,7 +232,7 @@ function applyUserSession(user){
 function handleLogout(){
     document.body.classList.remove('admin-mode');
     document.documentElement.classList.remove('admin-mode-early');
-    sessionStorage.removeItem('akdf_session');
+    clearSession();
     CURRENT_USER = null;
     document.getElementById('adminHeader').style.display = 'flex';
     document.getElementById('memberHeader').style.display = 'none';

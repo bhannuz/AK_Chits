@@ -93,7 +93,7 @@ function renderHomeGroups(ms, gs, ps){
 
     const totalSeats = data.reduce((a,d) => a + d.seats.length, 0);
     const cnt = document.getElementById('homeGroupsCount');
-    if(cnt) cnt.textContent = '· ' + (shown.length !== data.length ? shown.length + ' of ' : '') + data.length + ' group' + (data.length===1?'':'s') + ' · ' + totalSeats + ' members';
+    if(cnt) cnt.textContent = '· ' + (shown.length !== data.length ? shown.length + ' of ' + data.length + ' groups' : data.length + ' group' + (data.length===1?'':'s'));
 
     // view dropdown + advanced toolbar
     const vs = document.getElementById('hmViewSel'); if(vs) vs.value = window._hmView;
