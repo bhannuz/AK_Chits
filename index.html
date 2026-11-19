@@ -46,7 +46,8 @@
     .hm-sum>div{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:7px 10px;}
     .hm-sum span{display:block;font-size:0.62rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;}
     .hm-sum b{font-size:0.86rem;font-weight:800;}
-    .hm-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .hm-tools{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;}
+    .hm-sortlbl{flex:1;min-width:0;} .hm-sortlbl .hm-sel{flex:1;min-width:0;height:32px;font-size:0.78rem;}
     .hm-chips{display:flex;gap:5px;flex-wrap:wrap;}
     .hm-fchip{border:1px solid var(--border);background:var(--card-bg);color:var(--text-dim);border-radius:99px;padding:3px 10px;font-size:0.7rem;font-weight:700;cursor:pointer;}
     .hm-fchip b{color:var(--text-primary);margin-left:2px;}
@@ -56,10 +57,10 @@
     .hm-adv{padding:0 12px 9px;}
     .hm-bar{height:5px;border-radius:99px;background:rgba(255,255,255,0.08);overflow:hidden;}
     .hm-bar i{display:block;height:100%;border-radius:99px;}
-    .hm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px;margin-top:8px;}
+    .hm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 10px;margin-top:8px;}
     .hm-grid span{display:block;font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.3px;}
     .hm-grid b{font-size:0.78rem;font-weight:800;}
-    @media (min-width:700px){ .hm-grid{grid-template-columns:repeat(6,minmax(0,1fr));} }
+    @media (min-width:700px){ .hm-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
     /* the ledger area shows only while a ledger is open */
     #adminMemberSearch:has(#ledgerData:empty){display:none;}
     </style>
@@ -83,6 +84,7 @@
     .hm-qbtn{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:9px 2px;color:var(--text-primary);font-size:0.74rem;font-weight:600;cursor:pointer;}
     .hm-qbtn.on{border-color:rgba(99,102,241,.8);background:rgba(99,102,241,.14);}
     .hm-qi{position:relative;font-size:1.3rem;line-height:1.2;}
+    .hm-plus{position:absolute;right:-9px;bottom:-4px;width:15px;height:15px;border-radius:50%;background:#10b981;color:#fff;border:2px solid var(--card-bg);font-size:0.78rem;font-weight:900;line-height:11px;display:flex;align-items:center;justify-content:center;box-sizing:content-box;}
     .hm-qi .qa-badge{position:absolute;top:-6px;right:-12px;}
     #hmMore{gap:8px;flex-wrap:wrap;margin-top:8px;}
     .hm-chip{display:flex;align-items:center;gap:6px;background:var(--card-bg);border:1px solid var(--border);border-radius:99px;padding:7px 13px;font-size:0.8rem;font-weight:600;color:var(--text-primary);cursor:pointer;}
@@ -262,8 +264,8 @@
         <!-- Admin-only app-icon launcher (iPhone style) below the search box — shown via JS for admin -->
         <div id="adminQuickBtns" style="display:none;">
             <div class="hm-qa" role="toolbar" aria-label="Quick actions">
-                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAddMember()"><span class="hm-qi">👤</span>Member</button>
-                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAddGroup()"><span class="hm-qi">👥</span>Group</button>
+                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAddMember()"><span class="hm-qi">👤<span class="hm-plus">+</span></span>Add Member</button>
+                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAddGroup()"><span class="hm-qi">👥<span class="hm-plus">+</span></span>New Group</button>
                 <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAckQueue()"><span class="hm-qi">💬<span id="ackQueueCount" class="qa-badge" style="display:none;">0</span></span>Messages</button>
                 <button type="button" class="hm-qbtn" id="hmMoreBtn" onclick="hmToggleMore()"><span class="hm-qi">▦</span>More</button>
             </div>
@@ -1187,7 +1189,7 @@
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/home.js?v=20261119_v5"></script>
+<script src="js/home.js?v=20261119_v7"></script>
 <script src="js/backup.js?v=20261112_v10"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
