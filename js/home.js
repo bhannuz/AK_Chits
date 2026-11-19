@@ -78,9 +78,7 @@ function renderHomeGroups(ms, gs, ps){
     const sorters = {
         name:     (a,b) => ((a.completed?1:0) - (b.completed?1:0)) || byName(a,b),
         overdue:  (a,b) => ((a.completed?1:0) - (b.completed?1:0)) || (b.over - a.over) || byName(a,b),   // highest overdue first, then the rest by name
-        progress: (a,b) => (a.pct - b.pct) || byName(a,b),
-        members:  (a,b) => (b.seats.length - a.seats.length) || byName(a,b),
-        next:     (a,b) => (a.next ? 0 : 1) - (b.next ? 0 : 1) || (a.next||'').localeCompare(b.next||'') || byName(a,b)
+        progress: (a,b) => (a.pct - b.pct) || byName(a,b)
     };
     data.sort(adv ? (sorters[window._hmSort] || sorters.overdue) : sorters.name);
     const allData = data;
@@ -102,16 +100,26 @@ function renderHomeGroups(ms, gs, ps){
         else {
             const cnts = { all:data.length, active:data.filter(isActive).length, overdue:data.filter(d => d.over > 0).length, notstarted:data.filter(isNotStarted).length, completed:data.filter(d => d.completed).length };
             const fopt = [['active','Active'],['all','All'],['overdue','Overdue'],['notstarted','Not started'],['completed','Completed']].map(c => `<option value="${c[0]}"${window._hmFilter===c[0]?' selected':''}>${c[1]} (${cnts[c[0]]})</option>`).join('');
-            const sopt = [['overdue','Highest overdue'],['name','Name'],['progress','Lowest collection'],['members','Most members'],['next','Next due date']].map(o => `<option value="${o[0]}"${window._hmSort===o[0]?' selected':''}>${o[1]}</option>`).join('');
+            const sopt = [['overdue','Highest overdue'],['name','Name (A-Z)'],['progress','Lowest collection']].map(o => `<option value="${o[0]}"${window._hmSort===o[0]?' selected':''}>${o[1]}</option>`).join('');
             bar.style.display = 'block';
             bar.innerHTML = `<div class="hm-tools"><label class="hm-sortlbl">Show <select class="hm-sel" onchange="hmFilter(this.value)">${fopt}</select></label><label class="hm-sortlbl">Sort <select class="hm-sel" onchange="hmSort(this.value)">${sopt}</select></label></div>`;
         }
     }
 
+    // members inside a group follow the selected sort too (default: members with overdue on top)
+    const sortRows = (list, d) => {
+        const key = s => { let paidN = 0, ov = 0, due = 0; s.months.forEach(m => { if(m.st === 'p') paidN++; if(!m.due) return; if(m.st === 'o') ov++; if(m.st !== 'p') due += Math.max(0, d.chit - m.paid); }); return { paidN, ov, due, nm:(s.name||'').toLowerCase() }; };
+        const mode = window._hmSort;
+        return list.map(s => ({ s, k:key(s) })).sort((a,b) =>
+            mode === 'name'     ? a.k.nm.localeCompare(b.k.nm)
+          : mode === 'progress' ? (a.k.paidN - b.k.paidN) || (b.k.ov - a.k.ov) || a.k.nm.localeCompare(b.k.nm)
+          :                       (b.k.ov - a.k.ov) || (b.k.due - a.k.due) || a.k.nm.localeCompare(b.k.nm)
+        ).map(x => x.s);
+    };
     const dotCss = { p:'background:#34d399;', t:'background:#fbbf24;', o:'background:#f87171;', d:'border:1.5px solid #fbbf24;', f:'border:1px solid rgba(255,255,255,0.28);' };
     let html = '';
     shown.forEach(d => {
-        const rows = d.seats.filter(s => !q || s.name.toLowerCase().includes(q));
+        const rows = sortRows(d.seats.filter(s => !q || s.name.toLowerCase().includes(q)), d);
         if(q && !rows.length) return;
         const open = q ? true : window._hmSel === d.g.id;
         const ringCol = !d.monthsDue ? '#9ca3af' : d.pct >= 100 ? '#34d399' : d.pct >= 80 ? '#fbbf24' : '#f87171';
