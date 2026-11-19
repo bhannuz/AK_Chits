@@ -63,6 +63,35 @@
     /* the ledger area shows only while a ledger is open */
     #adminMemberSearch:has(#ledgerData:empty){display:none;}
     </style>
+    <style id="homeSimpleCss">
+    /* ── Simplified Home: slim header, one summary card, 4 shortcuts + More, ledger as full page ── */
+    .brand-sub, #appBrandCloud, #headerRoleBadge{display:none !important;}
+    #accessReqBtn{padding:5px 9px !important;font-size:1.05rem !important;}
+    #hdrMenu{display:none;position:absolute;right:0;top:42px;z-index:1200;min-width:190px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:6px;box-shadow:0 10px 28px rgba(0,0,0,.5);}
+    #hdrMenu .hdr-mi, #hdrMenu #logoutBtn{display:block;width:100%;text-align:left;background:transparent !important;border:none !important;color:var(--text-primary);border-radius:8px !important;padding:10px 12px !important;font-size:0.85rem !important;font-weight:600 !important;cursor:pointer;}
+    #hdrMenu #logoutBtn{color:#f87171 !important;}
+    #hdrMenu .hdr-mi:active, #hdrMenu #logoutBtn:active{background:rgba(255,255,255,.06) !important;}
+    .hm-summary{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;padding:12px 14px;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;}
+    .hm-sum-lbl{font-size:0.72rem;color:var(--text-dim);}
+    .hm-sum-big{font-size:1.5rem;font-weight:800;color:#34d399;line-height:1.15;}
+    .hm-sum-side{text-align:right;font-size:0.78rem;color:var(--text-dim);line-height:1.5;}
+    .hm-sum-side a{display:block;cursor:pointer;} .hm-sum-side a span{color:var(--text-primary);font-weight:700;}
+    #adminActionBtns{margin-top:10px !important;}
+    .hm-pay{justify-content:center;font-size:1rem;} .hm-pay small{display:none;}
+    #adminQuickBtns{flex-direction:column;margin-top:10px;}
+    .hm-qa{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;}
+    .hm-qbtn{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:9px 2px;color:var(--text-primary);font-size:0.74rem;font-weight:600;cursor:pointer;}
+    .hm-qbtn.on{border-color:rgba(99,102,241,.8);background:rgba(99,102,241,.14);}
+    .hm-qi{position:relative;font-size:1.3rem;line-height:1.2;}
+    .hm-qi .qa-badge{position:absolute;top:-6px;right:-12px;}
+    #hmMore{gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .hm-chip{display:flex;align-items:center;gap:6px;background:var(--card-bg);border:1px solid var(--border);border-radius:99px;padding:7px 13px;font-size:0.8rem;font-weight:600;color:var(--text-primary);cursor:pointer;}
+    .hm-chip.ios-active{border-color:rgba(99,102,241,.8);background:rgba(99,102,241,.18);color:#c7d2fe;}
+    /* Planner and Statistics now live under More (nav items stay in the page so the scripts keep working) */
+    #navPlanner, #navBackup{display:none !important;}
+    /* member ledger opens as its own full page; "Back" returns to the groups */
+    #adminMemberSearch:not(:has(#ledgerData:empty)){position:fixed;inset:0;z-index:1100;margin:0 !important;overflow-y:auto;background:var(--bg-dark,#0a0e1a);padding:12px 12px calc(24px + env(safe-area-inset-bottom));}
+    </style>
     <style id="homeToolRowCss">
     /* iPhone-style app icons */
     .ios-grid{width:100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:16px 6px;padding:8px 2px 4px;justify-items:center;}
@@ -84,8 +113,10 @@
     <script>
         (function(){
             try {
-                var s = sessionStorage.getItem(typeof APP_CONFIG!=='undefined'?APP_CONFIG.sessionKey:'akdf_session');
-                if(s){ var u=JSON.parse(s); if(u&&u.role==='admin') document.documentElement.classList.add('admin-mode-early'); }
+                var s = localStorage.getItem('akdf_session'), u = null;
+                if(s){ var o=JSON.parse(s); if(o && o.user && o.exp && Date.now()<o.exp) u=o.user; }
+                if(!u){ var l=sessionStorage.getItem('akdf_session'); if(l) u=JSON.parse(l); }
+                if(u&&u.role==='admin') document.documentElement.classList.add('admin-mode-early');
             }catch(e){}
         })();
     </script>
@@ -159,12 +190,18 @@
         <div style="display:flex;align-items:center;gap:8px;">
             <span id="headerRoleBadge" class="badge text-warning border border-warning" style="padding:4px 8px;font-size:0.72rem;">ADMIN</span>
             <button id="accessReqBtn" onclick="openAccessRequests()" title="Access Requests" style="display:none;background:rgba(243,156,18,.12);border:1px solid rgba(243,156,18,.3);color:#f39c12;border-radius:10px;padding:5px 10px;font-size:1.05rem;font-weight:700;cursor:pointer;position:relative;">
-                🔐 Requests <span id="pendingCount" style="display:none;background:#ef4444;color:white;border-radius:50%;width:16px;height:16px;font-size:0.98rem;font-weight:900;position:absolute;top:-5px;right:-5px;display:flex;align-items:center;justify-content:center;"></span>
+                🔐<span id="pendingCount" style="display:none;background:#ef4444;color:white;border-radius:50%;min-width:16px;height:16px;font-size:0.7rem;font-weight:800;position:absolute;top:-5px;right:-5px;align-items:center;justify-content:center;"></span>
             </button>
             <button id="backupReminderBtn" onclick="switchTab('backup')" class="backup-badge-btn" title="Daily backup due!" style="padding:5px 9px;font-size:0.72rem;">
                 💾
             </button>
-            <button id="logoutBtn" onclick="handleLogout()" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:5px 10px;font-size:1.05rem;font-weight:700;cursor:pointer;">⏻ Logout</button>
+            <div style="position:relative;">
+                <button id="hdrMenuBtn" type="button" onclick="hdrMenuToggle(event)" aria-label="Menu" style="background:var(--card-bg);border:1px solid var(--border);color:var(--text-primary);border-radius:10px;width:36px;height:34px;font-size:1.1rem;font-weight:800;cursor:pointer;line-height:1;">&#8942;</button>
+                <div id="hdrMenu">
+                    <button type="button" class="hdr-mi" onclick="hdrMenuClose();switchTab('home');iosOpenTool('backup')">☁️ Backup &amp; Restore</button>
+                    <button id="logoutBtn" onclick="handleLogout()" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:#f87171;border-radius:10px;padding:5px 10px;font-size:1.05rem;font-weight:700;cursor:pointer;">⏻ Logout</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -209,31 +246,50 @@
 
     <!-- HOME TAB -->
     <div id="homeTab" class="tab-content active">
-        <div id="adminStatCards" class="row g-2 mt-3 text-center" style="margin-left:0;margin-right:0;display:none;">
-            <div class="col-4"><div class="stat-card" onclick="openMembersQuickView()" style="cursor:pointer;active:scale(0.97);transition:transform .1s;" title="View all members"><span class="stat-num" id="memberCount">-</span><span class="stat-label">Members</span></div></div>
-            <div class="col-4"><div class="stat-card" onclick="openGroupsQuickView()" style="cursor:pointer;" title="View all groups"><span class="stat-num" id="groupCount">-</span><span class="stat-label">Groups</span></div></div>
-            <div class="col-4"><div class="stat-card"><span class="stat-num text-success" id="todayColl">₹0</span><span class="stat-label">Today</span></div></div>
+        <div id="adminStatCards" class="hm-summary" style="display:none;">
+            <div>
+                <div class="hm-sum-lbl">Collected today</div>
+                <div id="todayColl" class="hm-sum-big">₹0</div>
+            </div>
+            <div class="hm-sum-side">
+                <a onclick="openMembersQuickView()" title="View all members"><span id="memberCount">-</span> members</a>
+                <a onclick="openGroupsQuickView()" title="View all groups"><span id="groupCount">-</span> groups</a>
+            </div>
+        </div>
+        <div id="adminActionBtns" style="display:flex;gap:8px;margin-top:10px;">
+            <button class="hm-pay" onclick="openPaymentModal()"><span style="font-size:1.1rem;">💳</span><span>Record Payment</span><small id="homeTodayAmt">Today ₹0</small></button>
         </div>
         <!-- Admin-only app-icon launcher (iPhone style) below the search box — shown via JS for admin -->
-        <div id="adminQuickBtns" style="display:none;margin-top:12px;">
-            <div class="hm-tile" style="flex:1;min-width:0;">
-            <div class="ios-grid" role="toolbar" aria-label="Quick actions">
-                <button type="button" class="ios-app" onclick="iosCloseTools();openAddMember()" title="Add new member" aria-label="Add new member"><span class="ios-ico" style="background:linear-gradient(145deg,#f7b733,#e67e22);">👤<span class="ios-plus">+</span></span><span class="ios-lbl">Add Member</span></button>
-                <button type="button" class="ios-app" onclick="iosCloseTools();openAddGroup()" title="Create new group" aria-label="Create new group"><span class="ios-ico" style="background:linear-gradient(145deg,#3ddc97,#1e9e6a);">👥<span class="ios-plus">+</span></span><span class="ios-lbl">New Group</span></button>
-                <button type="button" class="ios-app" onclick="iosCloseTools();openAckQueue()" title="WhatsApp acknowledgements" aria-label="WhatsApp acknowledgements"><span class="ios-ico" style="background:linear-gradient(145deg,#4be07f,#128c7e);">💬<span id="ackQueueCount" class="qa-badge" style="display:none;">0</span></span><span class="ios-lbl">Messages</span></button>
-                <button type="button" class="ios-app" data-tool="wa" onclick="iosOpenTool('wa')" title="WhatsApp reminders"><span class="ios-ico" style="background:linear-gradient(145deg,#38bdf8,#2563eb);">🔔</span><span class="ios-lbl">Reminders</span></button>
-                <button type="button" class="ios-app" data-tool="qr" onclick="iosOpenTool('qr')" title="QR payment generator"><span class="ios-ico" style="background:linear-gradient(145deg,#a78bfa,#6d28d9);">📲</span><span class="ios-lbl">QR Pay</span></button>
-                <button type="button" class="ios-app" data-tool="spin" onclick="iosOpenTool('spin')" title="Spin wheel"><span class="ios-ico" style="background:linear-gradient(145deg,#fb923c,#ec4899);">🎡</span><span class="ios-lbl">Spin Wheel</span></button>
-                <button type="button" class="ios-app" data-tool="backup" onclick="iosOpenTool('backup')" title="Backup and restore"><span class="ios-ico" style="background:linear-gradient(145deg,#94a3b8,#475569);">☁️</span><span class="ios-lbl">Backup</span></button>
+        <div id="adminQuickBtns" style="display:none;">
+            <div class="hm-qa" role="toolbar" aria-label="Quick actions">
+                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAddMember()"><span class="hm-qi">👤</span>Member</button>
+                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAddGroup()"><span class="hm-qi">👥</span>Group</button>
+                <button type="button" class="hm-qbtn" onclick="iosCloseTools();openAckQueue()"><span class="hm-qi">💬<span id="ackQueueCount" class="qa-badge" style="display:none;">0</span></span>Messages</button>
+                <button type="button" class="hm-qbtn" id="hmMoreBtn" onclick="hmToggleMore()"><span class="hm-qi">▦</span>More</button>
             </div>
+            <div id="hmMore" style="display:none;">
+                <button type="button" class="hm-chip" data-tool="wa" onclick="iosOpenTool('wa')">🔔 Reminders</button>
+                <button type="button" class="hm-chip" data-tool="qr" onclick="iosOpenTool('qr')">📲 QR Pay</button>
+                <button type="button" class="hm-chip" data-tool="spin" onclick="iosOpenTool('spin')">🎡 Spin Wheel</button>
+                <button type="button" class="hm-chip" data-tool="backup" onclick="iosOpenTool('backup')">☁️ Backup</button>
+                <button type="button" class="hm-chip" onclick="iosCloseTools();switchTab('planner')">📅 Planner</button>
+                <button type="button" class="hm-chip" onclick="iosCloseTools();switchTab('backup')">📊 Statistics</button>
             </div>
         </div>
         <script>
         // Only ONE tool panel is open at a time: tapping another icon closes the open one and opens the new one
         var IOS_TOOLS={qr:['qrSectionBody','toggleQrSection','qrGeneratorSection'],wa:['waSectionBody','toggleWaSection','waReminderSection'],spin:['spinSectionBody','toggleSpinSection','spinWheelSection'],backup:['backupSectionBody','toggleBackupSection','backupSection']};
         function toggleBackupSection(){ var b=document.getElementById('backupSectionBody'); if(b) b.style.display=(b.style.display==='block')?'none':'block'; }
+        function hmToggleMore(force){
+            var p=document.getElementById('hmMore'), b=document.getElementById('hmMoreBtn'); if(!p) return;
+            var show=(typeof force==='boolean')?force:(p.style.display!=='flex');
+            p.style.display=show?'flex':'none'; if(b) b.classList.toggle('on',show);
+        }
+        function hdrMenuToggle(e){ if(e) e.stopPropagation(); var m=document.getElementById('hdrMenu'); if(m) m.style.display=(m.style.display==='block')?'none':'block'; }
+        function hdrMenuClose(){ var m=document.getElementById('hdrMenu'); if(m) m.style.display='none'; }
+        document.addEventListener('click',function(e){ var m=document.getElementById('hdrMenu'); if(m && m.style.display==='block' && !m.contains(e.target)) m.style.display='none'; });
         function iosMarkActive(which){
-            document.querySelectorAll('.ios-app[data-tool]').forEach(function(b){ b.classList.toggle('ios-active', b.getAttribute('data-tool')===which); });
+            document.querySelectorAll('[data-tool]').forEach(function(b){ b.classList.toggle('ios-active', b.getAttribute('data-tool')===which); });
         }
         function iosCloseTools(except){
             Object.keys(IOS_TOOLS).forEach(function(k){
@@ -454,9 +510,6 @@
         </div>
         </div><!-- /homeToolRow -->
 
-        <div id="adminActionBtns" style="display:flex;gap:8px;margin-top:10px;">
-            <button class="hm-pay" onclick="openPaymentModal()"><span style="font-size:1.1rem;">💳</span><span>Record Payment</span><small id="homeTodayAmt">Today ₹0</small></button>
-        </div>
 
         <!-- Groups: slim rows; a group opens only when selected. Small search on the right. -->
         <div id="homeGroupsHead" style="display:flex;justify-content:space-between;align-items:center;margin:14px 2px 4px;">
@@ -475,7 +528,7 @@
 
         <!-- Member ledger (opens when a member row is tapped) — the old search box lives here hidden: the code still uses its fields -->
         <div id="adminMemberSearch" class="my-3">
-            <div id="ledgerBar" style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 6px;font-size:0.8rem;font-weight:800;color:#a5b4fc;"><span>📋 Member ledger</span><button type="button" onclick="clearMemberSearch()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:8px;padding:3px 10px;font-size:0.7rem;font-weight:800;cursor:pointer;">✕ Close</button></div>
+            <div id="ledgerBar" style="display:flex;justify-content:space-between;align-items:center;margin:0 2px 6px;font-size:0.8rem;font-weight:800;color:#a5b4fc;"><span>📋 Member ledger</span><button type="button" onclick="clearMemberSearch()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:8px;padding:3px 10px;font-size:0.7rem;font-weight:800;cursor:pointer;">← Back</button></div>
             <div style="display:none;">
                 <input type="text" id="summarySearch" class="form-input" oninput="filterSearch('summarySearch','summaryList','summaryView')">
                 <input type="hidden" id="summaryView">
@@ -1138,11 +1191,11 @@
 <script src="js/draw.js?v=20261102_v3"></script>
 <script src="js/payments.js?v=20261102_v14"></script>
 <script src="js/acks.js?v=20261104_v15"></script>
-<script src="js/home.js?v=20261118_v3"></script>
+<script src="js/home.js?v=20261119_v4"></script>
 <script src="js/backup.js?v=20261112_v10"></script>
 <script src="js/planner.js?v=20261105_v1"></script>
 <script src="js/print.js?v=20261104_v9"></script>
-<script src="js/auth.js?v=20260614_v4"></script>
+<script src="js/auth.js?v=20261118_v5"></script>
 <script src="js/quickview.js?v=20261104_v1"></script>
 <script src="js/qr.js?v=20260613_v3"></script>
 <script src="js/init.js?v=20260610_v1"></script>
