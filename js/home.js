@@ -11,7 +11,7 @@ function _hmLoad(k, d){ try{ return localStorage.getItem(k) || d; }catch(e){ ret
 function _hmSave(k, v){ try{ localStorage.setItem(k, v); }catch(e){} }
 window._hmView   = 'advanced';                      // Advanced view only
 window._hmFilter = _hmLoad('hmFilter2', 'active');   // active (default) | all | overdue | notstarted | completed
-window._hmSort   = _hmLoad('hmSort', 'name');      // name | overdue | progress | members | next
+window._hmSort   = _hmLoad('hmSort2', 'overdue');    // overdue (default) | name | progress | members | next
 
 function _hmEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function _hmShort(n){ return n>=100000 ? (n/100000).toFixed(2).replace(/\.?0+$/,'')+'L' : n>=1000 ? (n/1000).toFixed(1).replace(/\.0$/,'')+'k' : String(Math.round(n)); }
@@ -34,7 +34,7 @@ async function hmOpenLedger(mid, name){
 function hmPick(id){ window._hmSel = (window._hmSel === id) ? null : id; renderHomeGroups(); }
 function hmView(v){ window._hmView = (v === 'advanced') ? 'advanced' : 'compact'; _hmSave('hmView', window._hmView); renderHomeGroups(); }
 function hmFilter(v){ window._hmFilter = v; _hmSave('hmFilter2', v); renderHomeGroups(); }
-function hmSort(v){ window._hmSort = v; _hmSave('hmSort', v); renderHomeGroups(); }
+function hmSort(v){ window._hmSort = v; _hmSave('hmSort2', v); renderHomeGroups(); }
 function hmQ(v){ window._hmQ = String(v||'').toLowerCase().trim(); renderHomeGroups(); }
 function hmSearchOpen(){
     const box = document.getElementById('hmSearchBox'), btn = document.getElementById('hmSearchBtn'), inp = document.getElementById('hmSearchInput');
@@ -77,12 +77,12 @@ function renderHomeGroups(ms, gs, ps){
     const byName = (a,b) => (a.g.name||'').localeCompare(b.g.name||'');
     const sorters = {
         name:     (a,b) => ((a.completed?1:0) - (b.completed?1:0)) || byName(a,b),
-        overdue:  (a,b) => (b.over - a.over) || byName(a,b),
+        overdue:  (a,b) => ((a.completed?1:0) - (b.completed?1:0)) || (b.over - a.over) || byName(a,b),   // highest overdue first, then the rest by name
         progress: (a,b) => (a.pct - b.pct) || byName(a,b),
         members:  (a,b) => (b.seats.length - a.seats.length) || byName(a,b),
         next:     (a,b) => (a.next ? 0 : 1) - (b.next ? 0 : 1) || (a.next||'').localeCompare(b.next||'') || byName(a,b)
     };
-    data.sort(adv ? (sorters[window._hmSort] || sorters.name) : sorters.name);
+    data.sort(adv ? (sorters[window._hmSort] || sorters.overdue) : sorters.name);
     const allData = data;
     // Active = started (first due date reached) and not completed. A group that has not started yet is NOT active.
     const isActive     = d => !d.completed && d.monthsDue > 0;
@@ -100,13 +100,11 @@ function renderHomeGroups(ms, gs, ps){
     if(bar){
         if(!adv){ bar.style.display = 'none'; bar.innerHTML = ''; }
         else {
-            const tOver = shown.reduce((a,d) => a + d.over, 0), tGot = shown.reduce((a,d) => a + d.got, 0), tExp = shown.reduce((a,d) => a + d.exp, 0);   // totals follow the selected filter
             const cnts = { all:data.length, active:data.filter(isActive).length, overdue:data.filter(d => d.over > 0).length, notstarted:data.filter(isNotStarted).length, completed:data.filter(d => d.completed).length };
-            const chips = [['all','All'],['active','Active'],['overdue','Overdue'],['notstarted','Not started'],['completed','Completed']].filter(c => c[0] !== 'notstarted' || cnts.notstarted > 0 || window._hmFilter === 'notstarted').map(c => `<button type="button" class="hm-fchip${window._hmFilter===c[0]?' on':''}" onclick="hmFilter('${c[0]}')">${c[1]} <b>${cnts[c[0]]}</b></button>`).join('');
-            const sopt = [['name','Name'],['overdue','Most overdue'],['progress','Lowest collection'],['members','Most members'],['next','Next due date']].map(o => `<option value="${o[0]}"${window._hmSort===o[0]?' selected':''}>${o[1]}</option>`).join('');
+            const fopt = [['active','Active'],['all','All'],['overdue','Overdue'],['notstarted','Not started'],['completed','Completed']].map(c => `<option value="${c[0]}"${window._hmFilter===c[0]?' selected':''}>${c[1]} (${cnts[c[0]]})</option>`).join('');
+            const sopt = [['overdue','Highest overdue'],['name','Name'],['progress','Lowest collection'],['members','Most members'],['next','Next due date']].map(o => `<option value="${o[0]}"${window._hmSort===o[0]?' selected':''}>${o[1]}</option>`).join('');
             bar.style.display = 'block';
-            bar.innerHTML = `<div class="hm-sum"><div><span>Collected</span><b style="color:#34d399;">${inr(tGot)}</b></div><div><span>Expected</span><b>${inr(tExp)}</b></div><div><span>Overdue</span><b style="color:${tOver?'#f87171':'#34d399'};">${inr(tOver)}</b></div></div>
-            <div class="hm-tools"><div class="hm-chips">${chips}</div><label class="hm-sortlbl">Sort <select class="hm-sel" onchange="hmSort(this.value)">${sopt}</select></label></div>`;
+            bar.innerHTML = `<div class="hm-tools"><label class="hm-sortlbl">Show <select class="hm-sel" onchange="hmFilter(this.value)">${fopt}</select></label><label class="hm-sortlbl">Sort <select class="hm-sel" onchange="hmSort(this.value)">${sopt}</select></label></div>`;
         }
     }
 
@@ -149,14 +147,12 @@ function renderHomeGroups(ms, gs, ps){
             </div>
             ${adv?`<div class="hm-adv"><div class="hm-bar"><i style="width:${d.pct}%;background:${ringCol};"></i></div>
                 <div class="hm-grid">
-                    <div><span>Chit amount</span><b>${d.chit?inr(d.chit):'—'}</b></div>
-                    <div><span>Collected</span><b style="color:#34d399;">${inr(d.got)}</b></div>
                     <div><span>Pending</span><b style="color:${d.exp-d.got>0?'#fbbf24':'#34d399'};">${inr(Math.max(0,d.exp-d.got))}</b></div>
                     <div><span>Overdue</span><b style="color:${d.over?'#f87171':'#34d399'};">${d.over?inr(d.over)+' · '+d.overMembers+' mem':'None'}</b></div>
                     <div><span>Next due</span><b>${d.next||(d.completed?'Done':'—')}</b></div>
                     <div><span>Chit picked</span><b>${d.picked} / ${d.seats.length}</b></div>
                 </div></div>`:''}
-            ${open?`<div style="display:flex;gap:14px;flex-wrap:wrap;padding:0 12px 8px 62px;font-size:0.7rem;color:var(--text-dim);"><span>Collected <b style="color:#34d399;">${_hmShort(d.got)}</b></span><span>Expected <b style="color:var(--text-primary);">${_hmShort(d.exp)}</b></span><span>Rate <b style="color:var(--text-primary);">${d.pct}%</b></span></div><div class="hm-list">${list}</div>`:''}
+            ${open?`<div class="hm-list">${list}</div>`:''}
         </div>`;
     });
     host.innerHTML = html || '<div style="padding:14px;text-align:center;color:var(--text-dim);font-size:0.82rem;">' + (q ? 'No member matches.' : (allData.length ? 'No groups match this filter.' : 'No groups yet.')) + '</div>';
